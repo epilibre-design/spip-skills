@@ -98,7 +98,7 @@ In template:
 ```
 
 Equivalent shortcut:
-- #GENERER_SAISIES{#TABLEAU} == #INCLURE{fond=inclure/generer_saisies,env,saisies=#TABLEAU}
+`#GENERER_SAISIES{#TABLEAU}` == `#INCLURE{fond=inclure/generer_saisies,env,saisies=#TABLEAU}`
 
 ## CVT pattern ready to copy
 
@@ -196,11 +196,11 @@ YAML example:
 			min: 10
 ```
 
-Equivalent PHP array is accepted directly by #GENERER_SAISIES and saisies_verifier().
+Equivalent PHP array is accepted directly by `#GENERER_SAISIES` and `saisies_verifier()`.
 
 ## Conditional display with afficher_si
 
-Attach condition in options.afficher_si:
+Attach condition in `options.afficher_si`:
 
 ```php
 [
@@ -214,10 +214,10 @@ Attach condition in options.afficher_si:
 ```
 
 Useful operators:
-- ==, !=, >, >=, <, <=
-- IN, !IN
-- MATCH, !MATCH
-- boolean style tests with @champ@
+- `==`, `!=`, `>`, `>=`, `<`, `<=`
+- `IN`, `!IN`
+- `MATCH`, `!MATCH`
+- boolean style tests with `@champ@`
 
 Operational effect in verification:
 - hidden fields by afficher_si are excluded from checks
@@ -273,7 +273,7 @@ Frequent useful options:
 
 ## Create a custom saisie type
 
-Minimum runtime requirement (usable by #SAISIE):
+Minimum runtime requirement (usable by the plugin #SAISIE):
 1. create saisies/mon_type.html
 
 To make it configurable/listed by Saisies builders:
@@ -330,19 +330,19 @@ Minimal mon_type.html:
 
 ## Agent checklist before shipping a form
 
-1. Every real field has options.nom
-2. #GENERER_SAISIES receives a valid list (array)
-3. verifier uses saisies_verifier() on the same list
-4. Required fields use obligatoire and show errors in template
-5. afficher_si conditions only target existing field names
+1. Every real field has `options.nom`
+2. `#GENERER_SAISIES` receives a valid list (array)
+3. verifier uses `saisies_verifier()` on the same list
+4. Required fields use `obligatoire` and show errors in template
+5. `afficher_si` conditions only target existing field names
 6. For custom types, html and yaml basenames match
 7. If using builder/listing, YAML plugin availability is assumed
 
 ## Extension points to know
 
 Main pipelines for advanced integration:
-- formulaire_saisies
-- saisies_lister_disponibles
-- saisies_verifier_lister_disponibles
-- saisies_afficher_si_saisies
-- saisies_verifier
+- `formulaire_saisies`
+- `saisies_lister_disponibles`
+- `saisies_verifier_lister_disponibles`
+- `saisies_afficher_si_saisies`
+- `saisies_verifier`
