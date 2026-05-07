@@ -3,7 +3,7 @@ name: spip-plugins
 description: Use when developing a SPIP plugin (paquet.xml present, _pipelines.php,
   spip_* table references in PHP) or when the user asks about plugin architecture,
   pipelines, hooks, or the SPIP PHP/SQL API. SPIP 4.1+. Not for template/squelettes
-  work — use the spip skill for that.
+  work — use the spip-squelettes skill for that.
 ---
 
 # SPIP plugin development
@@ -19,7 +19,7 @@ description: Use when developing a SPIP plugin (paquet.xml present, _pipelines.p
 | **pipeline** | Extension hook — a named chain of functions called in sequence |
 | **balise** | `#TAG` — template marker compiled to PHP |
 | **critère** | `{filter}` inside a boucle — constrains the SQL query |
-| **filtre** | `|function` — post-processor applied to a value in a squelette |
+| **filtre** | `\|function` — post-processor applied to a value in a squelette |
 | **formulaire CVT** | Charger/Vérifier/Traiter — SPIP's form pattern (load/validate/process) |
 | **objet éditorial** | First-class content type with CRUD, i18n, revisions (article, rubrique…) |
 | **genie** | SPIP scheduled task (cron), declared via `<genie>` in paquet.xml |
@@ -105,7 +105,7 @@ function monplugin_mon_pipeline($flux) {
 | Create a new database table (not an objet éditorial) | `references/declarer-table.md` |
 | Create a new objet éditorial (with statut, edition form, search) | `references/declarer-objet.md` |
 | Create public object URLs / custom `#URL_*` tags | `references/urls-objets.md` |
-| Define a custom `#BALISE`, `|filtre`, or `{critère}` | `references/balises-filtres-criteres.md` |
+| Define a custom `#BALISE`, `\|filtre`, or `{critère}` | `references/balises-filtres-criteres.md` |
 | Add translated strings to a plugin | `references/i18n.md` |
 | Write install/upgrade/uninstall logic (`_administrations.php`) | `references/cycle-de-vie.md` |
 | Build or customise private-space templates (liste, infos, contenu, editer) | `references/prive-objets.md` |
