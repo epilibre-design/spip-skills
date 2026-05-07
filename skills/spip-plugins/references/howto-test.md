@@ -148,6 +148,8 @@ namespace Monplugin\Tests\Squelettes;
 
 use Spip\Core\Testing\SquelettesTestCase;
 use Spip\Core\Testing\Templating;
+use Spip\Core\Testing\Template\FileLoader;
+use Spip\Core\Testing\Template\StringLoader;
 
 class MaBaliseTest extends SquelettesTestCase
 {
@@ -178,7 +180,8 @@ class MaBaliseTest extends SquelettesTestCase
     public function testSqueletteFichier(): void
     {
         // Path can be absolute or relative to SPIP root
-        $this->assertOkSquelette(__DIR__ . '/data/mon_squelette_test.html');
+        $ctx = ['variable' => 'value'];
+        $this->assertOkSquelette(__DIR__ . '/data/mon_squelette_test.html', $ctx);
     }
 
     // --- Templating with injected custom PHP functions ---
@@ -191,6 +194,17 @@ class MaBaliseTest extends SquelettesTestCase
             ",
         ]);
         $this->assertOkTemplate($templating, '[(#VAL|stub_ma_fonction|=={stub}|oui)ok]');
+
+        /* Other examples
+        * with StringLoader and FileLoader helpers
+        * $templating = new Templating(new StringLoader());
+        * $this->assertOkTemplate($templating, '[(#CONFIG{pasla}|non)ok]');
+        *
+        * Context can be passed to the template
+        * $templating = new Templating(new FileLoader());
+        * $ctx = ['prenom' => 'Camille', 'id_auteur' => 42];
+        * $this->assertOkTemplate($templating, __DIR__ . '/data/truc.html', $ctx);
+        */
     }
 }
 ```
