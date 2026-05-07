@@ -23,18 +23,22 @@ SPIP generates pages from **squelettes** — `.html` files mixing HTML with BOUC
 | **formulaire CVT** | Charger/Vérifier/Traiter — SPIP's form pattern (load/validate/process) |
 | **objet éditorial** | First-class content type with CRUD, i18n, revisions (article, rubrique…) |
 
-## BOUCLE Syntax
+## Complete BOUCLE Syntax
 
 ```html
+<BB_name>
+<!-- optional header section: always displayed -->
 <B_name>
-<!-- pre-section: output once before body, only if ≥1 result -->
+<!-- optional pre-section: output once before body, only if ≥1 result -->
 <BOUCLE_name(TABLE){critère1}{critère2}>
   <!-- Content repeated for each result row -->
 </BOUCLE_name>
-<!-- post-section: output once after body, only if ≥1 result -->
+<!-- optional post-section: output once after body, only if ≥1 result -->
 </B_name>
-<!-- zero-result alternative: output when loop returns nothing -->
+<!-- optional zero-result alternative: output when loop returns nothing -->
 <//B_name>
+<!-- optional footer section: always displayed -->
+</BB_name>
 ```
 
 **Example — 10 articles, newest first, paginated:**

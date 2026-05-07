@@ -5,20 +5,26 @@
 ## Anatomy of a BOUCLE
 
 ```html
+<BB_name>
+<!-- optional header section: always displayed -->
 <B_name>
-<!-- pre-section: output once before body, only if ≥1 result -->
+<!-- optional pre-section: output once before body, only if ≥1 result -->
 <BOUCLE_name(TABLE){critère1}{critère2}>
   <!-- Content repeated for each result row -->
 </BOUCLE_name>
-<!-- post-section: output once after body, only if ≥1 result -->
+<!-- optional post-section: output once after body, only if ≥1 result -->
 </B_name>
-<!-- zero-result alternative: output when loop returns nothing -->
+<!-- optional zero-result alternative: output when loop returns nothing -->
 <//B_name>
+<!-- optional footer section: always displayed -->
+</BB_name>
 ```
 
-- **`<B_name>` - `</BOUCLE_name>`** — pre-section. Wraps HTML that should only appear when the loop has at least one result (e.g. an opening `<ul>`).
+- **`<BB_name>` - `<B_name>`** — header section. Always displayed (e.g. `<thead>` part of a table that can have no result)
+- **`<B_name>` - `<BOUCLE_name>`** — pre-section. Wraps HTML that should only appear when the loop has at least one result (e.g. an opening `<ul>`).
 - **`</BOUCLE_name>` - `</B_name>`** — post-section. Appears after loop output, only when ≥1 result (e.g. a closing `</ul>` and pagination link).
 - **`</B_name>` - `<//B_name>`** — zero-result alternative. Shown when the loop finds nothing (e.g. "No articles yet.").
+- **`</B_name>` - `</BB_name>`** — footer section. Always displayed (e.g. `<tfoot>` part of a table that can have no result)
 
 ### Annotated example
 
