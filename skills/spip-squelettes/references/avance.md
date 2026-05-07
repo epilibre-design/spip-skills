@@ -177,7 +177,7 @@ The `#CACHE` of the main page controls the outer cache. If an included fragment 
 | Make a block reload without full page refresh | Add `{ajax}` to INCLURE |
 | Insert a template from article body text | Modèle in `squelettes/modeles/` |
 | Show a login/registration/search/comment form | `#FORMULAIRE_*` balise |
-| Different template per article or rubrique | Variant files (`article-42.html`) |
+| Different template per article or rubrique | Plugin "Compositions' or "Squelettes par rubrique" |
 | Custom "page not found" | `squelettes/404.html` |
 | Control caching | `#CACHE{seconds}` |
 | Read URL param or INCLURE argument | `#ENV{key}` |
