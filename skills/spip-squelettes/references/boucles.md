@@ -44,7 +44,7 @@
 <//B_articles>
 ```
 
-> **Gotcha:** This is not <xml> format
+> **Gotcha:** This is not `<xml>` format
 
 ---
 
