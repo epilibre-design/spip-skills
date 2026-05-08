@@ -105,7 +105,7 @@ function monplugin_mon_pipeline($flux) {
 | Create a new database table (not an objet éditorial) | `references/declarer-table.md` |
 | Create a new objet éditorial (with statut, edition form, search) | `references/declarer-objet.md` |
 | Create public object URLs / custom `#URL_*` tags | `references/urls-objets.md` |
-| Define a custom `#BALISE`, `|filtre`, or `{critère}` | `references/balises-filtres-criteres.md` |
+| Define a custom `#BALISE`, `\|filtre`, or `{critère}` | `references/balises-filtres-criteres.md` |
 | Add translated strings to a plugin | `references/i18n.md` |
 | Write install/upgrade/uninstall logic (`_administrations.php`) | `references/cycle-de-vie.md` |
 | Build or customise private-space templates (liste, infos, contenu, editer) | `references/prive-objets.md` |
