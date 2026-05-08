@@ -113,9 +113,121 @@ additional dedicated rules are added.
   as in the provided configuration.
 - In this workspace for SPIP core checks: run `vendor/bin/phpcs` from `spip/`.
 
-## Source
+## Configuring ECS and Rector
 
-- Canonical article: Standard "SCS1" (SPIP website, fr_article6677).
-- Snapshot basis observed: article updated 2025-03-03.
+### Setup dependencies
+
+Add these dev dependencies to `composer.json`:
+
+```json
+{
+	"name": "mon-organisation/plugin/mon-filtre",
+    "require-dev": {
+        "spip-league/easy-coding-standard": "^1.0",
+        "rector/rector": "^2.0",
+        "spip-league/rector": "dev-main"
+    },
+    "repositories": {
+        "spip": {
+            "type": "composer",
+            "url": "https://get.spip.net/composer"
+        }
+    },
+    "scripts": {
+        "check-cs": "vendor/bin/ecs check --ansi",
+        "fix-cs": "vendor/bin/ecs check --fix --ansi",
+        "rector": "vendor/bin/rector process --ansi",
+        "rector-dry-run": "vendor/bin/rector process --dry-run --ansi"
+    }
+}
+```
+
+Then run `composer install` to install the tools.
+
+### Configuring ECS
+
+Create `ecs.php` at the plugin root:
+
+```php
+<?php
+
+use SpipLeague\EasyCodingStandard\Set\SetList;
+use Symplify\EasyCodingStandard\Config\ECSConfig;
+
+return ECSConfig::configure()
+	->withSets([SetList::SPIP])
+	->withPaths([__DIR__])
+	->withRootFiles()
+	->withSkip([__DIR__ . '/lib', __DIR__ . '/vendor'])
+;
+```
+
+Key options:
+- `withSets([SetList::SPIP])` — Applies the SPIP-specific ruleset (tab indentation, brace positioning, etc.)
+- `withPaths([__DIR__])` — Scans the plugin root directory
+- `withRootFiles()` — Includes root-level PHP files like `paquet.xml` (if `.php` extension is added by SPIP conventions)
+- `withSkip()` — Excludes `lib/` and `vendor/` directories from analysis
+
+**Usage:**
+- `composer check-cs` — Report style violations
+- `composer fix-cs` — Auto-fix style violations
+
+### Configuring Rector
+
+Create `rector.php` at the plugin root:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use Rector\Config\RectorConfig;
+use Rector\Set\ValueObject\LevelSetList;
+use SpipLeague\Component\Rector\Set\SpipSetList;
+
+return RectorConfig::configure()
+	->withPaths([__DIR__])
+	->withRootFiles()
+	->withSets([SpipSetList::SPIP_41, LevelSetList::UP_TO_PHP_74])
+	->withPreparedSets(
+		deadCode: true,
+		codeQuality: true,
+		#codingStyle: true,
+		#typeDeclarations: true,
+		privatization: true,
+		naming: true,
+		instanceOf: true,
+		earlyReturn: true,
+		strictBooleans: true,
+	)
+	->withSkip([__DIR__ . '/lib', __DIR__ . '/vendor'])
+;
+```
+
+Key options:
+- `withSets([SpipSetList::SPIP_41, LevelSetList::UP_TO_PHP_74])` — Apply SPIP 4.1 refactorings and PHP 7.4 upgrade rules
+- `withPreparedSets()` — Enable refactoring categories:
+  - `deadCode` — Remove unreachable code
+  - `codeQuality` — Improve code patterns
+  - `privatization` — Convert `protected` to `private` where safe
+  - `naming` — Improve variable/method names
+  - `instanceOf` — Modernize type checks
+  - `earlyReturn` — Simplify control flow
+  - `strictBooleans` — Enforce strict boolean comparisons
+  - Commented-out options can be enabled as needed
+- `withSkip()` — Excludes directories from refactoring
+
+**Usage:**
+- `composer rector-dry-run` — Preview refactorings without modifying files
+- `composer rector` — Apply refactorings
+
+### Typical workflow
+
+1. Run `composer check-cs` to identify style issues
+2. Run `composer fix-cs` to auto-fix style issues
+3. Run `composer rector-dry-run` to preview refactorings
+4. Review changes and run `composer rector` when ready
+5. Commit fixed code with clear messages (e.g., "style: apply SPIP coding standards")
+
 
 If there is any ambiguity, prefer project-local conventions already present in the target codebase.

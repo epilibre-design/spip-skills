@@ -111,6 +111,7 @@ function monplugin_mon_pipeline($flux) {
 | Build or customise private-space templates (liste, infos, contenu, editer) | `references/prive-objets.md` |
 | Understand what `?exec=mon_objets` / `?exec=mon_objet` provides out-of-the-box | `references/exec-generique.md` |
 | Apply SPIP coding standards (SCS1) | `references/coding-standards.md` |
+| Configure composer.json, ecs.php or rector.php | `references/coding-standards.md` |
 | Control page cache duration, disable caching, or trigger invalidation | `references/cache.md` |
 | Write PHPUnit tests for my plugin (filtres, autorisations, squelettes) | `references/howto-test.md` |
 | Support content in multiple languages (`lang`, `id_trad`, translation groups) | `references/multilinguisme.md` |
@@ -127,6 +128,7 @@ function monplugin_mon_pipeline($flux) {
 1. `references/paquet-xml.md` → write the manifest
 2. `references/arborescence.md` → choose the right file for each function
 3. `references/pipelines.md` → pick which pipeline(s) to plug into
+4. `references/coding-standards.md` → configure composer.json, ecs.php or rector.php (optional but recommended)
 
 ### Adding a database table
 
