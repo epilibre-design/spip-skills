@@ -18,7 +18,7 @@ description: Use when developing a SPIP plugin (paquet.xml present, _pipelines.p
 | **paquet.xml** | Plugin manifest — declares metadata, dependencies, pipelines, menus |
 | **pipeline** | Extension hook — a named chain of functions called in sequence |
 | **balise** | `#TAG` — template marker compiled to PHP |
-| **critère** | `{filter}` inside a boucle — constrains the SQL query |
+| **critère** | `{criteria}` inside a boucle — constrains the SQL query |
 | **filtre** | `\|function` — post-processor applied to a value in a squelette |
 | **formulaire CVT** | Charger/Vérifier/Traiter — SPIP's form pattern (load/validate/process) |
 | **objet éditorial** | First-class content type with CRUD, i18n, revisions (article, rubrique…) |

@@ -2,6 +2,8 @@
 
 Declarative manifest at the root of every plugin. Describes the plugin to SPIP's SVP manager: metadata, dependencies, pipelines, menus, scheduled tasks.
 
+Extracted from 22 real files: SPIP 4.4 core + plugins-dist (`/src/spip/spip`).
+
 ---
 
 ## Root element `<paquet>`

@@ -6,12 +6,12 @@ You must install it manually or specify the dependency with the tag `<necessite 
 ## What to use when
 
 Use Saisies in 3 modes:
-1. Single field rendering in a template with #SAISIE
-2. Whole form rendering from a list with #GENERER_SAISIES
-3. CVT validation from the same list with saisies_verifier()
+1. Single field rendering in a template with `#SAISIE`
+2. Whole form rendering from a list with `#GENERER_SAISIES`
+3. CVT validation from the same list with `saisies_verifier()`
 
-If you need dynamic conditions between fields, use option afficher_si.
-If you need reusable business checks, use verifier definitions per field.
+If you need dynamic conditions between fields, use option `afficher_si`.
+If you need reusable business checks, use `verifier` definitions per field.
 
 ## Canonical data model for one field
 
@@ -50,9 +50,9 @@ Template call:
 ```
 
 Operational behavior:
-- #SAISIE injects standard context automatically:
+- `#SAISIE` injects standard context automatically:
 	- nom
-	- valeur from #ENV*{nom}
+	- valeur from `#ENV*{nom}`
 	- erreurs
 	- type_saisie
 	- fond=saisies/_base
@@ -62,7 +62,7 @@ Use this when:
 - You need 1 to a few fields
 - You do not need a centralized list
 
-## Quick start 2: render many fields with #GENERER_SAISIES
+## Quick start 2: render many fields with `#GENERER_SAISIES`
 
 In PHP (form saisies function):
 
@@ -98,7 +98,7 @@ In template:
 ```
 
 Equivalent shortcut:
-`#GENERER_SAISIES{#TABLEAU}` == `#INCLURE{fond=inclure/generer_saisies,env,saisies=#TABLEAU}`
+- `#GENERER_SAISIES{#TABLEAU}` == `#INCLURE{fond=inclure/generer_saisies,env,saisies=#TABLEAU}`
 
 ## CVT pattern ready to copy
 
@@ -198,7 +198,7 @@ YAML example:
 
 Equivalent PHP array is accepted directly by `#GENERER_SAISIES` and `saisies_verifier()`.
 
-## Conditional display with afficher_si
+## Conditional display with `afficher_si`
 
 Attach condition in `options.afficher_si`:
 
@@ -223,9 +223,9 @@ Operational effect in verification:
 - hidden fields by afficher_si are excluded from checks
 - at end of successful validation flow, masked fields can be set to empty string
 
-## Verifier integration rules
+## `Verifier` integration rules
 
-One verifier:
+One `verifier`:
 
 ```php
 'verifier' => [
@@ -245,7 +245,7 @@ Multiple verifiers:
 
 Behavior:
 - obligatory check runs first
-- each verifier is applied
+- each `verifier` is applied
 - normalized values can be written back into request context
 - errors are returned as standard CVT erreurs array by field name
 
@@ -273,7 +273,7 @@ Frequent useful options:
 
 ## Create a custom saisie type
 
-Minimum runtime requirement (usable by the plugin #SAISIE):
+Minimum runtime requirement (usable by `#SAISIE`):
 1. create saisies/mon_type.html
 
 To make it configurable/listed by Saisies builders:

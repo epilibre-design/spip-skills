@@ -79,8 +79,8 @@ Inside `modeles/my_modele.html`, all parameters are available via `#ENV`:
 | `#ENV{id_modele}` | Numeric identifier (alias specific to the modèle name) |
 | `#ENV{param}` | Named parameter, **HTML-escaped** (safe) |
 | `#ENV*{param}` | Named parameter, **raw HTML** (when the parameter may contain HTML) |
-| `[(#ENV*{param}|typo)]` | Raw HTML parameter with SPIP inline typography |
-| `[(#ENV*{param}|propre)]` | Raw HTML parameter with full SPIP formatting (multi-paragraph) |
+| `[(#ENV*{param}\|typo)]` | Raw HTML parameter with SPIP inline typography |
+| `[(#ENV*{param}\|propre)]` | Raw HTML parameter with full SPIP formatting (multi-paragraph) |
 | `#ENV{align}` | `left`, `right`, or `center` when alignment is passed |
 | `#ENV{lien}` | URL when called as `[<modele1>->url]` |
 | `#ENV{lien_class}` | CSS class of the link (`spip_out`, `spip_in`, etc.) |

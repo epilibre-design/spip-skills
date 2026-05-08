@@ -10,7 +10,7 @@ For a formulaire named `mon_form` (squelette at `formulaires/mon_form.html`):
 
 ```
 formulaires/
-└── mon_form.html         ← the template (displays data, errors and #SAISIES)
+├── mon_form.html         ← the template (displays data, errors and #SAISIES)
 └── mon_form.php          ← the three contract functions
     (or mon_form/         ← dir layout: charger.php / verifier.php / traiter.php)
 ```
