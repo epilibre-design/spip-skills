@@ -63,7 +63,7 @@ vendor/bin/phpunit --colors --debug --list-suites    # list discovered suites
 <?php
 declare(strict_types=1);
 
-namespace Monplugin\Tests\Filtre;
+namespace MonOrganisation\Plugin\Monplugin\Tests\Filtre;
 
 use PHPUnit\Framework\TestCase;
 
@@ -107,7 +107,7 @@ class MonFiltreTest extends TestCase
 <?php
 declare(strict_types=1);
 
-namespace Monplugin\Tests\Api;
+namespace MonOrganisation\Plugin\Monplugin\Tests\Api;
 
 use PHPUnit\Framework\TestCase;
 
@@ -144,7 +144,7 @@ Extend `Spip\Core\Testing\SquelettesTestCase`. Assertions from this class verify
 <?php
 declare(strict_types=1);
 
-namespace Monplugin\Tests\Squelettes;
+namespace MonOrganisation\Plugin\Monplugin\Tests\Squelettes;
 
 use Spip\Core\Testing\SquelettesTestCase;
 use Spip\Core\Testing\Templating;
@@ -231,7 +231,7 @@ The `OK`/`NOK` convention comes from legacy SPIP tests: the template must output
 <?php
 declare(strict_types=1);
 
-namespace Monplugin\Tests\Sql;
+namespace MonOrganisation\Plugin\Monplugin\Tests\Sql;
 
 use PHPUnit\Framework\TestCase;
 
@@ -310,10 +310,16 @@ There is no required namespace. Conventions seen in SPIP core:
 
 ```php
 namespace Spip\Core\Tests\Filtre;        // SPIP core
-namespace Monplugin\Tests\Filtre;         // plugin (recommended)
+namespace MonOrganisation\Plugin\Monplugin\Tests\Filtre;         // plugin (recommended)
 ```
 
 Declare the namespace in the plugin `composer.json` if present, or let PHPUnit load files through bootstrap.
+
+```json
+{
+    "name": "mon-organisation/plugin/mon-filtre",
+}
+```
 
 ---
 
@@ -329,7 +335,7 @@ Functions to test: {list of functions}
 
 Conventions:
 - Tests in monplugin/tests/{Category}/{NameTest}.php
-- Namespace: Monplugin\Tests\{Category}
+- Namespace: MonOrganisation\Plugin\Monplugin\Tests\{Category}
 - Simple PHP functions: extends TestCase + find_in_path() in setUpBeforeClass()
 - Balises/squelettes: extends SquelettesTestCase + assertOkCode() / assertEqualsCode()
 - Data providers for multiple cases
