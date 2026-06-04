@@ -20,7 +20,7 @@ Use this routing before reading anything else:
 Default routing rule:
 - Start with `references/form-structure.md` for any form template work.
 - Then read `references/cvt-formulaires.md` for any form behavior implemented in PHP.
-- Use `references/plugin-saisies.md` when Saisies is available: declare all fields in PHP via `formulaires_<nom>_saisies()` and leave the HTML file **completely empty**. This is Method 1 (recommended). Only use `#GENERER_SAISIES` when you need custom markup (Method 1b, rare). Only use `#SAISIE` for a single field outside a CVT context (Method 2, most limited).
+- Use `references/plugin-saisies.md` when Saisies is available: declare all fields in PHP via `formulaires_<nom>_saisies()` and leave the HTML file **completely empty**. This is Method 1 (recommended). Only use `#GENERER_SAISIES` when you need custom markup (Method 1b, rare exception).
 - Use `references/plugin-verifier.md` only when CVT validation needs reusable validator rules, normalisation, file validation, or cross-field comparison helpers.
 
 Practical rule of thumb:
@@ -93,7 +93,7 @@ Practical rule of thumb:
 1. `references/form-structure.md` -> confirm the plain SPIP structure would be repetitive enough to justify Saisies
 2. `references/cvt-formulaires.md` -> confirm the base CVT verification would benefit from reusable validators
 3. `references/plugin-saisies.md` -> define standard fields in YAML or arrays when the form is sufficiently field-driven
-4. `references/plugin-saisies.md` -> choose between `#SAISIE` and `#GENERER_SAISIES`
+4. `references/plugin-saisies.md` -> use `#GENERER_SAISIES` only when the empty HTML approach is insufficient and custom markup is required
 5. `references/plugin-verifier.md` -> choose validation rules, comparison rules, and normalisation strategy when the base CVT verifier becomes repetitive
 6. `references/plugin-saisies.md` -> extend with custom saisies when standard field types are not enough
 
