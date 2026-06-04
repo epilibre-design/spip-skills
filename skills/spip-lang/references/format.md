@@ -76,6 +76,7 @@ return [
 - Fichier : `lang/paquet-monplugin_fr.php`
 - Module dans `_T()` : `paquet-monplugin:`
 - Deux clés obligatoires : `{prefix}_description` et `{prefix}_slogan`
+- Les clés sont préfixées par le nom du plugin (ex. `forum_description`, `forum_slogan`), pas par `paquet_`
 - Pas de clés supplémentaires dans ce fichier
 
 ---
@@ -117,9 +118,11 @@ lang SPIP core.
 
 ## Codes langue supportés
 
+SPIP supporte de nombreux codes langue (y compris des variantes régionales). En voici quelques exemples courants :
+
 | Code | Langue |
 |---|---|
-| `fr` | Français (référence par défaut) |
+| `fr` | Français |
 | `en` | Anglais |
 | `es` | Espagnol |
 | `de` | Allemand |
@@ -130,6 +133,7 @@ lang SPIP core.
 | `nl` | Néerlandais |
 
 Le code correspond au suffixe du fichier : `monplugin_en.php`, `monplugin_ar.php`, etc.
+La liste complète des langues est disponible dans `ecrire/lang/` du core SPIP.
 
 ---
 
@@ -137,7 +141,7 @@ Le code correspond au suffixe du fichier : `monplugin_en.php`, `monplugin_ar.php
 
 SPIP résout une clé dans cet ordre :
 1. Langue active (`lang_select()` courant ou `$GLOBALS['spip_lang']`)
-2. Langue de référence déclarée dans `<traduire reference="fr" />`
+2. Langue de référence déclarée dans `<traduire reference="…" />` (définie par le plugin)
 3. Retour de la clé brute (sans le préfixe module, underscores → espaces) si `force = true`
 4. Chaîne vide si `force = false`
 
