@@ -19,7 +19,7 @@ journal(string $message, array $options = []): void
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `qui` | int | current `$GLOBALS['visiteur_session']['id_auteur']` | Author performing the action |
-| `quand` | string | now | Timestamp override (MySQL `DATETIME` format) |
+| `quand` | string | now | Timestamp override (MySQL DATETIME: `YYYY-MM-DD HH:MM:SS`) |
 | `id_objet` | int | 0 | ID of the related objet éditorial |
 | `objet` | string | `''` | Type of the related objet (e.g. `'article'`, `'rubrique'`) |
 | `etat` | string | `''` | State label displayed in the journal list |
@@ -73,7 +73,7 @@ journal(
 
 ## Storage
 
-Entries are stored in the `spip_meta` table (key `journal`) up to SPIP 4.1, and in a dedicated `spip_jobs` mechanism from SPIP 4.2 onward. Do not read this table directly — use `?exec=journal` or the `lire_config('journal')` API if you need programmatic access.
+Entries are stored in the `spip_meta` table under the key `journal`. Do not read this table directly — use `?exec=journal` to browse entries, or `lire_config('journal')` for programmatic access.
 
 ---
 

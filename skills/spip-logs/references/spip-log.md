@@ -69,15 +69,7 @@ Add to `config/mes_options.php` (never commit this):
 define('_LOG_FILTRE_GRAVITE', _LOG_DEBUG);
 ```
 
-Or scope it to a single log type by setting the constant before the call:
-
-```php
-// Temporarily raise the threshold just for this call
-if (!defined('_LOG_FILTRE_GRAVITE')) {
-    define('_LOG_FILTRE_GRAVITE', _LOG_DEBUG);
-}
-spip_log($data, 'monplugin', _LOG_DEBUG);
-```
+`_LOG_FILTRE_GRAVITE` is a global constant for the entire PHP process — once defined it cannot be reverted or scoped to a single call or plugin. Set it only in `config/mes_options.php` for the whole dev environment.
 
 ---
 

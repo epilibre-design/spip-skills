@@ -72,12 +72,12 @@ spip_log(['query' => $query, 'result' => $result], 'monplugin', _LOG_DEBUG);
 journal(string $message, array $options = []): void
 ```
 
-Writes to the `spip_jobs` table (SPIP ≥ 4.2) or `spip_meta`-based journal. Visible at `?exec=journal` in the private space.
+Writes an audit entry to the database. Visible at `?exec=journal` in the private space.
 
 | Option key | Type | Description |
 |---|---|---|
 | `qui` | int | `id_auteur` of the actor (defaults to current logged-in author) |
-| `quand` | string | Timestamp override (ISO format) |
+| `quand` | string | Timestamp override (MySQL DATETIME: `YYYY-MM-DD HH:MM:SS`) |
 | `id_objet` | int | Related object ID |
 | `objet` | string | Related object type (e.g. `'article'`) |
 | `etat` | string | Status label (e.g. `'publie'`, `'erreur'`) |
