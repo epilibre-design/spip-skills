@@ -8,7 +8,7 @@ description: Use when creating, editing, or auditing SPIP language files (lang/p
 # SPIP language files
 
 SPIP stores translatable strings in PHP files under `lang/`. Each plugin declares its
-language module in `paquet.xml`; the reference language is always `fr`.
+language module in `paquet.xml`; by convention the reference language is `fr` (configurable via `<traduire reference="…">`).
 
 ---
 
