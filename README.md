@@ -133,6 +133,39 @@ test -L ~/.claude/skills/spip-plugins && echo "spip-plugins link OK"
 
 4. If a new `skills/spip-*` folder was added, run the symlink install loop again to create its link.
 
+## Tests (Anthropic skill-creator)
+
+Prerequisites:
+
+1. Install the plugin in Claude Code:
+
+```text
+/plugin install skill-creator
+```
+
+Running evals in Claude Code:
+
+1. Open the repository (`/src/spip`) in Claude Code.
+2. Run a natural-language request, for example:
+
+```text
+Run evals on my spip-formulaires skill
+```
+
+3. Repeat the same command for other skills by changing the skill name.
+
+Expected artifacts:
+
+- `skills/<skill>-workspace/iteration-*/benchmark.json`
+- `skills/<skill>-workspace/iteration-*/benchmark.md`
+- `skills/<skill>-workspace/iteration-*/review.html`
+
+Quick interpretation:
+
+- `benchmark.json`: structured results by eval/assertion.
+- `benchmark.md`: readable summary (baseline vs with_skill, deltas, trends).
+- `review.html`: detailed report, useful for qualitative review.
+
 ## Troubleshooting
 
 - `No such file or directory`: verify the source path exists in this repository.
