@@ -1,0 +1,13 @@
+<paquet
+    prefix="acme"
+    categorie="outil"
+    version="1.0.0"
+    etat="stable"
+    compatibilite="[4.2.0;4.*]">
+
+  <nom>Acme Plugin</nom>
+  <auteur>Nom Auteur</auteur>
+  <licence>GNU/GPL</licence>
+
+  <pipeline nom="post_edition" inclure="acme_pipelines.php" />
+</paquet>

@@ -1,0 +1,71 @@
+{
+  "skill_name": "spip-plugins",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Écris un paquet.xml minimal valide pour un plugin SPIP 4.2+ avec le prefix 'acme', compatible jusqu'à SPIP 4.x, qui aura besoin d'une table en base de données.",
+      "expected_output": "Un fichier paquet.xml contenant tous les attributs obligatoires (prefix, categorie, version, etat, compatibilite) ainsi que l'attribut schema qui déclenche le mécanisme d'installation.",
+      "files": [],
+      "expectations": [
+        "L'attribut schema est présent sur l'élément <paquet>",
+        "L'attribut compatibilite utilise la notation [4.2.0;4.*] ou équivalente avec borne inférieure et supérieure",
+        "Les quatre attributs obligatoires prefix, categorie, version, etat sont présents",
+        "Les balises enfants <nom>, <auteur>, <licence> sont présentes",
+        "Aucune balise <install> n'est présente (elle n'existe pas dans le DTD paquet.xml)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Dans un plugin SPIP avec le prefix 'acme', écris le handler PHP pour le pipeline post_edition qui doit exécuter du code uniquement quand un article est modifié.",
+      "expected_output": "Une fonction acme_post_edition($flux) qui utilise $flux['args']['objet'] pour filtrer les articles, lit $flux['args']['id_objet'] pour l'identifiant, et retourne $flux.",
+      "files": [],
+      "expectations": [
+        "La fonction est nommée acme_post_edition($flux)",
+        "Le filtre utilise $flux['args']['objet'] === 'article' (clé canonique, pas $flux['args']['table'])",
+        "L'identifiant de l'objet est lu via $flux['args']['id_objet']",
+        "La fonction retourne $flux dans tous les cas, y compris si la condition n'est pas remplie"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Dans un plugin SPIP, écris le code PHP pour récupérer les 5 articles publiés les plus récents de la rubrique 12.",
+      "expected_output": "Utilisation de sql_allfetsel ou sql_select+sql_fetch avec les bons arguments. Aucun SQL brut ni appel PDO/mysqli.",
+      "files": [],
+      "expectations": [
+        "La fonction sql_allfetsel ou sql_select est utilisée (pas de requête SQL brute)",
+        "La table 'spip_articles' est passée comme argument",
+        "La condition statut='publie' est présente",
+        "La condition sur id_rubrique=12 ou intval(12) est présente",
+        "Le tri date DESC (ou {inverse}{par date}) est appliqué",
+        "La limite est fixée à 5 résultats via le paramètre limit ou '0,5'"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Le fichier paquet.xml ci-joint déclare un plugin 'acme' avec une table spip_acme. Quels fichiers faut-il créer pour gérer l'installation et la désinstallation ? Donne leur nom exact et le squelette de code attendu.",
+      "expected_output": "Un fichier acme_administrations.php à la racine du plugin, chargé par convention de nommage (pas par paquet.xml), contenant acme_upgrade($nom_meta_base_version, $version_cible) et acme_vider_tables($nom_meta_base_version).",
+      "files": ["files/paquet-sans-schema.xml"],
+      "expectations": [
+        "Le fichier s'appelle acme_administrations.php (convention {prefix}_administrations.php)",
+        "La fonction d'installation est nommée acme_upgrade (pas acme_install ni acme_activate)",
+        "acme_upgrade reçoit les paramètres $nom_meta_base_version et $version_cible",
+        "La fonction de désinstallation est nommée acme_vider_tables (pas acme_uninstall)",
+        "acme_vider_tables appelle sql_drop_table et effacer_meta",
+        "La réponse mentionne que le fichier est chargé par convention de nommage, sans balise <install> dans paquet.xml"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Dans une action SPIP (fichier action/supprimer_item.php) pour le plugin 'acme', comment vérifier que l'utilisateur courant est autorisé à supprimer un objet de type 'item' avant d'effectuer l'opération ?",
+      "expected_output": "Utilisation de autoriser('supprimer', 'item', $id_item) après include_spip('inc/autoriser'), avec retour anticipé ou erreur si non autorisé.",
+      "files": [],
+      "expectations": [
+        "include_spip('inc/autoriser') est appelé avant autoriser()",
+        "La fonction autoriser() est utilisée (pas une vérification ad hoc sur $GLOBALS['visiteur_session'])",
+        "Le premier argument de autoriser() est 'supprimer'",
+        "Le deuxième argument est 'item' et le troisième est l'identifiant de l'objet",
+        "Un comportement défensif est implémenté quand autoriser() retourne false (return, spip_log, ou erreur)"
+      ]
+    }
+  ]
+}

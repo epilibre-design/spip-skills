@@ -1,0 +1,65 @@
+{
+  "skill_name": "spip-logs",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Dans un plugin SPIP avec le prefix 'acme', écris l'appel pour logger un avertissement indiquant que l'API externe n'a retourné aucun résultat. Le log doit aller dans un fichier propre au plugin, pas dans spip.log.",
+      "expected_output": "spip_log('message', 'acme', _LOG_AVERTISSEMENT) — trois arguments, $type='acme' pour créer tmp/log/acme.log, constante SPIP correcte.",
+      "files": [],
+      "expectations": [
+        "La fonction spip_log() est utilisée",
+        "Le deuxième argument ($type) est 'acme' ou similaire (pas 'spip')",
+        "La constante de gravité est _LOG_AVERTISSEMENT (pas LOG_WARNING, ni WARNING, ni 3)",
+        "La réponse mentionne que le log sera écrit dans tmp/log/acme.log (pas logs/ ni var/log/)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "J'ajoute des traces de debug dans mon plugin SPIP avec spip_log($data, 'acme', _LOG_DEBUG) mais rien n'apparaît dans les logs. Pourquoi et comment y remédier en environnement de développement ?",
+      "expected_output": "Explication du mécanisme _LOG_FILTRE_GRAVITE : la valeur par défaut est _LOG_INFO (6), _LOG_DEBUG vaut 8, donc 8 > 6 → message ignoré. Solution : define('_LOG_FILTRE_GRAVITE', _LOG_DEBUG) dans config/mes_options.php.",
+      "files": [],
+      "expectations": [
+        "La réponse explique que _LOG_DEBUG (valeur 8) est supérieur au seuil par défaut _LOG_FILTRE_GRAVITE (_LOG_INFO = 6)",
+        "La règle d'écriture est énoncée : un message est écrit seulement si gravite <= _LOG_FILTRE_GRAVITE",
+        "La solution proposée est de redéfinir _LOG_FILTRE_GRAVITE à _LOG_DEBUG dans config/mes_options.php",
+        "La réponse ne suggère pas de modifier les fichiers du core SPIP"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Dans un pipeline post_edition d'un plugin SPIP, enregistre un événement d'audit visible par les administrateurs dans l'espace privé, indiquant que l'article #42 a été publié par l'auteur $id_auteur.",
+      "expected_output": "Appel à journal() avec le message traduit et les options id_objet, objet, etat, qui — visible à ?exec=journal dans l'espace privé.",
+      "files": [],
+      "expectations": [
+        "La fonction journal() est utilisée (pas spip_log())",
+        "L'option id_objet est passée avec la valeur 42 (ou $id_article)",
+        "L'option objet est passée avec la valeur 'article'",
+        "L'option etat est passée (par exemple 'publie')",
+        "La réponse mentionne que l'entrée est visible à ?exec=journal dans l'espace privé"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Quelles sont les différences entre spip_log() et journal() ? Dans quel cas utiliser l'un plutôt que l'autre ?",
+      "expected_output": "spip_log() écrit dans des fichiers texte rotatifs dans tmp/log/ (usage développeur). journal() écrit en base de données, visible à ?exec=journal (usage audit administrateur).",
+      "files": [],
+      "expectations": [
+        "La réponse identifie que spip_log() écrit dans des fichiers dans tmp/log/",
+        "La réponse identifie que journal() écrit en base de données",
+        "La réponse mentionne ?exec=journal comme interface de consultation pour journal()",
+        "La réponse distingue l'audience : développeurs pour spip_log(), administrateurs pour journal()"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Je veux logger un tableau PHP $debug_data (contenant des clés 'query' et 'result') avec spip_log() dans mon plugin. Est-ce que je dois appeler var_export() moi-même avant de le passer ?",
+      "expected_output": "Non. spip_log() appelle var_export() automatiquement sur tout argument non-string. Passer le tableau directement est correct et préférable.",
+      "files": [],
+      "expectations": [
+        "La réponse indique que var_export() n'est pas nécessaire — spip_log() le fait automatiquement",
+        "La réponse montre qu'on peut passer un tableau directement : spip_log($debug_data, 'monplugin', _LOG_DEBUG)",
+        "La réponse ne suggère pas json_encode() ou print_r() comme prétraitement obligatoire"
+      ]
+    }
+  ]
+}

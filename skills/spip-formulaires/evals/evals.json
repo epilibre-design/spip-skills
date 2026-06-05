@@ -1,0 +1,69 @@
+{
+  "skill_name": "spip-formulaires",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Écris le template HTML complet pour un formulaire CVT SPIP nommé 'inscription' avec un champ 'nom' obligatoire et un champ 'email'. Inclus les messages globaux de succès/erreur.",
+      "expected_output": "Un template avec le wrapper formulaire_spip, les blocs reponse_formulaire correctement nommés, les champs dans .editer-groupe/.editer, et la gestion des erreurs par champ.",
+      "files": [],
+      "expectations": [
+        "Le wrapper externe contient au minimum les classes formulaire_spip et formulaire_editer",
+        "Les messages globaux utilisent les classes reponse_formulaire reponse_formulaire_ok et reponse_formulaire reponse_formulaire_erreur (pas message_ok ni alert-success)",
+        "Les messages globaux utilisent #ENV*{message_ok} et #ENV*{message_erreur} avec l'étoile simple",
+        "Chaque champ est dans un div.editer.editer_{nom_champ} (pas ul/li)",
+        "Les erreurs de champ utilisent #ENV**{erreurs}|table_valeur{nom_champ} avec la double étoile",
+        "Le texte d'erreur est dans un élément avec la classe erreur_message",
+        "Le submit est dans un élément avec la classe boutons"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Dans un template de formulaire SPIP, comment afficher le message d'erreur du champ 'titre' et appliquer conditionnellement la classe CSS 'erreur' au bloc parent ?",
+      "expected_output": "Utilisation de #ENV**{erreurs}|table_valeur{titre} (double étoile) pour lire l'erreur, et du conditionnel SPIP [ (#ENV**{erreurs}|table_valeur{titre}|oui)erreur] pour la classe.",
+      "files": [],
+      "expectations": [
+        "La double étoile ** est utilisée dans #ENV**{erreurs} (et non une étoile simple ou sans étoile)",
+        "Le filtre table_valeur{titre} est utilisé pour extraire l'erreur du champ titre",
+        "Le filtre |oui est utilisé pour convertir la chaîne en booléen dans le conditionnel de classe",
+        "La classe erreur_message est appliquée à l'élément contenant le texte d'erreur",
+        "La classe erreur est appliquée conditionnellement au div.editer parent (pas au label ni à l'input)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Examine le template de formulaire ci-joint et liste tous les problèmes de structure ou de classes CSS selon les conventions SPIP.",
+      "expected_output": "Identification des erreurs : mauvaises classes sur les messages globaux, dot-notation incorrecte pour les erreurs, ul/li au lieu de div pour editer-groupe, input submit sans classe, étoile manquante.",
+      "files": ["files/form-broken.html"],
+      "expectations": [
+        "La réponse signale que les classes message_ok / message_erreur sont incorrectes et doit proposer reponse_formulaire reponse_formulaire_ok / reponse_formulaire_erreur",
+        "La réponse signale que #ENV{erreurs.titre} (dot-notation) est invalide et propose #ENV**{erreurs}|table_valeur{titre}",
+        "La réponse signale que l'utilisation de ul/li pour editer-groupe n'est pas conforme (div requis depuis SPIP 3.1)",
+        "La réponse signale que #ENV{message_ok} devrait être #ENV*{message_ok} (étoile simple pour éviter le double-échappement)",
+        "La réponse signale l'absence de la classe submit sur le bouton"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Dans la fonction charger() d'un formulaire CVT 'mon_form', comment indiquer que le formulaire ne doit pas s'afficher parce que l'utilisateur n'a pas les droits ?",
+      "expected_output": "Retourner false depuis charger() pour ne rien afficher, ou une chaîne pour afficher un message explicatif. Pas de die(), header(), ni redirect.",
+      "files": [],
+      "expectations": [
+        "La réponse mentionne que charger() peut retourner false pour empêcher l'affichage du formulaire",
+        "La réponse mentionne qu'une chaîne de retour affiche un message à la place du formulaire",
+        "La réponse ne propose pas die(), exit(), ou header() comme mécanisme de contrôle d'accès dans charger()"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Pour un formulaire avec de nombreux champs similaires, tu envisages d'utiliser le plugin Saisies. Quelle est la méthode recommandée et comment l'implémenter ?",
+      "expected_output": "Method 1 : déclarer les saisies dans formulaires_nom_saisies() en PHP, laisser le fichier HTML vide. Ne pas utiliser #GENERER_SAISIES comme point de départ.",
+      "files": [],
+      "expectations": [
+        "La réponse décrit la méthode avec formulaires_{nom}_saisies() (ou _charger retournant _saisies) en PHP",
+        "La réponse indique que le fichier HTML doit être vide (ou ne contenir que #INCLURE) avec cette méthode",
+        "La réponse présente #GENERER_SAISIES comme une exception rare (markup custom) et non comme l'approche par défaut",
+        "La réponse ne présente pas #GENERER_SAISIES comme la première étape à utiliser"
+      ]
+    }
+  ]
+}

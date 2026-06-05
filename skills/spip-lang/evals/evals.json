@@ -1,0 +1,65 @@
+{
+  "skill_name": "spip-lang",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Crée le fichier de langue de référence français pour un plugin SPIP avec le prefix 'acme'. Le fichier doit contenir : un titre de liste d'objets, un bouton d'ajout, un message d'erreur pour champ vide (avec placeholder @champ@), et le compteur singulier/pluriel d'objets.",
+      "expected_output": "Un fichier lang/acme_fr.php avec return [...] (pas $GLOBALS['i18n']), l'en-tête fixe, des clés en snake_case avec les préfixes conventionnels, des sections alphabétiques commentées, et les deux clés info_1_objet / info_nb_objets pour le pluriel.",
+      "files": [],
+      "expectations": [
+        "Le fichier utilise return [...] et non $GLOBALS['i18n']['acme'] = [...]",
+        "L'en-tête contient '// This is a SPIP language file  --  Ceci est un fichier langue de SPIP'",
+        "La clé d'erreur utilise le préfixe erreur_ (ex: erreur_champ_vide)",
+        "La clé de bouton utilise le préfixe bouton_ (ex: bouton_ajouter)",
+        "Le placeholder dynamique est au format @champ@ (pas {champ} ni %s ni :champ)",
+        "Deux clés distinctes pour le singulier et le pluriel : info_1_objet et info_nb_objets",
+        "Le fichier n'a pas de balise de fermeture ?>"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Dans un squelette SPIP (.html), comment afficher la chaîne traduite correspondant à la clé 'titre_liste_objets' du module 'acme' ?",
+      "expected_output": "La syntaxe courte recommandée est <:acme:titre_liste_objets:>. La variante avec filtre [(#VAL{acme:titre_liste_objets}|_T)] est valide mais non idiomatique pour les clés statiques.",
+      "files": [],
+      "expectations": [
+        "La réponse propose la syntaxe <:acme:titre_liste_objets:> (avec le module comme préfixe)",
+        "La réponse n'utilise pas _T() directement dans le HTML comme appel PHP brut (<?php echo _T(…) ?>)",
+        "Si [(#VAL{…}|_T)] est mentionné, il est présenté comme alternatif et non comme méthode principale pour les clés statiques"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "En PHP dans un plugin SPIP, affiche le message 'Le champ titre est obligatoire' en utilisant la clé 'acme:erreur_champ_vide' qui contient 'Le champ @champ@ est obligatoire'.",
+      "expected_output": "_T('acme:erreur_champ_vide', ['champ' => 'titre']) — format module:clé, tableau d'arguments pour substitution des @placeholder@.",
+      "files": [],
+      "expectations": [
+        "La fonction _T() est utilisée",
+        "La clé est au format 'acme:erreur_champ_vide' (module:clé)",
+        "Le tableau d'arguments est ['champ' => 'titre'] pour substituer @champ@",
+        "La réponse ne propose pas str_replace() ou sprintf() pour la substitution"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Quelles sont les deux clés obligatoires du fichier lang/paquet-acme_fr.php et quels noms doivent-elles avoir ?",
+      "expected_output": "Les clés acme_description et acme_slogan, préfixées par le prefix du plugin. Accessibles via le module paquet-acme:.",
+      "files": [],
+      "expectations": [
+        "La clé de description s'appelle acme_description (pas description ni plugin_description)",
+        "La clé de slogan s'appelle acme_slogan (pas slogan ni titre)",
+        "La réponse mentionne que le module à utiliser pour _T() est paquet-acme: (pas acme:)"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Dans un plugin SPIP, j'envoie un email à un utilisateur dont la langue préférée est 'en' alors que le site est en 'fr'. Comment utiliser _T() pour obtenir le sujet de l'email dans la langue de l'utilisateur ?",
+      "expected_output": "Utiliser lang_select('en') avant _T(), puis lang_select(null) pour restaurer la langue précédente. Mécanisme de pile, pas d'argument lang à _T().",
+      "files": [],
+      "expectations": [
+        "lang_select('en') est appelé avant _T()",
+        "lang_select(null) est appelé après pour restaurer la langue précédente",
+        "La réponse n'invente pas un troisième argument langue à _T() (qui n'existe pas)"
+      ]
+    }
+  ]
+}

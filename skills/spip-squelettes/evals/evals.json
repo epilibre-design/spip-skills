@@ -1,0 +1,76 @@
+{
+  "skill_name": "spip-squelettes",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Écris le code squelette SPIP pour afficher une liste paginée (10 par page) des articles publiés de la rubrique courante, du plus récent au plus ancien. Inclus un message 'Aucun article' quand la liste est vide, et le bloc de navigation de pagination.",
+      "expected_output": "Une BOUCLE_arts(ARTICLES) avec {id_rubrique}{par date}{inverse}{pagination 10}, la section pré (B_arts) pour la liste, la section alternative (//B_arts) pour le message vide, et #PAGINATION dans la section post ou après la boucle.",
+      "files": [],
+      "expectations": [
+        "La boucle utilise la table ARTICLES",
+        "Le critère {par date}{inverse} est présent pour le tri du plus récent au plus ancien",
+        "Le critère {pagination 10} est présent",
+        "La balise #PAGINATION est présente en dehors du corps de la boucle (section post ou après </BOUCLE>)",
+        "Une alternative zéro-résultat est présente avec la syntaxe <//B_nom>"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Dans un squelette SPIP, affiche l'article le plus récent de la rubrique en vedette, puis la liste des autres articles en excluant celui déjà affiché. Utilise le mécanisme {doublons}.",
+      "expected_output": "Deux boucles portant toutes les deux {doublons} : la première (vedette, limit 1) marque l'article, la seconde (reste) le saute automatiquement.",
+      "files": [],
+      "expectations": [
+        "Le critère {doublons} est présent sur la PREMIÈRE boucle (vedette)",
+        "Le critère {doublons} est présent sur la DEUXIÈME boucle (reste)",
+        "Les deux boucles utilisent la table ARTICLES",
+        "La boucle vedette a le critère {limit 1} ou {0,1}"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Écris un squelette SPIP qui affiche l'arborescence complète des rubriques sous forme de liste ul/li imbriquées récursivement.",
+      "expected_output": "Une BOUCLE récursive utilisant <BOUCLE_sous(BOUCLE_rubs) /> pour s'appeler elle-même, avec {id_parent} comme critère de départ.",
+      "files": [],
+      "expectations": [
+        "La boucle principale utilise {id_parent} comme critère (pas {racine} seul sans récursion)",
+        "La récursion utilise la syntaxe <BOUCLE_sous(BOUCLE_rubs) /> ou équivalente avec le nom de la boucle parente comme type",
+        "La structure ul/li est correctement imbriquée (le ul récursif est à l'intérieur du li courant)"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Dans un squelette SPIP, inclus un fragment 'inc-liste-articles' qui doit se recharger en AJAX quand l'utilisateur navigue entre les pages de pagination.",
+      "expected_output": "INCLURE{fond=inc-liste-articles,env}{ajax} — le {ajax} est sur la balise INCLURE, pas sur le critère {pagination} de la boucle interne.",
+      "files": [],
+      "expectations": [
+        "Le modificateur {ajax} est sur la balise INCLURE (et non sur le critère de pagination de la boucle interne)",
+        "La syntaxe est <INCLURE{fond=inc-liste-articles,env}{ajax} /> ou équivalent",
+        "La réponse ne place pas {ajax} sur le critère {pagination} de la boucle interne du fragment"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Dans un squelette SPIP, affiche le logo de la rubrique courante redimensionné à exactement 400×250 pixels (crop centré). Quelle est la chaîne de filtres correcte ?",
+      "expected_output": "[(#LOGO_RUBRIQUE|image_reduire{400,250}|image_recadre{400,250})] — image_reduire en premier pour éviter l'upscaling par image_recadre.",
+      "files": [],
+      "expectations": [
+        "image_reduire est appliqué AVANT image_recadre dans la chaîne de filtres",
+        "image_reduire est appelé avec au moins la largeur 400 comme argument",
+        "image_recadre est appelé avec les dimensions 400 et 250",
+        "La réponse ne propose pas image_recadre seul sans image_reduire préalable",
+        "La balise utilisée est #LOGO_RUBRIQUE (pas #LOGO_ARTICLE)"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "J'ai deux squelettes : article.html et un fragment inclus inc-related.html. J'utilise {doublons} dans article.html pour marquer des articles déjà affichés, et je veux que inc-related.html exclue aussi ces articles. Comment passer les doublons au fragment inclus ?",
+      "expected_output": "Passer doublons explicitement via INCLURE : <INCLURE{fond=inc-related,doublons}>. Les doublons ne sont pas transmis automatiquement aux fragments inclus.",
+      "files": [],
+      "expectations": [
+        "La réponse indique que les doublons ne sont PAS transmis automatiquement aux fragments inclus via INCLURE",
+        "La solution proposée est de passer doublons explicitement dans INCLURE : <INCLURE{fond=inc-related,doublons}>",
+        "La réponse ne suggère pas que {doublons} fonctionne automatiquement à travers les INCLURE"
+      ]
+    }
+  ]
+}

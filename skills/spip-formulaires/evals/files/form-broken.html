@@ -1,0 +1,25 @@
+<div class="formulaire_spip">
+  <p class="message_ok">[(#ENV{message_ok})]</p>
+  <p class="message_erreur">[(#ENV{message_erreur})]</p>
+
+  <form method="post" action="#ENV{action}">
+    #ACTION_FORMULAIRE{#ENV{action}}
+
+    <ul class="editer-groupe">
+      <li class="editer editer_titre">
+        <label for="titre">Titre</label>
+        [(#ENV{erreurs.titre})]
+        <input type="text" name="titre" id="titre" value="[(#ENV{titre})]" />
+      </li>
+      <li class="editer editer_email">
+        <label for="email">Email</label>
+        [(#ENV{erreurs.email})]
+        <input type="email" name="email" id="email" value="[(#ENV{email})]" />
+      </li>
+    </ul>
+
+    <p class="boutons">
+      <input type="submit" value="Envoyer" />
+    </p>
+  </form>
+</div>
