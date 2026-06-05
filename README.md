@@ -37,6 +37,21 @@ New-Item -ItemType Directory -Force "$HOME/.claude/skills" | Out-Null
 Copy-Item -Recurse -Force "skills/spip-*" "$HOME/.claude/skills/"
 ```
 
+## Install (symlink-based)
+
+Run from the repository root.
+
+Linux/macOS:
+
+```bash
+mkdir -p ~/.claude/skills
+for d in skills/spip-*; do
+	name="$(basename "$d")"
+	rm -rf "$HOME/.claude/skills/$name"
+	ln -s "$PWD/$d" "$HOME/.claude/skills/$name"
+done
+```
+
 ## Installation on claude.ai
 
 Custom skill installation is available in Customize > Skills.
@@ -98,10 +113,25 @@ Test-Path "$HOME/.claude/skills/spip-logs/SKILL.md"
 
 ## Update workflow
 
+### If you used copy-based install
+
 1. Edit files in `skills/<name>/`.
-2. Re-copy the updated skill folder to `~/.claude/skills/`.
+2. Re-copy updated folders to `~/.claude/skills/` (Linux/macOS: `cp -R skills/spip-* ~/.claude/skills/`, PowerShell: `Copy-Item -Recurse -Force "skills/spip-*" "$HOME/.claude/skills/"`).
 3. Verify the skill locally.
 4. Commit changes in this repository.
+
+### If you used symlink-based install
+
+1. Edit files in `skills/<name>/`.
+2. No re-copy needed: symlinks point to your working tree, changes are already reflected.
+3. Verify symlinks and skill files:
+
+```bash
+ls -l ~/.claude/skills/spip-*
+test -L ~/.claude/skills/spip-plugins && echo "spip-plugins link OK"
+```
+
+4. If a new `skills/spip-*` folder was added, run the symlink install loop again to create its link.
 
 ## Troubleshooting
 
