@@ -1,8 +1,9 @@
 ---
 name: spip-squelettes
-description: Use when working in a SPIP squelettes folder, authoring BOUCLE loops,
-  BALISE tags, critères, filtres, INCLURE fragments, or native formulaires. For
-  web integrators building SPIP templates without PHP. Not for plugin development.
+description: Use for any SPIP template question — BOUCLE loops, balises, critères,
+  filtres, INCLURE, pagination, image filters, recursive trees, AJAX reloads. Covers
+  public squelettes and plugin squelettes (espace privé, modèles). Trigger even when
+  the user doesn't say "squelette". Not for PHP hooks/pipelines → use spip-plugins.
 ---
 
 # SPIP — Squelettes Reference
