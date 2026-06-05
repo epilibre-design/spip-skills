@@ -1,348 +1,336 @@
-# Saisies for SPIP forms - actionable reference
+# Saisies — reference
 
-This plugin provides declarative field definitions, `#SAISIE`, `#GENERER_SAISIES`, and helper APIs around form field rendering and validation.
-You must install it manually or specify the dependency with the tag `<necessite nom="saisie" compatibilite="[3.3.0;]" />` in your `paquet.xml`.
+This plugin adds a `formulaires_<nom>_saisies()` function to the CVT contract that lets
+you declare all fields in PHP. SPIP then generates the complete HTML automatically.
 
-## What to use when
+Require it in `paquet.xml`:
+```xml
+<necessite nom="saisies" compatibilite="[3.3.0;]" />
+```
 
-Use Saisies in 3 modes:
-1. Single field rendering in a template with `#SAISIE`
-2. Whole form rendering from a list with `#GENERER_SAISIES`
-3. CVT validation from the same list with `saisies_verifier()`
+---
 
-If you need dynamic conditions between fields, use option `afficher_si`.
-If you need reusable business checks, use `verifier` definitions per field.
+## The fundamental rule: empty HTML file
 
-## Canonical data model for one field
+When using the PHP API, **leave the HTML file of the CVT form completely empty.**
 
-A field declaration is an associative array with this shape:
+```
+formulaires/
+├── mon_form.php   ← all logic + saisies() function
+└── mon_form.html  ← intentionally empty
+```
+
+The empty file must exist (SPIP needs it for form routing), but putting anything inside it
+disables the automatic scaffolding that gives you multi-step forms, AJAX, error display,
+and the submit button — for free.
+
+Only fill the HTML file when you need to take full control of the markup (Method 1b, rare).
+
+---
+
+## Method 1 — PHP API (recommended, covers 99% of cases)
+
+### Canonical data model for one field
 
 ```php
 [
-	'saisie' => 'input',
-	'options' => [
-		'nom' => 'email',
-		'label' => 'Email',
-		'obligatoire' => 'on',
-		'placeholder' => 'name@example.net',
-	],
-	'verifier' => [
-		'type' => 'email',
-		'options' => [],
-	],
+    'saisie' => 'input',          // field type
+    'options' => [
+        'nom'          => 'email', // mandatory for real inputs
+        'label'        => 'Email',
+        'obligatoire'  => 'on',
+        'placeholder'  => 'name@example.net',
+    ],
+    'verifier' => [               // optional — requires plugin Vérifier
+        'type'    => 'email',
+        'options' => [],
+    ],
+]
+```
+
+### Full CVT pattern (copy-paste ready)
+
+PHP file — `formulaires/mon_form.php`:
+
+```php
+<?php
+if (!defined('_ECRIRE_INC_VERSION')) { return; }
+
+function formulaires_mon_form_saisies_dist(): array {
+    return [
+        // Global form options (optional)
+        'options' => [
+            'texte_submit'       => 'Envoyer',
+            'obligatoire_defaut' => false,
+            'ajax'               => true,
+        ],
+        // Fields
+        [
+            'saisie'  => 'input',
+            'options' => [
+                'nom'         => 'email',
+                'label'       => 'Email',
+                'obligatoire' => 'on',
+            ],
+            'verifier' => ['type' => 'email'],
+        ],
+        [
+            'saisie'  => 'textarea',
+            'options' => [
+                'nom'   => 'message',
+                'label' => 'Message',
+            ],
+            'verifier' => [
+                'type'    => 'taille',
+                'options' => ['min' => 10],
+            ],
+        ],
+    ];
+}
+
+// charger() is optional — add it when you need default values or extra context variables.
+// verifier() is optional for purely declarative validation, but must be implemented
+// explicitly whenever custom checks are required beyond what Saisies handles.
+
+function formulaires_mon_form_traiter_dist(): array {
+    // read posted values with _request('nom_du_champ')
+    return ['message_ok' => 'Formulaire envoyé.'];
+}
+```
+
+HTML file — `formulaires/mon_form.html`: **leave completely empty**
+
+```html
+
+```
+
+That's all. Saisies generates the full form wrapper, field layout, error messages, and submit
+button from the `saisies()` declaration.
+
+---
+
+## Global form options
+
+Place under the `'options'` key at the root of the `saisies()` return array:
+
+| Option | Values | Default | Effect |
+|---|---|---|---|
+| `texte_submit` | string | `<:bouton_enregistrer:>` | Submit button label |
+| `obligatoire_defaut` | true/false | false | Mark all fields required by default |
+| `ajax` | true/false | false | AJAX submission |
+| `etapes_activer` | true/false | false | Multi-step form mode |
+| `verifier_valeurs_acceptables` | true/false | false | Validate against declared values |
+| `conteneur_class` | string | — | Extra CSS class on the form wrapper |
+
+---
+
+## Nested fields — fieldset
+
+```php
+[
+    'saisie'  => 'fieldset',
+    'options' => [
+        'nom'   => 'mon_groupe',
+        'label' => 'Mon groupe',
+    ],
+    'saisies' => [
+        [
+            'saisie'  => 'input',
+            'options' => ['nom' => 'prenom', 'label' => 'Prénom'],
+        ],
+        // …
+    ],
+]
+```
+
+Nested data uses slash notation for `nom`:
+```php
+'nom' => 'adresse/ville'
+// retrieved in PHP: $adresse = _request('adresse'); $ville = $adresse['ville'];
+```
+
+---
+
+## Conditional display with `afficher_si`
+
+```php
+'options' => [
+    'nom'         => 'siret',
+    'label'       => 'SIRET',
+    'afficher_si' => '@type_contact@ == "pro"',
+]
+```
+
+Supported operators: `==`, `!=`, `>`, `>=`, `<`, `<=`, `IN`, `!IN`, `MATCH`, `!MATCH`
+
+Hidden fields are excluded from verification and can be reset to empty string after validation.
+
+---
+
+## Verifier integration
+
+One verifier:
+```php
+'verifier' => ['type' => 'email']
+```
+
+Multiple verifiers (plugin ≥ 3.23.0, use `verifiers` plural key):
+```php
+'verifiers' => [
+    ['type' => 'email'],
+    ['type' => 'taille', 'options' => ['max' => 180]],
+]
+```
+
+Behavior: `obligatoire` check runs first, then each verifier in order. Normalized values are
+written back into request context. Errors are returned as a standard CVT `erreurs` array keyed
+by field name.
+
+---
+
+## Method 1b — `#GENERER_SAISIES` (exception, not the default)
+
+Use only when the automatic HTML scaffolding is not enough and you need to control the markup
+yourself. Start from the stripped-down version of Saisies' own default template
+(`formulaires/inc-saisies-cvt.html`):
+
+```spip
+[(#ENV**{_saisies/options/ajax}|oui)
+<div class="ajax">
+]
+<div class="
+    formulaire_spip
+    formulaire_#ENV{form}
+    [(#ENV{_etape}|oui)formulaire_multietapes]
+    [(#ENV**{_saisies/options/conteneur_class})]"
+    [(#ENV{_saisies}|saisies_dont_avec_option{afficher_si}|oui) data-avec-afficher_si="true"]
+>
+    [<div class="reponse_formulaire reponse_formulaire_ok" role="status">(#ENV**{message_ok})</div>]
+    [<div class="reponse_formulaire reponse_formulaire_erreur" role="alert">(#ENV**{message_erreur})</div>]
+
+    [(#ENV{editable}|oui)
+    <form method="post"
+        action="#ENV{action}"
+        enctype="multipart/form-data"
+    >
+        <div>
+            #ACTION_FORMULAIRE{#ENV{action}}
+            <div class="editer-groupe">
+                #GENERER_SAISIES{#ENV{_saisies}}
+            </div>
+            <!--extra-->
+            <INCLURE{fond=formulaires/inc-saisies-cvt-boutons, env} />
+        </div>
+    </form>
+    ]
+</div>
+[(#ENV**{_saisies/options/ajax}|oui)
+</div>
 ]
 ```
 
 Notes:
-- saisie is the field type
-- options.nom is mandatory for real input fields
-- verifier can be a single object or a list of verifier objects
+- `#ENV{_saisies}` with underscore — prevents HTML entity conversion of the array
+- The submit button is generated by `inc-saisies-cvt-boutons` via the `texte_submit` option — do not write it manually
+- `<!--extra-->` is a marker SPIP uses to inject extra saisies (extra, bigup…) — keep it
+- The AJAX wrapper is conditional on the form's `ajax` option
+- For multi-step forms, see `formulaires/inc-saisies-cvt-etapes-*.html` in the plugin sources
 
-## Quick start 1: render one field with #SAISIE
-
-Template call:
-
-```spip
-#SAISIE{input,email,
-	label=Email,
-	obligatoire=on,
-	placeholder=name@example.net}
-```
-
-Operational behavior:
-- `#SAISIE` injects standard context automatically:
-	- nom
-	- valeur from `#ENV*{nom}`
-	- erreurs
-	- type_saisie
-	- fond=saisies/_base
-- You can pass extra options directly in call arguments
-
-Use this when:
-- You need 1 to a few fields
-- You do not need a centralized list
-
-## Quick start 2: render many fields with `#GENERER_SAISIES`
-
-In PHP (form saisies function):
-
+You must also call `saisies_verifier()` explicitly in `verifier()`:
 ```php
-function formulaires_mon_form_saisies_dist(): array {
-	return [
-		[
-			'saisie' => 'input',
-			'options' => [
-				'nom' => 'nom',
-				'label' => 'Nom',
-				'obligatoire' => 'on',
-			],
-		],
-		[
-			'saisie' => 'input',
-			'options' => [
-				'nom' => 'email',
-				'label' => 'Email',
-			],
-			'verifier' => [
-				'type' => 'email',
-			],
-		],
-	];
-}
-```
-
-In template:
-
-```spip
-#GENERER_SAISIES{#ENV{_saisies}}
-```
-
-Equivalent shortcut:
-- `#GENERER_SAISIES{#TABLEAU}` == `#INCLURE{fond=inclure/generer_saisies,env,saisies=#TABLEAU}`
-
-## CVT pattern ready to copy
-
-PHP file:
-
-```php
-if (!defined('_ECRIRE_INC_VERSION')) {
-	return;
-}
-
-function formulaires_mon_form_charger_dist(): array {
-	return [];
-}
-
-function formulaires_mon_form_saisies_dist(): array {
-	return [
-		[
-			'saisie' => 'input',
-			'options' => [
-				'nom' => 'email',
-				'label' => 'Email',
-				'obligatoire' => 'on',
-			],
-			'verifier' => [
-				'type' => 'email',
-			],
-		],
-		[
-			'saisie' => 'textarea',
-			'options' => [
-				'nom' => 'message',
-				'label' => 'Message',
-			],
-			'verifier' => [
-				'type' => 'taille',
-				'options' => ['min' => 10],
-			],
-		],
-	];
-}
-
 function formulaires_mon_form_verifier_dist(): array {
-	include_spip('inc/saisies');
-	$saisies = formulaires_mon_form_saisies_dist();
-	return saisies_verifier($saisies);
-}
-
-function formulaires_mon_form_traiter_dist(): array {
-	return [
-		'message_ok' => 'OK',
-	];
+    include_spip('inc/saisies');
+    return saisies_verifier(formulaires_mon_form_saisies_dist());
 }
 ```
 
-Template file:
+---
 
-```spip
-<div class="formulaire_spip formulaire_mon_form">
-	[<div class="reponse_formulaire reponse_formulaire_ok">(#ENV*{message_ok})</div>]
-	[<div class="reponse_formulaire reponse_formulaire_erreur">(#ENV*{message_erreur})</div>]
-	<form method="post" action="#ENV{action}">
-		#ACTION_FORMULAIRE{#ENV{action}}
-		<div class="editer-groupe">
-			#GENERER_SAISIES{#ENV{_saisies}}
-		</div>
-		<p class="boutons">
-			<input type="submit" class="submit" value="Envoyer" />
-		</p>
-	</form>
-</div>
-```
+## Custom saisie type
 
-## YAML and array: same semantics
+Minimum to make `#SAISIE{mon_type, …}` work:
 
-For agents, treat YAML as another syntax for the same field declaration tree.
+1. `saisies/mon_type.html` — the field template
 
-YAML example:
-
-```yaml
-- saisie: input
-	options:
-		nom: email
-		label: Email
-		obligatoire: on
-	verifier:
-		type: email
-
-- saisie: textarea
-	options:
-		nom: message
-		label: Message
-	verifier:
-		type: taille
-		options:
-			min: 10
-```
-
-Equivalent PHP array is accepted directly by `#GENERER_SAISIES` and `saisies_verifier()`.
-
-## Conditional display with `afficher_si`
-
-Attach condition in `options.afficher_si`:
-
-```php
-[
-	'saisie' => 'input',
-	'options' => [
-		'nom' => 'societe',
-		'label' => 'Societe',
-		'afficher_si' => '@type_contact@ == "pro"',
-	],
-]
-```
-
-Useful operators:
-- `==`, `!=`, `>`, `>=`, `<`, `<=`
-- `IN`, `!IN`
-- `MATCH`, `!MATCH`
-- boolean style tests with `@champ@`
-
-Operational effect in verification:
-- hidden fields by afficher_si are excluded from checks
-- at end of successful validation flow, masked fields can be set to empty string
-
-## `Verifier` integration rules
-
-One `verifier`:
-
-```php
-'verifier' => [
-	'type' => 'email',
-	'options' => [],
-]
-```
-
-Multiple verifiers:
-
-```php
-'verifier' => [
-	['type' => 'email'],
-	['type' => 'taille', 'options' => ['max' => 180]],
-]
-```
-
-Behavior:
-- obligatory check runs first
-- each `verifier` is applied
-- normalized values can be written back into request context
-- errors are returned as standard CVT erreurs array by field name
-
-## Global options on the form list
-
-The form list may contain a top-level options key:
-
-```php
-[
-	'options' => [
-		'ajax' => true,
-		'conteneur_class' => 'mon_formulaire',
-		'obligatoire_defaut' => true,
-		'verifier_valeurs_acceptables' => true,
-	],
-	[ 'saisie' => 'input', 'options' => ['nom' => 'titre', 'label' => 'Titre'] ],
-]
-```
-
-Frequent useful options:
-- ajax
-- conteneur_class
-- obligatoire_defaut
-- verifier_valeurs_acceptables
-
-## Create a custom saisie type
-
-Minimum runtime requirement (usable by `#SAISIE`):
-1. create saisies/mon_type.html
-
-To make it configurable/listed by Saisies builders:
-1. create saisies/mon_type.yaml
-2. keep same basename as HTML file
-3. provide title/description/options in yaml
-
-Recommended files:
-1. saisies/mon_type.html
-2. saisies/mon_type.yaml
-3. saisies/mon_type.php (optional helper/filter functions)
-4. saisies-vues/mon_type.html (if you need a dedicated read-only view)
-
-Minimal mon_type.yaml:
-
-```yaml
-titre: 'Mon type'
-description: 'Champ personnalise'
-categorie:
-	type: 'libre'
-	rang: 10
-options:
-	-
-		saisie: fieldset
-		options:
-			nom: description
-			label: 'Description'
-		saisies:
-			-
-				saisie: input
-				options:
-					nom: label
-					label: 'Label'
-					obligatoire: 'on'
-defaut:
-	options:
-		label: 'Mon type'
-```
-
-Minimal mon_type.html:
-
+Minimum `mon_type.html`:
 ```spip
 <input
-	type="text"
-	name="#ENV{nom}"
-	id="#ENV{id}"
-	class="text[ (#ENV{class})]"
-	[value="(#ENV{valeur,#ENV{defaut}}|attribut_html)"]
-	[(#ENV{disable}|oui)disabled="disabled"]
-	[(#ENV{readonly}|oui)readonly="readonly"]
-	[aria-describedby="(#ENV{describedby})"]
+    type="text"
+    name="#ENV{nom}"
+    id="#ENV{id}"
+    class="text[ (#ENV{class})]"
+    [value="(#ENV{valeur,#ENV{defaut}}|attribut_html)"]
+    [(#ENV{disable}|oui)disabled="disabled"]
+    [(#ENV{readonly}|oui)readonly="readonly"]
+    [aria-describedby="(#ENV{describedby})"]
 />
 ```
 
-## Agent checklist before shipping a form
+To make the type configurable in Saisies builders, also add:
 
-1. Every real field has `options.nom`
-2. `#GENERER_SAISIES` receives a valid list (array)
-3. verifier uses `saisies_verifier()` on the same list
-4. Required fields use `obligatoire` and show errors in template
-5. `afficher_si` conditions only target existing field names
-6. For custom types, html and yaml basenames match
-7. If using builder/listing, YAML plugin availability is assumed
+2. `saisies/mon_type.yaml` — field configuration schema (same basename as HTML)
+3. `saisies/mon_type.php` — optional helper/filter functions
+4. `saisies-vues/mon_type.html` — optional read-only view
 
-## Extension points to know
+Minimal `mon_type.yaml`:
+```yaml
+titre: 'Mon type'
+description: 'Champ personnalisé'
+categorie:
+    type: 'libre'
+    rang: 10
+options:
+    -
+        saisie: fieldset
+        options:
+            nom: description
+            label: 'Description'
+        saisies:
+            -
+                saisie: input
+                options:
+                    nom: label
+                    label: 'Label'
+                    obligatoire: 'on'
+defaut:
+    options:
+        label: 'Mon type'
+```
 
-Main pipelines for advanced integration:
-- `formulaire_saisies`
-- `saisies_lister_disponibles`
-- `saisies_verifier_lister_disponibles`
-- `saisies_afficher_si_saisies`
-- `saisies_verifier`
+---
+
+## Display submitted values (read-only)
+
+```spip
+[(#EDITABLE|non)
+    #VOIR_SAISIES{#ENV{mes_saisies}, #ENV}
+]
+```
+
+---
+
+## Pipeline — modify fields dynamically
+
+```php
+function monplugin_formulaire_saisies($flux) {
+    if ($flux['args']['form'] === 'mon_form') {
+        $flux['data'][] = [
+            'saisie'  => 'input',
+            'options' => ['nom' => 'extra', 'label' => 'Extra'],
+        ];
+    }
+    return $flux;
+}
+```
+
+---
+
+## Checklist before shipping a form
+
+1. `saisies()` function declared and returns a valid array
+2. HTML file exists and is **completely empty** (Method 1) or fully written (Method 1b)
+3. Every real field has `options.nom`
+4. `obligatoire` is set on required fields
+5. `verifier` entries use types available in the Vérifier plugin
+6. `afficher_si` conditions only target existing field names
+7. For custom types: HTML and YAML basenames match

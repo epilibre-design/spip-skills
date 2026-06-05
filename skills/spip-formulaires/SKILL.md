@@ -20,13 +20,14 @@ Use this routing before reading anything else:
 Default routing rule:
 - Start with `references/form-structure.md` for any form template work.
 - Then read `references/cvt-formulaires.md` for any form behavior implemented in PHP.
-- Use `references/plugin-saisies.md` only when declarative field definitions, repeated field structures, `#SAISIE`, `#GENERER_SAISIES`, or custom saisie types would materially simplify the form.
+- Use `references/plugin-saisies.md` when Saisies is available: declare all fields in PHP via `formulaires_<nom>_saisies()` and leave the HTML file **completely empty**. This is Method 1 (recommended). Only use `#GENERER_SAISIES` when you need custom markup (Method 1b, rare exception).
 - Use `references/plugin-verifier.md` only when CVT validation needs reusable validator rules, normalisation, file validation, or cross-field comparison helpers.
 
 Practical rule of thumb:
 - Do not introduce Saisies for a very small form with one or two straightforward fields unless it clearly improves maintainability.
 - Do not introduce Verifier when a tiny form only needs one or two obvious inline CVT checks.
 - Consider Saisies and Verifier as optional improvements over the base SPIP structure and base CVT mechanism, not as mandatory defaults.
+- When using Saisies, default to Method 1 (PHP API + empty HTML). Never reach for `#GENERER_SAISIES` first.
 
 ## SPIP-specific terms (always kept in original form)
 
@@ -54,8 +55,8 @@ Practical rule of thumb:
 | Verify CSS classes expected by SPIP forms | `references/form-structure.md` |
 | Handle CVT advanced features (multi-step, autosave, identifier, pipelines) | `references/cvt-formulaires.md` |
 | Decide whether Saisies is actually useful for this form | `references/form-structure.md` + `references/cvt-formulaires.md` + `references/plugin-saisies.md` |
-| Build fields with standard Saisies in YAML and `#SAISIE` when the form is field-driven | `references/plugin-saisies.md` |
-| Render a full field list with `#GENERER_SAISIES` when repeated declarative fields are useful | `references/plugin-saisies.md` |
+| Build a form with Saisies (PHP API + empty HTML — the standard approach) | `references/plugin-saisies.md` |
+| Use `#GENERER_SAISIES` when custom markup is required (rare) | `references/plugin-saisies.md` |
 | Create a custom saisie type | `references/plugin-saisies.md` |
 | Decide whether Verifier is actually useful for this validation logic | `references/cvt-formulaires.md` + `references/plugin-verifier.md` |
 | Apply field validation with the Verifier plugin when reusable rules are helpful | `references/plugin-verifier.md` |
@@ -92,7 +93,7 @@ Practical rule of thumb:
 1. `references/form-structure.md` -> confirm the plain SPIP structure would be repetitive enough to justify Saisies
 2. `references/cvt-formulaires.md` -> confirm the base CVT verification would benefit from reusable validators
 3. `references/plugin-saisies.md` -> define standard fields in YAML or arrays when the form is sufficiently field-driven
-4. `references/plugin-saisies.md` -> choose between `#SAISIE` and `#GENERER_SAISIES`
+4. `references/plugin-saisies.md` -> use `#GENERER_SAISIES` only when the empty HTML approach is insufficient and custom markup is required
 5. `references/plugin-verifier.md` -> choose validation rules, comparison rules, and normalisation strategy when the base CVT verifier becomes repetitive
 6. `references/plugin-saisies.md` -> extend with custom saisies when standard field types are not enough
 
