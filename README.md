@@ -16,6 +16,7 @@ In this repository, skills are version-controlled in `skills/` and installed to 
 - `spip-plugins`: SPIP plugin development (`paquet.xml`, pipelines, SQL API, plugin architecture)
 - `spip-squelettes`: SPIP template work (BOUCLE, `#BALISE`, criteres, filtres, `<INCLURE>`)
 - `spip-formulaires`: SPIP CVT form structure and conventions (HTML wrappers, `charger/verifier/traiter`, errors)
+- `spip-lang`: SPIP language files (`lang/prefix_XX.php`, key naming conventions, `_T()`, `<:module:key:>`)
 
 ## Install (copy-based)
 
@@ -28,6 +29,7 @@ mkdir -p ~/.claude/skills
 cp -R skills/spip-plugins ~/.claude/skills/
 cp -R skills/spip-squelettes ~/.claude/skills/
 cp -R skills/spip-formulaires ~/.claude/skills/
+cp -R skills/spip-lang ~/.claude/skills/
 ```
 
 Windows PowerShell:
@@ -37,6 +39,7 @@ New-Item -ItemType Directory -Force "$HOME/.claude/skills" | Out-Null
 Copy-Item -Recurse -Force "skills/spip-plugins" "$HOME/.claude/skills/"
 Copy-Item -Recurse -Force "skills/spip-squelettes" "$HOME/.claude/skills/"
 Copy-Item -Recurse -Force "skills/spip-formulaires" "$HOME/.claude/skills/"
+Copy-Item -Recurse -Force "skills/spip-lang" "$HOME/.claude/skills/"
 ```
 
 ## Installation on claude.ai
@@ -75,6 +78,7 @@ You should see these folders:
 - `~/.claude/skills/spip-plugins`
 - `~/.claude/skills/spip-squelettes`
 - `~/.claude/skills/spip-formulaires`
+- `~/.claude/skills/spip-lang`
 
 Optional deeper check (Linux/macOS):
 
@@ -82,6 +86,7 @@ Optional deeper check (Linux/macOS):
 test -f ~/.claude/skills/spip-plugins/SKILL.md && echo "spip-plugins OK"
 test -f ~/.claude/skills/spip-squelettes/SKILL.md && echo "spip-squelettes OK"
 test -f ~/.claude/skills/spip-formulaires/SKILL.md && echo "spip-formulaires OK"
+test -f ~/.claude/skills/spip-lang/SKILL.md && echo "spip-lang OK"
 ```
 
 Optional deeper check (Windows PowerShell):
@@ -90,6 +95,7 @@ Optional deeper check (Windows PowerShell):
 Test-Path "$HOME/.claude/skills/spip-plugins/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-squelettes/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-formulaires/SKILL.md"
+Test-Path "$HOME/.claude/skills/spip-lang/SKILL.md"
 ```
 
 ## Update workflow
