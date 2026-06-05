@@ -64,6 +64,8 @@ Conditionally apply the `erreur` class:
 <div class="editer editer_titre[ (#ENV**{erreurs}|table_valeur{titre}|oui)erreur]">
 ```
 
+`|oui` returns a space (` `) if the value is non-empty/non-null, empty string otherwise — equivalent to `|?{' ',''}`. This is intentional: it produces a non-empty value so that the surrounding `[ ...]` conditional block renders, adding the ` erreur` class.
+
 Conditionally render the error text:
 
 ```spip
