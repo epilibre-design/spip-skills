@@ -3,7 +3,7 @@ name: spip-plugins
 description: Use when developing a SPIP plugin (paquet.xml present, _pipelines.php,
   spip_* table references in PHP) or when the user asks about plugin architecture,
   pipelines, hooks, or the SPIP PHP/SQL API. SPIP 4.1+. Not for template/squelettes
-  work — use the spip skill for that.
+  work — use the spip-squelettes skill for that.
 ---
 
 # SPIP plugin development
