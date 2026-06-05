@@ -48,8 +48,8 @@ function acme_post_edition($flux) {
 - Pipeline declaration correct (`<pipeline nom="post_edition" inclure="..."/>`): ✅
 - Handler name pattern `acme_post_edition($flux)`: ✅
 - Returns `$flux`: ✅
-- Checks `$flux['args']['table']`: ✅
-- Result: PASS
+- Checks `$flux['args']['table']`: ⚠️ works but deprecated — canonical key is `$flux['args']['objet']`
+- Result: PARTIAL
 
 ---
 
@@ -80,9 +80,46 @@ while ($row = sql_fetch($res)) {
 - Uses `sql_allfetsel` and `sql_select`+`sql_fetch`: ✅ (not raw PDO/mysqli)
 - Result: PASS
 
+## Q4: Add install/upgrade support to a plugin with prefix "acme" that needs a DB table
+
+```xml
+<!-- paquet.xml — guessed answer -->
+<paquet prefix="acme" version="1.0.0" ...>
+  <install inclure="acme_install.php" />
+</paquet>
+```
+
+```php
+// acme_install.php — guessed function names
+function acme_install() {
+    // create table on activation
+}
+
+function acme_uninstall() {
+    // drop table on deactivation
+}
+```
+
+**Self-assessment:**
+- Uses `<install>` tag in paquet.xml: ❌ (tag does not exist in the paquet.xml DTD)
+- File name convention `{prefix}_administrations.php`: ❌ (guessed `acme_install.php`)
+- Function names `{prefix}_upgrade($nom_meta_base_version, $version_cible)`: ❌ (guessed `acme_install()`)
+- Function name `{prefix}_vider_tables($nom_meta_base_version)`: ❌ (guessed `acme_uninstall()`)
+- `schema` attribute triggers the upgrade mechanism: ❌ (unaware)
+- Result: FAIL
+
+---
+
 ## Overall Baseline Conclusion
 
-All 3 questions answered correctly from training knowledge. The `spip-plugins` skill will provide most value as:
-- A precise reference for the full paquet.xml schema (all attributes/child elements)
-- A complete pipelines catalog (100+ hooks grouped by category)
-- A SQL API quick-reference with all function signatures
+| Q | Result | Key gap |
+|---|---|---|
+| 1 | PASS | All required attributes present |
+| 2 | PARTIAL | `$flux['args']['table']` works but is deprecated; canonical key is `objet` |
+| 3 | PASS | Correct SQL API usage |
+| 4 | FAIL | `<install>` tag doesn't exist; wrong file name and function name conventions |
+
+The `spip-plugins` skill adds most value on:
+- Canonical `$flux['args']['objet']` key (vs deprecated `table`)
+- `schema` attribute + `{prefix}_administrations.php` naming convention
+- `{prefix}_upgrade()` and `{prefix}_vider_tables()` exact signatures
