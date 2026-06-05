@@ -106,7 +106,7 @@ function forum_pre_insertion($flux) {
 
 ### `post_insertion`
 
-Fires **after** the new row has been inserted. `$flux['data']` contains the fields that were inserted; `$flux['args']['id_objet']` is the new ID. The return value of this pipeline is **ignored** by SPIP — return `$flux` anyway by convention.
+Fires **after** the new row has been inserted. `$flux['data']` contains the fields that were inserted; `$flux['args']['id_objet']` is the new ID.
 
 ```
 $flux['args']
@@ -163,7 +163,7 @@ function myplugin_pre_edition($flux) {
 
 ### `post_edition`
 
-Fires **after** the database write. Use it to trigger side-effects: invalidate caches, update related tables, send notifications. The pipeline return value is ignored by SPIP.
+Fires **after** the database write. Use it to trigger side-effects: invalidate caches, update related tables, send notifications.
 
 ```
 $flux['args']   same structure as pre_edition
