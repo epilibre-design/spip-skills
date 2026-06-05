@@ -7,12 +7,11 @@
       "expected_output": "Un fichier lang/acme_fr.php avec return [...] (pas $GLOBALS['i18n']), l'en-tête fixe, des clés en snake_case avec les préfixes conventionnels, des sections alphabétiques commentées, et les deux clés info_1_objet / info_nb_objets pour le pluriel.",
       "files": [],
       "expectations": [
-        "Le fichier utilise return [...] et non $GLOBALS['i18n']['acme'] = [...]",
-        "L'en-tête contient '// This is a SPIP language file  --  Ceci est un fichier langue de SPIP'",
-        "La clé d'erreur utilise le préfixe erreur_ (ex: erreur_champ_vide)",
-        "La clé de bouton utilise le préfixe bouton_ (ex: bouton_ajouter)",
+        "Le fichier utilise return [...] et non $GLOBALS[$GLOBALS['idx_lang']] = [...]",
+        "La clé d'erreur utilise le préfixe sémantique erreur_ (ex: erreur_champ_vide) sans préfixer par le nom du plugin",
+        "La clé de bouton utilise le préfixe sémantique bouton_ (ex: bouton_ajouter) sans préfixer par le nom du plugin",
         "Le placeholder dynamique est au format @champ@ (pas {champ} ni %s ni :champ)",
-        "Deux clés distinctes pour le singulier et le pluriel : info_1_objet et info_nb_objets",
+        "Deux clés distinctes pour le singulier et le pluriel, suivant le pattern info_1_X et info_nb_Xs",
         "Le fichier n'a pas de balise de fermeture ?>"
       ]
     },
@@ -47,7 +46,7 @@
       "expectations": [
         "La clé de description s'appelle acme_description (pas description ni plugin_description)",
         "La clé de slogan s'appelle acme_slogan (pas slogan ni titre)",
-        "La réponse mentionne que le module à utiliser pour _T() est paquet-acme: (pas acme:)"
+        "Si _T() est mentionné pour accéder aux clés du paquet, le module utilisé est paquet-acme: (pas acme:)"
       ]
     },
     {
@@ -57,7 +56,7 @@
       "files": [],
       "expectations": [
         "lang_select('en') est appelé avant _T()",
-        "lang_select(null) est appelé après pour restaurer la langue précédente",
+        "La restauration se fait avec lang_select(null) ou lang_select() sans argument — PAS avec une variable sauvegardée depuis la valeur de retour de lang_select()",
         "La réponse n'invente pas un troisième argument langue à _T() (qui n'existe pas)"
       ]
     }

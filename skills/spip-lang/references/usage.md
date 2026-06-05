@@ -60,12 +60,26 @@ lang_select('en');
 $sujet = _T('monplugin:email_sujet');   // récupéré en anglais
 $corps  = _T('monplugin:email_corps');
 
-// Retour à la langue précédente
-lang_select(null);
+// Retour à la langue précédente — null ou aucun argument
+lang_select(null);  // équivalent à lang_select()
 ```
 
 `lang_select($lang)` empile la langue courante et passe à `$lang`.
-`lang_select(null)` dépile et restaure la langue précédente.
+`lang_select(null)` (ou `lang_select()` sans argument) dépile et restaure la langue précédente.
+
+**Piège fréquent** : `lang_select($lang)` retourne la langue qu'on lui a passée (`$lang`),
+pas la langue précédente. Ne pas sauvegarder la valeur de retour pour restaurer :
+
+```php
+// ❌ FAUX — retourne 'en', pas 'fr' ; le second appel ne restaure pas 'fr'
+$save = lang_select('en');
+lang_select($save);  // rappelle lang_select('en') !
+
+// ✅ CORRECT
+lang_select('en');
+// ... appels _T() ...
+lang_select(null);  // ou lang_select() sans argument
+```
 
 ---
 

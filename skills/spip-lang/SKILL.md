@@ -86,6 +86,12 @@ These two keys are mandatory. Module in `_T()` calls: `paquet-monplugin:`.
 
 ---
 
+## Response style
+
+Match the answer to the question: a focused question ("how do I call _T() with a placeholder?") deserves a direct code snippet, not a tour of all i18n conventions. Read the relevant reference file, then answer what was asked.
+
+---
+
 ## Source of truth
 
 - SPIP core lang files: `ecrire/lang/` and `plugins-dist/*/lang/`
