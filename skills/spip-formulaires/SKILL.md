@@ -1,8 +1,9 @@
 ---
 name: spip-formulaires
-description: Use when creating or reviewing SPIP CVT forms, especially the standard
-  HTML form structure (`formulaire_spip`, `.editer-groupe`, `.editer`, `reponse_formulaire`),
-  global form messages, and field-level errors.
+description: Use when creating, reviewing, or debugging SPIP forms — HTML template
+  structure (`formulaire_spip`, `.editer-groupe`, `.editer`, `reponse_formulaire`),
+  PHP CVT contract (`charger`/`verifier`/`traiter`/`identifier`), or the Saisies
+  and Verifier plugins.
 ---
 
 # SPIP CVT forms - Standard structure
