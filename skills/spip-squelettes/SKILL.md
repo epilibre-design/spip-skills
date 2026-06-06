@@ -110,7 +110,7 @@ SPIP generates pages from **squelettes** — `.html` files mixing HTML with BOUC
 ## Load on Demand
 
 - All native loop types, recursive loops → `references/boucles.md`
-- Full critères + balises catalog → `references/balises-criteres.md`
+- Full critères + balises catalog → `references/balises.md` and `references/criteres.md`
 - Filter signatures with examples → `references/filtres.md`
 - INCLURE composition, file resolution, AJAX partial reload → `references/inclure-ajax.md`
 - #ENV, #SET/#GET, #SESSION_SET/#SESSION → `references/variables.md`
