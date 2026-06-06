@@ -1,40 +1,40 @@
-# Conventions de nommage des clés lang SPIP
+# Naming conventions for SPIP lang keys
 
 ---
 
-## Préfixes standard
+## Standard prefixes
 
-SPIP organise les clés par préfixe sémantique. Respecter ces préfixes garantit la cohérence
-entre plugins et permet aux traducteurs de repérer rapidement la nature de la chaîne.
+SPIP organizes keys by semantic prefix. Keeping these prefixes ensures consistency
+across plugins and helps translators quickly understand what each string is for.
 
-| Préfixe | Rôle | Exemple |
+| Prefix | Role | Example |
 |---|---|---|
-| `titre_` | Titre de section, libellé d'objet (affiché en en-tête) | `titre_objets`, `titre_rubrique` |
-| `info_` | Message informatif, compteur, état | `info_1_objet`, `info_nb_objets` |
-| `erreur_` | Message d'erreur (validation, système) | `erreur_champ_vide`, `erreur_acces` |
-| `bouton_` | Label de bouton ou lien d'action | `bouton_ajouter`, `bouton_supprimer` |
-| `texte_` | Bloc de texte long (explication, aide) | `texte_aide_configuration` |
-| `avis_` | Avertissement ou notice contextuelle | `avis_modification_enregistree` |
-| `aucun_` | État vide — aucun résultat | `aucun_objet`, `aucun_objet_trouve` |
-| `objet_` | Nom de l'objet éditorial (singulier/pluriel) | `objet_type_monobjet` |
-| `icone_` | Infobulle d'icône | `icone_modifier_objet` |
-| `item_` | Entrée de menu ou de liste de choix | `item_statut_publie` |
-| `choix_` | Option d'un `<select>` | `choix_langue_defaut` |
-| `login_` | Écrans d'authentification | `login_connexion_requise` |
-| `paquet_` | Réservé au fichier `paquet-prefix_XX.php` | `monplugin_description` |
+| `titre_` | Section title, object label (header display) | `titre_objets`, `titre_rubrique` |
+| `info_` | Informational message, counter, state | `info_1_objet`, `info_nb_objets` |
+| `erreur_` | Error message (validation, system) | `erreur_champ_vide`, `erreur_acces` |
+| `bouton_` | Button label or action link | `bouton_ajouter`, `bouton_supprimer` |
+| `texte_` | Long text block (help, explanation) | `texte_aide_configuration` |
+| `avis_` | Warning or contextual notice | `avis_modification_enregistree` |
+| `aucun_` | Empty state - no result | `aucun_objet`, `aucun_objet_trouve` |
+| `objet_` | Editorial object name (singular/plural) | `objet_type_monobjet` |
+| `icone_` | Icon tooltip | `icone_modifier_objet` |
+| `item_` | Menu or choice-list entry | `item_statut_publie` |
+| `choix_` | `<select>` option | `choix_langue_defaut` |
+| `login_` | Authentication-screen strings | `login_connexion_requise` |
+| `paquet_` | Reserved for `paquet-prefix_XX.php` file usage | `monplugin_description` |
 
 ---
 
-## Singulier / Pluriel
+## Singular / plural
 
-SPIP ne dispose pas de mécanisme de pluriel automatique. La convention est d'avoir deux clés :
+SPIP has no automatic pluralization engine. The convention is to provide two keys:
 
 ```php
-'info_1_objet'    => 'Un objet',       // exactement 1
-'info_nb_objets'  => '@nb@ objets',    // 2 ou plus (@nb@ = le nombre)
+'info_1_objet'    => 'One object',       // exactly 1
+'info_nb_objets'  => '@nb@ objects',     // 2 or more (@nb@ = count)
 ```
 
-Usage PHP :
+PHP usage:
 ```php
 $n = sql_countsel('spip_objets');
 echo ($n === 1)
@@ -44,80 +44,80 @@ echo ($n === 1)
 
 ---
 
-## Placeholders `@nom@`
+## `@name@` placeholders
 
-Toute valeur dynamique dans une chaîne doit utiliser la syntaxe `@nom@`.
+Any dynamic value in a string must use `@name@` placeholder syntax.
 
 ```php
-// lang/monplugin_fr.php
-'erreur_champ_vide'         => 'Le champ @champ@ est obligatoire',
-'info_nb_elements_max'      => 'Maximum @max@ éléments autorisés',
-'texte_confirmation_suppr'  => 'Supprimer « @titre@ » ?',
+// lang/monplugin_en.php
+'erreur_champ_vide'         => 'Field @champ@ is required',
+'info_nb_elements_max'      => 'Maximum @max@ allowed elements',
+'texte_confirmation_suppr'  => 'Delete "@titre@"?',
 ```
 
-Règles :
-- Nom du placeholder : lowercase, sans espaces
-- Pas de HTML dans le placeholder lui-même (l'échappement est géré par `_T()`)
-- Un seul `@` de chaque côté (pas `@@nom@@`)
+Rules:
+- Placeholder name: lowercase, no spaces
+- No HTML inside the placeholder itself (`_T()` handles escaping)
+- Exactly one `@` on each side (not `@@name@@`)
 
 ---
 
-## Ordre alphabétique et commentaires de section
+## Alphabetical order and section comments
 
-Les clés sont triées alphabétiquement **globalement** (pas par préfixe), avec un commentaire
-de lettre à chaque changement de lettre initiale :
+Keys are sorted alphabetically **globally** (not grouped by prefix), with a letter
+comment each time the first letter changes:
 
 ```php
 return [
     // A
-    'aucun_objet'        => 'Aucun objet',
-    'avis_attention'     => 'Attention',
+    'aucun_objet'        => 'No object',
+    'avis_attention'     => 'Warning',
 
     // B
-    'bouton_ajouter'     => 'Ajouter',
-    'bouton_supprimer'   => 'Supprimer',
+    'bouton_ajouter'     => 'Add',
+    'bouton_supprimer'   => 'Delete',
 
     // E
-    'erreur_acces'       => 'Accès refusé',
-    'erreur_champ_vide'  => 'Ce champ est obligatoire',
+    'erreur_acces'       => 'Access denied',
+    'erreur_champ_vide'  => 'This field is required',
 
     // I
-    'info_1_objet'       => 'Un objet',
-    'info_nb_objets'     => '@nb@ objets',
+    'info_1_objet'       => 'One object',
+    'info_nb_objets'     => '@nb@ objects',
 ];
 ```
 
 ---
 
-## Clés partagées avec le core SPIP
+## Shared keys from SPIP core
 
-Certaines clés du core peuvent être réutilisées directement (sans les redéfinir dans le plugin) :
+Some core keys can be reused directly (without redefining them in your plugin):
 
-| Clé core | Module | Usage |
+| Core key | Module | Usage |
 |---|---|---|
-| `info_obligatoire` | `spip:` | Champ obligatoire (validation CVT) |
-| `info_modification_enregistree` | `ecrire:` | Succès d'enregistrement |
-| `bouton_enregistrer` | `spip:` | Label bouton submit générique |
-| `bouton_annuler` | `spip:` | Label bouton annuler |
-| `confirmer_supprimer` | `spip:` | Confirmation suppression |
-| `ecrire:info_acces_interdit` | `ecrire:` | Accès refusé |
+| `info_obligatoire` | `spip:` | Required field message (CVT validation) |
+| `info_modification_enregistree` | `ecrire:` | Successful save message |
+| `bouton_enregistrer` | `spip:` | Generic submit button label |
+| `bouton_annuler` | `spip:` | Cancel button label |
+| `confirmer_supprimer` | `spip:` | Delete confirmation message |
+| `ecrire:info_acces_interdit` | `ecrire:` | Access denied |
 
-Ne pas redéfinir une clé qui existe déjà dans le core — utiliser directement `_T('spip:cle')`.
-
----
-
-## Cas particulier : clés sans préfixe module dans le core
-
-Dans `verifier()`, `_T('info_obligatoire')` sans préfixe module est résolu vers `spip:`
-par défaut. Hors contexte CVT, toujours préfixer explicitement : `_T('spip:info_obligatoire')`.
+Do not redefine a key that already exists in core - use `_T('spip:key')` directly.
 
 ---
 
-## Checklist avant commit
+## Special case: core keys without module prefix
 
-- [ ] Toutes les clés sont en `snake_case` minuscule
-- [ ] Les clés sont triées alphabétiquement avec commentaires de lettre
-- [ ] Les placeholders suivent le pattern `@nom@`
-- [ ] Les formes singulier/pluriel (`info_1_X` / `info_nb_Xs`) sont présentes si besoin
-- [ ] Le fichier `paquet-prefix_fr.php` contient `prefix_description` et `prefix_slogan`
-- [ ] Aucune clé core n'est redéfinie inutilement
+In `verifier()`, `_T('info_obligatoire')` without a module prefix resolves to `spip:`
+by default. Outside CVT context, always prefix explicitly: `_T('spip:info_obligatoire')`.
+
+---
+
+## Pre-commit checklist
+
+- [ ] All keys use lowercase `snake_case`
+- [ ] Keys are globally alphabetically sorted with section-letter comments
+- [ ] Placeholders follow the `@nom@` pattern
+- [ ] Singular/plural pair (`info_1_X` / `info_nb_Xs`) exists when needed
+- [ ] `paquet-prefix_fr.php` contains `prefix_description` and `prefix_slogan`
+- [ ] No core key is unnecessarily redefined

@@ -1,89 +1,90 @@
-# Utilisation des chaînes i18n en PHP et dans les squelettes
+# Using i18n strings in PHP and squelettes
 
 ---
 
-## _T() — récupérer une chaîne traduite (PHP)
+## _T() - fetch a translated string (PHP)
 
 ```php
 // Signature (ecrire/inc/utils.php)
 _T(string $cle, array $args = [], array $options = []): string
 ```
 
-`$cle` = `'module:clé'` — le préfixe module route vers le bon fichier lang.
+`$cle` is `'module:key'` - module prefix routes lookup to the right lang file.
 
-### Cas courants
+### Common cases
 
 ```php
-// Lookup simple
+// Simple lookup
 echo _T('monplugin:titre_liste_objets');
 
-// Avec substitution de placeholder
-echo _T('monplugin:erreur_champ_vide', ['champ' => 'titre']);
+// With placeholder substitution
+echo _T('monplugin:erreur_champ_vide', ['champ' => 'title']);
 echo _T('monplugin:info_nb_objets', ['nb' => $count]);
 
-// Clé optionnelle — retourne '' si absente (pas de fallback sur la clé brute)
+// Optional key - return '' if missing (no raw-key fallback)
 $label = _T('monplugin:libelle_optionnel', [], ['force' => false]);
 
-// Sans échappement HTML des placeholders (valeur brute)
+// Disable placeholder HTML escaping (raw value)
 echo _T('monplugin:texte_avec_lien', ['url' => $url], ['sanitize' => false]);
 ```
 
-### Options disponibles
+### Available options
 
-| Clé | Défaut | Effet |
+| Option | Default | Effect |
 |---|---|---|
-| `force` | `true` | `true` → retourne la clé brute si absente ; `false` → retourne `''` |
-| `sanitize` | `true` | `true` → échappe le HTML dans les valeurs `$args` |
+| `force` | `true` | `true` -> return raw key if missing; `false` -> return `''` |
+| `sanitize` | `true` | `true` -> escape HTML in `$args` values |
 
 ---
 
-## _L() — interpoler des placeholders dans une chaîne existante
+## _L() - interpolate placeholders in an existing string
 
-Niveau bas — à utiliser quand on a déjà la chaîne et qu'on veut juste remplacer les `@nom@` :
+Low-level helper - use when you already have the source string and only want to
+replace `@name@` placeholders:
 
 ```php
-$texte = _L('Bienvenue @prenom@ @nom@ !', ['prenom' => $p, 'nom' => $n]);
+$texte = _L('Welcome @firstname@ @lastname@!', ['firstname' => $p, 'lastname' => $n]);
 ```
 
-`_T()` appelle `_L()` en interne. Préférer `_T()` dans la majorité des cas.
+`_T()` calls `_L()` internally. Prefer `_T()` in most cases.
 
 ---
 
-## lang_select() — changer la langue active
+## lang_select() - switch active language
 
-Utile pour générer du contenu traduit dans une langue différente du contexte courant
-(ex : email envoyé dans la langue du destinataire) :
+Useful to generate translated content in a different language than current context
+(for example, sending email in recipient language):
 
 ```php
-// Pousser une nouvelle langue
-lang_select('en');
-$sujet = _T('monplugin:email_sujet');   // récupéré en anglais
-$corps  = _T('monplugin:email_corps');
+// Push a new language
+lang_select('it');
+$sujet = _T('monplugin:email_sujet');   // fetched in Italian
+$corps = _T('monplugin:email_corps');
 
-// Retour à la langue précédente — null ou aucun argument
-lang_select(null);  // équivalent à lang_select()
+// Restore previous language - null or no argument
+lang_select(null);  // same as lang_select()
 ```
 
-`lang_select($lang)` empile la langue courante et passe à `$lang`.
-`lang_select(null)` (ou `lang_select()` sans argument) dépile et restaure la langue précédente.
+`lang_select($lang)` pushes current language and switches to `$lang`.
+`lang_select(null)` (or `lang_select()` without args) pops and restores previous language.
 
-**Piège fréquent** : `lang_select($lang)` retourne la langue qu'on lui a passée (`$lang`),
-pas la langue précédente. Ne pas sauvegarder la valeur de retour pour restaurer :
+**Common pitfall**: `lang_select($lang)` returns the language you passed (`$lang`),
+not the previous language. Do not store return value for restoration:
 
 ```php
-// ❌ FAUX — retourne 'en', pas 'fr' ; le second appel ne restaure pas 'fr'
+// Wrong - returns 'en', not previous language; second call does not restore
 $save = lang_select('en');
-lang_select($save);  // rappelle lang_select('en') !
+lang_select($save);  // calls lang_select('en') again
 
-// ✅ CORRECT
+// Correct
 lang_select('en');
-// ... appels _T() ...
-lang_select(null);  // ou lang_select() sans argument
+// ... _T() calls ...
+lang_select(null);  // or lang_select() without args
 ```
 
 ---
 
-## Singulier / Pluriel
+## Singular / plural
 
 ```php
 $n = sql_countsel('spip_monsobjets');
@@ -94,72 +95,72 @@ echo ($n === 1)
 
 ---
 
-## Usage dans les squelettes SPIP
+## Usage in SPIP squelettes
 
-### Syntaxe courte (recommandée)
+### Short syntax (recommended)
 
 ```html
 <:monplugin:titre_liste_objets:>
 ```
 
-Avec substitution de placeholder :
+With placeholder substitution:
 ```html
 <:monplugin:info_nb_objets{nb=#TOTAL_BOUCLE}:>
 ```
 
-### Via le filtre `|_T`
+### Via `|_T` filter
 
 ```html
 [(#VAL{monplugin:titre_liste_objets}|_T)]
 ```
 
-Avec un environnement dynamique :
+With dynamic environment:
 ```html
 [(#MODULE|concat{:}|concat{#CLE}|_T)]
 ```
 
-### Comparaison des formes
+### Comparison of forms
 
-| Forme | Quand l'utiliser |
+| Form | When to use |
 |---|---|
-| `<:module:cle:>` | Cas standard — statique, lisible |
-| `<:module:cle{param=val}:>` | Substitution de placeholder depuis l'environnement |
-| `[(#VAL{module:cle}\|_T)]` | Valeur dépendant d'une balise SPIP dynamique |
+| `<:module:key:>` | Standard static case, most readable |
+| `<:module:key{param=val}:>` | Placeholder substitution from squelette environment |
+| `[(#VAL{module:key}\|_T)]` | Key value built dynamically from SPIP balises |
 
 ---
 
-## Patterns courants (PHP)
+## Common patterns (PHP)
 
-### Validation CVT — erreur de champ
+### CVT validation - field error
 
 ```php
 // verifier()
-$erreurs['titre'] = _T('monplugin:erreur_champ_vide', ['champ' => 'titre']);
+$erreurs['titre'] = _T('monplugin:erreur_champ_vide', ['champ' => 'title']);
 
-// Clé core réutilisable (pas besoin de la redéfinir)
-$erreurs['titre'] = _T('info_obligatoire');  // 'spip:' implicite en contexte CVT
+// Reuse core key (no plugin redefinition needed)
+$erreurs['titre'] = _T('info_obligatoire');  // implicit 'spip:' in CVT context
 ```
 
-### Succès CVT — message global
+### CVT success - global message
 
 ```php
 // traiter()
 return ['message_ok' => _T('ecrire:info_modification_enregistree')];
 ```
 
-### Notification par email
+### Email notification
 
 ```php
 lang_select($destinataire_lang);
 $sujet = _T('monplugin:email_notification_sujet');
-$corps  = _T('monplugin:email_notification_corps', ['titre' => $objet['titre']]);
+$corps = _T('monplugin:email_notification_corps', ['titre' => $objet['titre']]);
 lang_select(null);
 
 include_spip('inc/notifications');
 envoyer_message($destinataire_email, $sujet, $corps);
 ```
 
-### Clé conditionnelle (label optionnel)
+### Conditional key (optional label)
 
 ```php
 $label = _T('monplugin:libelle_contexte_special', [], ['force' => false])
@@ -168,9 +169,9 @@ $label = _T('monplugin:libelle_contexte_special', [], ['force' => false])
 
 ---
 
-## Module core utiles
+## Useful core modules
 
-| Module | Fichier | Exemples de clés |
+| Module | File | Example keys |
 |---|---|---|
 | `spip:` | `lang/spip_fr.php` | `info_obligatoire`, `bouton_enregistrer`, `confirmer_supprimer` |
 | `ecrire:` | `lang/ecrire_fr.php` | `info_modification_enregistree`, `info_acces_interdit` |
@@ -179,8 +180,8 @@ $label = _T('monplugin:libelle_contexte_special', [], ['force' => false])
 
 ---
 
-## Voir aussi
+## See also
 
-- `format.md` — structure et format des fichiers lang
-- `conventions.md` — nommage des clés
-- `../spip-plugins/references/i18n.md` — déclaration `<traduire>` et lang_select avancé
+- `format.md` - lang file structure and formatting
+- `conventions.md` - key naming rules
+- `../spip-plugins/references/i18n.md` - `<traduire>` declaration and advanced `lang_select()` usage

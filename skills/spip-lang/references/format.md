@@ -1,8 +1,10 @@
-# Format des fichiers lang SPIP
+# SPIP lang file format
 
 ---
 
-## Structure complète d'un fichier de référence
+## Full structure of a reference file
+
+Example for lang/monplugin_fr.php:
 
 ```php
 <?php
@@ -30,19 +32,21 @@ return [
 ];
 ```
 
-Règles de format :
-- En-tête fixe : `// This is a SPIP language file  --  Ceci est un fichier langue de SPIP`
-- `return [...]` — pas de variable, pas de `$GLOBALS['i18n']`
-- Pas de balises `?>` fermantes en fin de fichier
-- Alignement des `=>` optionnel mais recommandé pour la lisibilité
-- Toujours `<?php` seul sur la première ligne, pas `<?`
+Formatting rules:
+- Fixed header comment: `// This is a SPIP language file  --  Ceci est un fichier langue de SPIP`
+- Use `return [...]` - no variable assignment, no `$GLOBALS['i18n']`
+- No closing `?>` tag at end of file
+- `=>` alignment is optional but recommended for readability
+- Always use `<?php` alone on line 1, never `<?`
 
 ---
 
-## Fichier de traduction (non-référence)
+## Translation file (non-reference language)
 
-Un fichier de traduction a **exactement la même structure**. Il peut omettre des clés (SPIP
-retombe sur la langue de référence pour les clés absentes) mais ne doit pas en ajouter.
+A translation file has **exactly the same structure**. It may omit keys (SPIP falls
+back to the reference language for missing keys) but must not introduce extra keys.
+
+Example for lang/monplugin_en.php:
 
 ```php
 <?php
@@ -62,93 +66,93 @@ return [
 
 ---
 
-## Fichier paquet- (métadonnées du gestionnaire)
+## paquet- file (plugin manager metadata)
 
 ```php
 <?php
 // This is a SPIP language file  --  Ceci est un fichier langue de SPIP
 return [
-    'monplugin_description' => 'Description complète affichée dans le gestionnaire de plugins.',
-    'monplugin_slogan'      => 'Accroche courte (une ligne)',
+    'monplugin_description' => 'Full description shown in the plugin manager.',
+    'monplugin_slogan'      => 'Short one-line slogan',
 ];
 ```
 
-- Fichier : `lang/paquet-monplugin_fr.php`
-- Module dans `_T()` : `paquet-monplugin:`
-- Deux clés obligatoires : `{prefix}_description` et `{prefix}_slogan`
-- Les clés sont préfixées par le nom du plugin (ex. `forum_description`, `forum_slogan`), pas par `paquet_`
-- Pas de clés supplémentaires dans ce fichier
+- File name: `lang/paquet-monplugin_en.php`
+- Module name in `_T()`: `paquet-monplugin:`
+- Two mandatory keys: `{prefix}_description` and `{prefix}_slogan`
+- Keys are prefixed with plugin name (for example `forum_description`, `forum_slogan`), not `paquet_`
+- No extra keys in this file
 
 ---
 
-## Valeurs avec HTML
+## Values containing HTML
 
-SPIP échappe les valeurs des placeholders (`@nom@`) par défaut. Pour insérer du HTML dans
-une chaîne, il faut que la valeur de la clé elle-même contienne le HTML (jamais via placeholder) :
+SPIP escapes placeholder values (`@nom@`) by default. To include HTML, put the HTML
+in the lang string itself (not inside placeholder content):
 
 ```php
-// OK — HTML dans la valeur de la clé
-'texte_aide'  => 'Voir la <a href="@url@">documentation</a>',
+// OK - HTML in the key value
+'texte_aide'  => 'See the <a href="@url@">documentation</a>',
 
-// À éviter — HTML dans le placeholder (sera échappé)
-// 'texte_aide' => '@lien@'   avec _T(..., ['lien' => '<a href="...">doc</a>'])
+// Avoid - HTML in placeholder content (will be escaped)
+// 'texte_aide' => '@lien@' with _T(..., ['lien' => '<a href="...">doc</a>'])
 ```
 
-Pour passer du HTML brut via un placeholder sans échappement :
+To pass raw HTML via placeholders without escaping:
 ```php
 _T('monplugin:texte_aide', ['url' => $url], ['sanitize' => false]);
 ```
 
 ---
 
-## Apostrophes et caractères spéciaux
+## Apostrophes and special characters
 
 ```php
-// Apostrophe dans une chaîne single-quoted : échapper avec \
-'titre_modifier_objet' => 'Modifier l\'objet',
+// Apostrophe inside single-quoted string: escape with \
+'titre_modifier_objet' => 'Edit object\'s settings',
 
-// Ou utiliser double-quotes (moins courant en SPIP)
-'titre_modifier_objet' => "Modifier l'objet",
+// Or use double quotes (less common in SPIP lang files)
+'titre_modifier_objet' => "Edit object's settings",
 ```
 
-Préférer les guillemets simples avec `\'` pour l'apostrophe — c'est la convention des fichiers
-lang SPIP core.
+Prefer single quotes plus escaped apostrophe (`\'`) - this is the convention used in
+SPIP core lang files.
 
 ---
 
-## Codes langue supportés
+## Supported language codes
 
-SPIP supporte de nombreux codes langue (y compris des variantes régionales). En voici quelques exemples courants :
+SPIP supports many language codes (including regional variants). Common examples:
 
-| Code | Langue |
+| Code | Language |
 |---|---|
-| `fr` | Français |
-| `en` | Anglais |
-| `es` | Espagnol |
-| `de` | Allemand |
-| `it` | Italien |
-| `pt` | Portugais |
-| `ar` | Arabe |
+| `fr` | French |
+| `en` | English |
+| `es` | Spanish |
+| `de` | German |
+| `it` | Italian |
+| `pt` | Portuguese |
+| `ar` | Arabic |
 | `ca` | Catalan |
-| `nl` | Néerlandais |
+| `nl` | Dutch |
 
-Le code correspond au suffixe du fichier : `monplugin_en.php`, `monplugin_ar.php`, etc.
-La liste complète des langues est disponible dans `ecrire/lang/` du core SPIP.
-
----
-
-## Fallback de langue
-
-SPIP résout une clé dans cet ordre :
-1. Langue active (`lang_select()` courant ou `$GLOBALS['spip_lang']`)
-2. Langue de référence déclarée dans `<traduire reference="…" />` (définie par le plugin)
-3. Retour de la clé brute (sans le préfixe module, underscores → espaces) si `force = true`
-4. Chaîne vide si `force = false`
+The code is the file suffix: `monplugin_en.php`, `monplugin_ar.php`, etc.
+Full list is available in SPIP core under `ecrire/lang/`.
 
 ---
 
-## Voir aussi
+## Language fallback
 
-- `conventions.md` — règles de nommage des clés
-- `usage.md` — `_T()`, `_L()`, `lang_select()`, squelettes
-- `../spip-plugins/references/i18n.md` — déclaration `<traduire>` dans paquet.xml
+SPIP resolves a key in this order:
+1. Active language (current `lang_select()` or `$GLOBALS['spip_lang']`)
+2. Reference language declared by `<traduire reference="..." />` in plugin manifest
+3. Raw key fallback (module removed, underscores converted to spaces) if `force = true`
+4. Empty string if `force = false`
+
+---
+
+## See also
+
+- `conventions.md` - key naming rules
+- `usage.md` - `_T()`, `_L()`, `lang_select()`, squelettes
+- `../spip-plugins/references/i18n.md` - `<traduire>` declaration in paquet.xml
