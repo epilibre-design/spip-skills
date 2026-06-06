@@ -55,7 +55,9 @@ A **formulaire CVT** is a SPIP form built around the PHP contract
         <input type="text" class="text" name="titre" id="titre" value="[(#ENV**{titre})]" />
       </div>
     </div>
-    <p class="boutons"><input type="submit" class="submit" value="<:bouton_enregistrer:>" /></p>
+    <p class="boutons">
+      <input type="submit" class="submit" value="<:bouton_enregistrer:>" />
+    </p>
   </form>
 </div>
 ```
