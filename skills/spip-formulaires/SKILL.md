@@ -49,7 +49,8 @@ A **formulaire CVT** is a SPIP form built around the PHP contract
   <form method="post" action="#ENV{action}">
     #ACTION_FORMULAIRE{#ENV{action}}
     <div class="editer-groupe">
-      <div class="editer editer_titre[ (#ENV**{erreurs}|table_valeur{titre}|oui)erreur]">
+      <div class="editer editer_titre obligatoire[ (#ENV**{erreurs}|table_valeur{titre}|oui)erreur]">
+        <label for="titre"><:info_titre:></label>
         [<span class="erreur_message">(#ENV**{erreurs}|table_valeur{titre})</span>]
         <input type="text" class="text" name="titre" id="titre" value="[(#ENV**{titre})]" />
       </div>
