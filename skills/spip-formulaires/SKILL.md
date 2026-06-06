@@ -43,7 +43,7 @@ A **formulaire CVT** is a SPIP form built around the PHP contract
 ## Minimal template pattern
 
 ```html
-<div class="formulaire_spip formulaire_editer formulaire_editer_x">
+<div class="formulaire_spip formulaire_editer formulaire_editer_x formulaire_editer_x-#ENV{id_x,nouveau}">
   [<div class="reponse_formulaire reponse_formulaire_ok">(#ENV*{message_ok})</div>]
   [<div class="reponse_formulaire reponse_formulaire_erreur">(#ENV*{message_erreur})</div>]
   <form method="post" action="#ENV{action}">
