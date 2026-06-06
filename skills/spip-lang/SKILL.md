@@ -1,8 +1,8 @@
 ---
 name: spip-lang
-description: Use when creating, editing, or auditing SPIP language files (lang/prefix_XX.php,
-  lang/paquet-prefix_XX.php), naming keys, adding translations, or using _T() / <:module:key:>
-  in PHP and squelettes.
+description: Use for SPIP translation/i18n work — creating, editing, or auditing language files
+  (lang/prefix_XX.php, lang/paquet-prefix_XX.php), naming keys, adding translations,
+  using _T() / <:module:key:>, or debugging missing/untranslated strings.
 ---
 
 # SPIP language files
@@ -17,8 +17,10 @@ language module in `paquet.xml`; the reference language is defined by `<traduire
 | Goal | Read |
 |---|---|
 | Create or edit a `lang/prefix_fr.php` file | `references/format.md` |
+| Add a new translation file (`lang/prefix_XX.php`) | `references/format.md` |
 | Name keys consistently (prefixes, plural forms, placeholders) | `references/conventions.md` |
 | Use `_T()` in PHP or `<:module:key:>` in a squelette | `references/usage.md` |
+| Debug missing or untranslated output | `references/usage.md` + `references/conventions.md` |
 | Declare the module in `paquet.xml` | `../spip-plugins/references/i18n.md` |
 | Send translated output in a different language (`lang_select`) | `references/usage.md` |
 
@@ -66,9 +68,10 @@ return [
 ```
 
 Key rules:
+- Keep alphabetical section comments (`// A`, `// B`…)
 - Lowercase `snake_case`
-- Alphabetical section comments (`// A`, `// B`…)
-- Variable placeholders: `@nom@`
+- Variable placeholders must use `@nom@`
+- Save files as UTF-8 (without BOM)
 
 ---
 
@@ -82,13 +85,14 @@ return [
 ];
 ```
 
-These two keys are mandatory. Module in `_T()` calls: `paquet-monplugin:`.
+These two keys are **mandatory**. Module in `_T()` calls: `paquet-monplugin:` (not `monplugin:`).
 
 ---
 
-## Response style
+## Scope boundary
 
-Match the answer to the question: a focused question ("how do I call _T() with a placeholder?") deserves a direct code snippet, not a tour of all i18n conventions. Read the relevant reference file, then answer what was asked.
+For plugin architecture, pipelines, or full `paquet.xml` structure, route to `spip-plugins`.
+For language files and translation usage, stay in this skill.
 
 ---
 
