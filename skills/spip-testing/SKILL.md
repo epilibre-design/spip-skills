@@ -1,6 +1,6 @@
 ---
 name: spip-testing
-description: Use when writing, running, or debugging PHPUnit tests for any SPIP code — plugins (filtres, autorisations, CVT forms, pipelines), squelettes, or `#BALISE` tags. Covers the full self-contained setup (composer.json, phpunit.xml, spip-cli install script), the unit-vs-integration split, lightweight mock bootstraps, SquelettesTestCase, and composer scripts (tests-unit, tests-integration, install-spip-test).
+description: Guides PHPUnit testing of SPIP plugins and squelettes, from a self-contained composer setup to unit tests with lightweight mocks and integration tests against a real SPIP instance installed by spip-cli. Use when the user asks how to write or run tests for a SPIP plugin or squelette, or mentions PHPUnit, SquelettesTestCase, composer tests-unit / tests-integration, or testing filtres, autorisations, CVT forms, or #BALISE tags.
 ---
 
 # SPIP testing with PHPUnit
