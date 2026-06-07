@@ -1,0 +1,46 @@
+{
+  "skill_name": "spip-testing",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I have a SPIP plugin `mon_plugin` with a filtre function `mon_plugin_nettoyer_url` in `inc/mon_plugin_filtres.php`. I want to add PHPUnit unit tests for it without installing a full SPIP. How do I set it up?",
+      "expected_output": "Explains self-contained composer setup at plugin root. Shows tests/bootstrap.php with if(!function_exists()) mocks, require_once of the plugin file, use of $GLOBALS['_test_*'] injection, composer tests-unit script, and tests/unit/ directory structure.",
+      "files": [],
+      "assertions": [
+        {"id": "mentions-require-once", "description": "Uses require_once to load the plugin file directly (not find_in_path or include_spip)"},
+        {"id": "mentions-bootstrap-mocks", "description": "Explains tests/bootstrap.php as the place for lightweight mock stubs"},
+        {"id": "mentions-function-exists-guard", "description": "Shows or mentions if (!function_exists()) guards in the mock bootstrap"},
+        {"id": "mentions-globals-injection", "description": "Mentions $GLOBALS['_test_*'] pattern for controlling mock return values in tests"},
+        {"id": "mentions-composer-tests-unit", "description": "Mentions `composer tests-unit` script or equivalent phpunit command for running unit tests"},
+        {"id": "mentions-unit-directory", "description": "Mentions tests/unit/ as the directory for unit test classes"}
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "My SPIP plugin has a CVT form with a `verifier` function that calls `sql_countsel`. I want to write integration tests that hit a real database. How do I install the SPIP test environment with spip-cli and write the test?",
+      "expected_output": "Explains composer install-spip-test, scripts/install-spip-test.sh with spip-cli commands (core:telecharger, core:preparer, core:installer SQLite3, plugins:activer), tests/bootstrap_integration.php loading vendor/spip/spip, and a concrete integration test example using real sql_countsel.",
+      "files": [],
+      "assertions": [
+        {"id": "mentions-spip-cli-commands", "description": "Mentions spip-cli commands for setting up SPIP (core:telecharger, core:preparer, or core:installer)"},
+        {"id": "mentions-install-spip-test", "description": "Mentions `composer install-spip-test` or scripts/install-spip-test.sh as the setup entry point"},
+        {"id": "mentions-bootstrap-integration", "description": "Mentions tests/bootstrap_integration.php as the integration bootstrap file"},
+        {"id": "mentions-vendor-spip-spip", "description": "Mentions that SPIP is installed inside vendor/spip/spip/ (not a global install)"},
+        {"id": "mentions-sqlite3", "description": "Mentions SQLite3 as the test database engine"},
+        {"id": "mentions-no-mock-conflict", "description": "Warns that tests/bootstrap.php (unit mocks) must NOT be included in the integration bootstrap"}
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I've added a custom `#MON_PLUGIN_STATUS` balise to my SPIP plugin. I want to test it with PHPUnit — it should output 'actif' when the config is set and be empty otherwise. How do I do that?",
+      "expected_output": "Explains SquelettesTestCase from spip/tests, assertEqualsCode / assertEmptyCode assertions, that this needs the integration tier (real SPIP loaded), and shows a concrete test class extending SquelettesTestCase.",
+      "files": [],
+      "assertions": [
+        {"id": "mentions-squelettestestcase", "description": "Mentions the SquelettesTestCase class by name"},
+        {"id": "mentions-assert-method", "description": "Shows assertEqualsCode or assertEmptyCode (or similar SquelettesTestCase assertion method)"},
+        {"id": "mentions-integration-tier", "description": "Clarifies that SquelettesTestCase tests require real SPIP (integration tier, not unit tier)"},
+        {"id": "shows-extends-class", "description": "Shows a concrete PHP class extending SquelettesTestCase"},
+        {"id": "mentions-spip-tests-package", "description": "Mentions spip/tests package as the source of SquelettesTestCase"}
+      ]
+    }
+  ]
+}
