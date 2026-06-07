@@ -1,9 +1,11 @@
 ---
 name: spip-testing
-description: Guides PHPUnit testing of SPIP plugins and squelettes, from a self-contained composer setup to unit tests with lightweight mocks and integration tests against a real SPIP instance installed by spip-cli. Use when the user asks how to write or run tests for a SPIP plugin or squelette, or mentions PHPUnit, SquelettesTestCase, composer tests-unit / tests-integration, or testing filtres, autorisations, CVT forms, or #BALISE tags.
+description: Guides automated testing of SPIP plugins and squelettes using PHPUnit — the standard test tool for SPIP. Covers the full self-contained setup (composer, spip-cli), unit tests with lightweight mocks, and integration tests against a real SPIP instance. Use whenever the user wants to test, verify, or validate a SPIP plugin or squelette — even if they don't mention PHPUnit — including questions like "how do I test my plugin", "I want to make sure my filtre works", or "how do I write tests for my autorisation / CVT form / #BALISE".
 ---
 
-# SPIP testing with PHPUnit
+# SPIP testing
+
+PHPUnit is the standard test tool for SPIP plugins and squelettes, used by SPIP core and the official plugin ecosystem.
 
 ## Quick-start
 
