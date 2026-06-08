@@ -1,9 +1,9 @@
 [(#REM)<!--spip-test
 spec: >
-  Affiche le logo de la rubrique #ENV{id_rubrique} redimensionné à exactement 300 pixels de large et 200 pixels de haut, sans déformation ni upscaling. 
+  Affiche le logo de la rubrique #E NV{id_rubrique} redimensionné à exactement 300 pixels de large et 200 pixels de haut, sans déformation ni upscaling. 
 errors:
   - id: FILTRE_INCORRECT
-    location: "[(#LOGO_RUBRIQUE|image_recadre{300,200})]"
+    location: "#L OGO_RUBRIQUE|image_recadre{300,200}"
     found: "image_recadre{300,200}"
     expected: "image_reduire{300,200}|image_recadre{300,200}"
     symptom: >
