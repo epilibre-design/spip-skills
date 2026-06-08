@@ -50,3 +50,5 @@ composer tests-integration  # integration tests — real SPIP + SQLite3
 | Test a BOUCLE loop with DB fixtures (ordering, doublons, pagination) | `references/squelettes-test.md` |
 | Analyse an erroneous squelette and generate structured error comments | `references/fixture-with-errors-convention.md` |
 | Write failing tests for a `*WithError*.html` fixture (TDD RED) | `references/fixture-with-errors-convention.md` §Workflow |
+| Test `charger()`, `verifier()`, or `traiter()` directly | `references/formulaires-cvt-test.md` |
+| Test `#FORMULAIRE_{nom}` rendering or error display | `references/formulaires-cvt-test.md` §Testing the rendered template |
