@@ -1,3 +1,27 @@
+<!--spip-test
+spec: >
+  Affiche les articles publiés de la rubrique 4, par pages de 5,
+  du plus récent au plus ancien, dans une liste structurée (balises ul/li).
+  Affiche les liens de navigation entre pages via PAGINATION.
+  Affiche un message de fallback si aucun article publié dans la rubrique.
+errors:
+  - id: CRITERE_INVALIDE
+    location: "BOUCLE_arts"
+    found: "{pagination 10}"
+    expected: "{pagination 5}"
+    symptom: "Affiche tous les articles sur une seule page au lieu de 5 par page"
+
+  - id: LISTE_NON_STRUCTUREE
+    location: "contenu de BOUCLE_arts"
+    found: "li sans parent ul"
+    expected: "balise ul encadrant les li"
+    symptom: "HTML invalide : li sans element ul parent"
+
+  - id: SECTION_ALTERNATIVE_ABSENTE
+    location: "apres /BOUCLE_arts"
+    expected: "section /B_arts avec texte de fallback puis //B_arts"
+    symptom: "Aucun message de fallback quand la rubrique est vide"
+-->
 <BOUCLE_arts(ARTICLES){id_rubrique}{par date}{inverse}{pagination 10}>
   <li><a href="#URL_ARTICLE">#TITRE</a></li>
 </BOUCLE_arts>
