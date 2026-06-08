@@ -9,17 +9,17 @@ use Spip\Test\Templating;
  * concernant l'affichage conditionnel du message de fallback (erreur #5).
  *
  * Ce test ÉCHOUE intentionnellement car le squelette contient l'erreur #5:
- *   5. <//B_articles> sans balise de fermeture </B_articles> — le texte de fallback
- *      "Aucun article n'est publié dans cette rubrique." est rendu inconditionnellement:
- *      il apparaît même quand des articles publiés existent dans la rubrique.
+ *   5. Le texte de fallback "Aucun article n'est publié dans cette rubrique." est positionné
+ *      APRÈS <//B_articles> au lieu d'AVANT — il est rendu inconditionnellement
+ *      et apparaît même quand des articles publiés existent dans la rubrique.
  *
  * Comportement correct attendu: le message de fallback NE DOIT PAS apparaître
  * quand la rubrique contient des articles publiés.
  *
- * Pour corriger le squelette, il faut ajouter </B_articles> après le texte de fallback:
- *   <//B_articles>
- *   Aucun article n'est publié dans cette rubrique.
+ * Pour corriger le squelette, placer le texte entre </B_articles> et <//B_articles>:
  *   </B_articles>
+ *   Aucun article n'est publié dans cette rubrique.
+ *   <//B_articles>
  *
  * Note empirique: sans la balise fermante </B_articles>, SPIP rend le texte après
  * <//B_articles> de façon inconditionnelle (hors du bloc alternatif).
