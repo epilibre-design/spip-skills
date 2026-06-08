@@ -48,3 +48,5 @@ composer tests-integration  # integration tests — real SPIP + SQLite3
 | Test a squelette or `#BALISE` (SquelettesTestCase) | `references/howto-test.md` §Testing squelettes |
 | Verify the plugin is active in the integration environment | `references/howto-test.md` §Verify the plugin is active |
 | Test a BOUCLE loop with DB fixtures (ordering, doublons, pagination) | `references/squelettes-test.md` |
+| Analyse an erroneous squelette and generate structured error comments | `references/errone-fixture-convention.md` |
+| Write failing tests for a `*Errone*.html` fixture (TDD RED) | `references/errone-fixture-convention.md` §Workflow |
