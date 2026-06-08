@@ -30,7 +30,7 @@ composer tests-integration  # integration tests — real SPIP + SQLite3
 | Use case | Class |
 |---|---|
 | PHP functions (filtre, autorisation, inc…) | `PHPUnit\Framework\TestCase` |
-| Squelettes, `#BALISE`, `\|filtre` in templates | `Spip\Core\Testing\SquelettesTestCase` |
+| Squelettes, `#BALISE`, `\|filtre` in templates | `Spip\Test\SquelettesTestCase` |
 
 `SquelettesTestCase` requires the integration tier (real SPIP loaded).
 

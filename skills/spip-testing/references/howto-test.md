@@ -449,7 +449,7 @@ final class MonObjetSqlTest extends TestCase
 | Use case | Base class |
 |---|---|
 | Test a PHP function (filtre, autorisation, inc…) | `PHPUnit\Framework\TestCase` |
-| Test a squelette, a `#BALISE`, or a `\|filtre` in a template | `Spip\Core\Testing\SquelettesTestCase` |
+| Test a squelette, a `#BALISE`, or a `\|filtre` in a template | `Spip\Test\SquelettesTestCase` |
 
 `SquelettesTestCase` is provided by `spip/tests`. It requires the integration environment (real SPIP loaded).
 
@@ -463,7 +463,7 @@ declare(strict_types=1);
 
 namespace MonOrganisation\Plugin\Monplugin\Tests\Integration;
 
-use Spip\Core\Testing\SquelettesTestCase;
+use Spip\Test\SquelettesTestCase;
 
 class MaBaliseTest extends SquelettesTestCase
 {
