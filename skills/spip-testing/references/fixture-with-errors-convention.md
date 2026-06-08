@@ -63,6 +63,8 @@ errors:
 
 ## Taxonomie des `id` d'erreur SPIP
 
+### Squelettes / BOUCLE
+
 | id | Signification | Exemple |
 |---|---|---|
 | `CRITERE_MANQUANT` | Critère absent dans la BOUCLE | `{statut=publie}` ou `{par date}{inverse}` oublié |
@@ -72,6 +74,17 @@ errors:
 | `SECTION_ALTERNATIVE_MAL_POSITIONNEE` | Texte de fallback hors de la section alternative | Texte après `<//B_boucle>` au lieu d'avant |
 | `SECTION_ALTERNATIVE_ABSENTE` | Aucune section alternative définie | Ni `</B_boucle>` ni `<//B_boucle>` présents |
 | `LISTE_NON_STRUCTUREE` | Éléments de liste sans élément parent | `<li>` sans `<ul>` parent |
+
+### Formulaires CVT
+
+| id | Signification | Exemple |
+|---|---|---|
+| `CLASSE_WRAPPER` | Wrapper sans classes canoniques SPIP | `class="form"` au lieu de `formulaire_spip formulaire_editer` |
+| `CLASSE_MESSAGES` | Messages globaux sans classes `reponse_formulaire_*` | `class="message_ok"` au lieu de `reponse_formulaire reponse_formulaire_ok` |
+| `SYNTAXE_ENV` | `#ENV` avec mauvais nombre d'étoiles | `#ENV{…}` ou `#ENV**{…}` au lieu de `#ENV*{…}` (messages globaux) ; `#ENV*{erreurs}` au lieu de `#ENV**{erreurs}` (champs) |
+| `STRUCTURE_CHAMP` | Champ sans `div.editer.editer_{champ}` | `<ul><li>` au lieu de `<div class="editer editer_nom">` |
+| `CLASSE_ERREUR_CHAMP` | Texte d'erreur de champ sans classe `erreur_message` | `class="champ_erreur"` au lieu de `class="erreur_message"` |
+| `CLASSE_SUBMIT` | Bouton de soumission sans classe `boutons` | `class="submit-btn"` au lieu de `class="boutons"` |
 
 ---
 
