@@ -11,6 +11,7 @@ use Spip\Test\Templating;
  * Erreurs dans le fixture (rubrique 4 avec 7 articles publiés) :
  *   1. {pagination 10} au lieu de {pagination 5} → tous les articles sur une page
  *   2. <li> sans <ul> parent → HTML invalide
+ *   3. #PAGINATION après </B_arts> → erreur compilateur zbug_champ_hors_boucle
  */
 final class PaginationWithErrorTest extends SquelettesTestCase
 {
@@ -62,10 +63,14 @@ final class PaginationWithErrorTest extends SquelettesTestCase
 
     private function render(): string
     {
-        $raw = Templating::fromString()->render(
-            file_get_contents(self::FIXTURE),
-            ['id_rubrique' => self::RUB_ID]
-        );
+        try {
+            $raw = Templating::fromString()->render(
+                file_get_contents(self::FIXTURE),
+                ['id_rubrique' => self::RUB_ID]
+            );
+        } catch (\Spip\Test\Exception\TemplateCompilationErrorException $e) {
+            $this->fail('Erreur de compilation — le rendu du fixture a échoué : ' . $e->getMessage());
+        }
         // Strip HTML comments so the <!--spip-test YAML block doesn't contaminate assertions
         return (string) preg_replace('/<!--.*?-->/s', '', $raw);
     }
@@ -95,6 +100,38 @@ final class PaginationWithErrorTest extends SquelettesTestCase
             '<ul>',
             $this->render(),
             'La liste doit être encadrée par <ul>. Erreur : <ul> absent dans le fixture.'
+        );
+    }
+
+    /**
+     * Erreur 3 — #PAGINATION placé après </B_arts> (hors boucle).
+     * Correct : #PAGINATION dans <B_arts>...</B_arts> génère des liens de navigation.
+     * ÉCHOUE (via TemplateCompilationErrorException au 1er run, ou via absence de debut_arts=
+     * au 2e run sur le cache compilé) tant que #PAGINATION reste hors de la boucle.
+     */
+    public function testPaginationHorsBoucleDeclencheErreurCompilateur(): void
+    {
+        try {
+            $rendered = (string) preg_replace(
+                '/<!--.*?-->/s',
+                '',
+                Templating::fromString()->render(
+                    file_get_contents(self::FIXTURE),
+                    ['id_rubrique' => self::RUB_ID]
+                )
+            );
+        } catch (\Spip\Test\Exception\TemplateCompilationErrorException $e) {
+            $this->fail(
+                '#PAGINATION hors boucle déclenche zbug_champ_hors_boucle. '
+                . 'Déplacer [(#PAGINATION)] dans <B_arts>...</B_arts>. '
+                . 'Erreur : ' . $e->getMessage()
+            );
+        }
+
+        $this->assertStringContainsString(
+            'debut_arts=',
+            $rendered,
+            '#PAGINATION dans <B_arts> doit générer des liens de navigation entre les pages (debut_arts=).'
         );
     }
 }
