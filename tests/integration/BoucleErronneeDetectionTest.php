@@ -135,6 +135,13 @@ final class BoucleErronneeDetectionTest extends SquelettesTestCase
             $rendered,
             '#UURL_ARTICLE (balise inconnue) doit produire un href vide'
         );
+
+        // La balise correcte #URL_ARTICLE rend une URL non vide
+        $this->assertNotEmptyCode(
+            '<BOUCLE_b(ARTICLES){id_rubrique=3}{statut=publie}{0,1}>[(#URL_ARTICLE)]</BOUCLE_b>',
+            [],
+            '#URL_ARTICLE (correct) doit rendre une URL non vide — preuve que le problème est bien la faute de frappe.'
+        );
     }
 
     /**
