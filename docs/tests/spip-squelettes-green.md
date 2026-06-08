@@ -75,7 +75,6 @@ Source: `SKILL.md` Key Critères table + Key Balises table.
 ```html
 <B_rubs>
 <ul>
-</B_rubs>
 
 <BOUCLE_rubs(RUBRIQUES){id_parent}{par num titre, titre}>
   <li>
@@ -84,11 +83,11 @@ Source: `SKILL.md` Key Critères table + Key Balises table.
   </li>
 </BOUCLE_rubs>
 
-<BB_rubs>
 </ul>
-</BB_rubs>
+</B_rubs>
 ```
 
+- `<ul>` et `</ul>` sont **dans le même bloc `<B_rubs>...</B_rubs>`** — ils n'apparaissent que si la boucle a des résultats.
 - First call: `{id_parent}` defaults to 0 → top-level rubriques.
 - `<BOUCLE_sous(BOUCLE_rubs) />` recursively calls the outer loop with the current rubrique's `id_rubrique` as the new `id_parent`.
 - Recursion stops automatically when a rubrique has no children.
