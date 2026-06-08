@@ -1,3 +1,4 @@
 spip-*-workspace/
+/tests/readonly-src/
 /tests/vendor/
 /tests/.phpunit.cache/
