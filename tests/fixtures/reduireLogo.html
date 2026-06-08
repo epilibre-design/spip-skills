@@ -1,0 +1,7 @@
+[(#REM)<!--spip-test
+spec: >
+  Affiche le logo de la rubrique #ENV{id_rubrique} redimensionné à exactement 300 pixels de large et 200 pixels de haut, sans déformation ni upscaling. 
+-->]
+<BOUCLE_rubrique(RUBRIQUES){id_rubrique}>
+  [(#LOGO_RUBRIQUE|image_reduire{300,200})]
+</BOUCLE_rubrique>
