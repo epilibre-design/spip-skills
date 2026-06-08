@@ -1,0 +1,33 @@
+[(#REM)<!--spip-test
+spec: >
+  Affiche l'arbre complet des rubriques sous forme de listes HTML imbriquées.
+  Chaque rubrique est un li dans une ul. Les sous-rubriques sont dans une ul
+  imbriquée dans le li parent. Rien n'est affiché si l'arbre est vide.
+errors:
+  - id: LISTE_NON_STRUCTUREE
+    location: "section BB_rubs (après la boucle, toujours rendue)"
+    found: "tag de fermeture ul dans BB_rubs, rendu même quand la boucle est vide"
+    expected: "ul et sa fermeture dans le même bloc B_rubs encadrant la boucle"
+    symptom: >
+      Le tag de fermeture ul est rendu inconditionnellement par BB_rubs, même
+      quand la boucle n'a aucun résultat. La boucle récursive via BB_sous hérite
+      du même problème : chaque feuille sans enfants produit un tag de fermeture
+      ul orphelin. Résultat : balises ul et ul-fermeture déséquilibrées, HTML invalide.
+      Correction : inclure la BOUCLE_rubs et le tag ul-fermeture dans B_rubs
+      (avant de fermer avec /B_rubs), comme dans la référence boucles.md.
+-->]
+
+<B_rubs>
+<ul>
+</B_rubs>
+
+<BOUCLE_rubs(RUBRIQUES){id_parent}{par num titre, titre}>
+  <li>
+    <a href="#URL_RUBRIQUE">#TITRE</a>
+    <BOUCLE_sous(BOUCLE_rubs) />
+  </li>
+</BOUCLE_rubs>
+
+<BB_rubs>
+</ul>
+</BB_rubs>
