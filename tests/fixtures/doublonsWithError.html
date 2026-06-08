@@ -1,0 +1,31 @@
+[(#REM)<!--spip-test
+spec: >
+  Affiche l'article le plus recent de la rubrique #ENV{id_rubrique} en vedette,
+  puis affiche les 5 articles suivants, sans duplicata avec l'article vedette,
+  du plus recent au plus ancien.
+errors:
+  - id: DOUBLONS_MANQUANT
+    location: "< BOUCLE_reste>"
+    found: "{id_rubrique}{par date}{inverse}{0,5}"
+    expected: "{id_rubrique}{par date}{inverse}{doublons}{0,5}"
+    symptom: "L'article vedette reapparait dans la liste des articles restants"
+
+  - id: OFFSET_INCORRECT
+    location: "< BOUCLE_reste>"
+    found: "{0,5}"
+    expected: "{1,5} (ou {doublons} avec une borne coherente)"
+    symptom: "La liste secondaire recommence au premier article et favorise les doublons"
+-->]
+
+<BOUCLE_une(ARTICLES){id_rubrique}{par date}{inverse}{0,1}{doublons}>
+<article class="featured">
+  <h2><a href="#URL_ARTICLE">#TITRE</a></h2>
+  [<p>(#DESCRIPTIF)</p>]
+</article>
+</BOUCLE_une>
+
+<ul class="liste-restante">
+<BOUCLE_reste(ARTICLES){id_rubrique}{par date}{inverse}{0,5}>
+  <li><a href="#URL_ARTICLE">#TITRE</a></li>
+</BOUCLE_reste>
+</ul>
