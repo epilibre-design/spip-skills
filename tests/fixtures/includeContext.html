@@ -1,0 +1,9 @@
+[(#REM)<!--spip-test
+spec: >
+  Inclut un fragment qui liste les 5 derniers articles publies de la rubrique
+  courante (id_rubrique transmis au contexte d'INCLURE), du plus recent au plus ancien.
+  Le fragment doit afficher un fallback si aucun article publie.
+notes:
+  - Ce fixture est la version correcte : il transmet le contexte avec env.
+-->]
+[(#INCLURE{fond=includeContextFragment,env})]

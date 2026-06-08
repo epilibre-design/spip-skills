@@ -1,0 +1,12 @@
+[(#REM)<!--spip-test
+spec: >
+  Inclut un fragment qui doit lister les 5 derniers articles publies de la rubrique
+  courante. Le contexte (id_rubrique) doit etre transmis a l'INCLURE.
+errors:
+  - id: CONTEXTE_INCLURE_NON_TRANSMIS
+    location: "#INCLURE{fond=includeContextFragment}"
+    found: "INCLURE sans env ni id_rubrique explicite"
+    expected: "#INCLURE{fond=includeContextFragment,env} ou id_rubrique=#ENV{id_rubrique}"
+    symptom: "Le fragment ne recoit pas id_rubrique et retourne une liste vide ou trop large"
+-->]
+[(#INCLURE{fond=includeContextFragment})]

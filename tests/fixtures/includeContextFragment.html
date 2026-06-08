@@ -1,0 +1,12 @@
+[(#REM)<!--spip-test-fragment
+purpose: Fragment partage par includeContext.html et includeContextWithError.html
+-->]
+<B_articles>
+<ul class="liste-articles-include">
+<BOUCLE_articles(ARTICLES){id_rubrique}{statut=publie}{par date}{inverse}{0,5}>
+  <li><a href="#URL_ARTICLE">#TITRE</a> - [(#DATE|affdate_court)]</li>
+</BOUCLE_articles>
+</ul>
+</B_articles>
+<p>Aucun article publie dans cette rubrique.</p>
+<//B_articles>
