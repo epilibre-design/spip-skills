@@ -101,17 +101,21 @@ final class BoucleErronneeTest extends SquelettesTestCase
     }
 
     /**
-     * Test 3 — Les dates doivent apparaître formatées, pas comme texte littéral "#DATE".
+     * Test 3 — Les dates doivent apparaître sans le caractère "#" en préfixe.
      *
-     * ÉCHOUE car ##DATE (double dièse) rend le texte littéral "#DATE" au lieu de la date formatée.
+     * ÉCHOUE car ##DATE (double dièse) rend "#" + la valeur de la date (ex: "#2020-01-01"),
+     * au lieu de rendre uniquement la date formatée.
+     * Dans SPIP, ## échappe le # suivant: ##DATE = "#" littéral + valeur de #DATE.
      */
     public function testAfficheLaDateFormatee(): void
     {
         $rendered = Templating::fromString()->render(file_get_contents(self::FIXTURE));
-        $this->assertStringNotContainsString(
-            '#DATE',
+        // ##DATE renders as "#<date>" (e.g. "#2020-01-01 00:00:00")
+        // Correct behavior: dates appear after "— " without a leading "#"
+        $this->assertDoesNotMatchRegularExpression(
+            '/—\s+#\d{4}/',
             $rendered,
-            'La balise ##DATE ne doit pas rendre le texte littéral "#DATE". Erreur: ##DATE doit être #DATE.'
+            'La date ne doit pas être précédée d\'un "#". Erreur: ##DATE rend "#<date>" — doit être #DATE.'
         );
     }
 
@@ -137,6 +141,7 @@ final class BoucleErronneeTest extends SquelettesTestCase
         $this->assertEqualsCode(
             $correctOrder,
             $fixtureSort,
+            [],
             'Les articles doivent être affichés du plus récent au plus ancien. Critères manquants: {par date}{inverse}.'
         );
     }
