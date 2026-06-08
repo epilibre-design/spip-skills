@@ -1,2 +1,3 @@
 spip-*-workspace/
-/tests/
+/tests/vendor/
+/tests/.phpunit.cache/

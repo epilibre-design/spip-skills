@@ -1,0 +1,43 @@
+{
+    "name": "spip-skill/squelettes-tests",
+    "description": "Integration tests for SPIP squelettes skill verification",
+    "type": "project",
+    "require": {
+        "php": "^8.2"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^13.0",
+        "spip/spip-cli": "dev-master",
+        "spip/tests": "dev-master"
+    },
+    "repositories": [
+        {
+            "name": "spip",
+            "type": "composer",
+            "url": "https://get.spip.net/composer"
+        },
+        {
+            "name": "spip-cli",
+            "type": "vcs",
+            "url": "https://git.spip.net/spip-contrib-outils/spip-cli.git"
+        },
+        {
+            "name": "spip-tests",
+            "type": "vcs",
+            "url": "https://git.spip.net/spip-contrib-extensions/tests.git"
+        }
+    ],
+    "scripts": {
+        "install-spip-test": "sh scripts/install-spip-test.sh",
+        "tests-integration": [
+            "if [ ! -f vendor/spip/spip/config/connect.php ]; then echo 'SPIP non installé.' >&2; composer install-spip-test || exit 1; fi",
+            "vendor/bin/phpunit --colors --testsuite integration --bootstrap bootstrap_integration.php"
+        ]
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "composer/installers": true
+        }
+    }
+}
