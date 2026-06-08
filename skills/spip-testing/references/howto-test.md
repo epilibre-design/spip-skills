@@ -505,6 +505,7 @@ Place `SquelettesTestCase` tests in `tests/integration/` — they need real SPIP
 | `assertEmptyCode($code, $ctx)` | Inline rendering is empty |
 | `assertNotEmptyCode($code, $ctx)` | Inline rendering is not empty |
 | `assertEqualsCode($expected, $code, $ctx)` | Strict equality |
+| `assertNotEqualsCode($unexpected, $code, $ctx, $message)` | Inline rendering does NOT equal expected string |
 | `assertOkSquelette($path, $ctx)` | Same as `assertOkCode` but from a `.html` file |
 
 ---

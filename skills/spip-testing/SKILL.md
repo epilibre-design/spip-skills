@@ -47,3 +47,4 @@ composer tests-integration  # integration tests — real SPIP + SQLite3
 | Configure `scripts/install-spip-test.sh` | `references/howto-test.md` §install-spip-test.sh template |
 | Test a squelette or `#BALISE` (SquelettesTestCase) | `references/howto-test.md` §Testing squelettes |
 | Verify the plugin is active in the integration environment | `references/howto-test.md` §Verify the plugin is active |
+| Test a BOUCLE loop with DB fixtures (ordering, doublons, pagination) | `references/squelettes-test.md` |
