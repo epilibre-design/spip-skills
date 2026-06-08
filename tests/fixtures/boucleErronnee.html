@@ -1,0 +1,13 @@
+<!-- 
+  Vérifie que ce squelette affiche les 5 titres des derniers articles publiés de la rubrique 3 du plus récent au plus ancien 
+  Si aucun article n'est publié dans cette rubrique, affiche "Aucun article n'est publié dans cette rubrique."
+-->
+<B_articles>
+    <ul>
+<BOUCLE_articles(ARTICLES){id_rubrique=3}{statut=publie}{limit 5}>
+  <li><a href="#UURL_ARTICLE">#TITTRE</a> — ##DATE</li>
+</BOUCLE_articles>
+    </ul>
+</B_articles>
+<//B_articles>
+Aucun article n'est publié dans cette rubrique.
