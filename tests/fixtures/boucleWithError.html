@@ -6,7 +6,7 @@ spec: >
   si aucun article publié dans la rubrique.
 errors:
   - id: CRITERE_MANQUANT
-    location: "<BOUCLE_articles>"
+    location: "< BOUCLE_articles>"
     found: "{id_rubrique=3}{statut=publie}{0,5}"
     expected: "{id_rubrique=3}{statut=publie}{par date}{inverse}{0,5}"
     symptom: "Articles affichés dans l'ordre d'insertion, pas du plus récent au plus ancien"
@@ -27,8 +27,8 @@ errors:
     symptom: "Affiche le texte littéral '#DATE' au lieu de la date formatée"
 
   - id: SECTION_ALTERNATIVE_MAL_POSITIONNEE
-    location: "Aucun article... placé après <//B_articles>"
-    expected: "Texte alternatif entre </B_articles> et <//B_articles>"
+    location: "Aucun article... placé après < //B_articles>"
+    expected: "Texte alternatif entre < /B_articles> et < //B_articles>"
     symptom: "Message 'Aucun article...' affiché inconditionnellement, même quand des articles existent"
     -->]
 <B_articles>
