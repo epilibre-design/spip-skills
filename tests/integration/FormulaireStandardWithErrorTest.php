@@ -4,7 +4,7 @@ declare(strict_types=1);
 use Spip\Test\SquelettesTestCase;
 
 /**
- * Vérifie les 7 erreurs intentionnelles dans tests/fixtures/formulaireStandardWithError.html.
+ * Vérifie les 7 erreurs intentionnelles dans tests/fixtures/formulaires/formulaireStandardWithError.html.
  * Tous les tests ÉCHOUENT intentionnellement — phase TDD RED.
  *
  * Erreurs (voir bloc <!--spip-test--> du fixture) :
@@ -17,7 +17,7 @@ use Spip\Test\SquelettesTestCase;
  */
 final class FormulaireStandardWithErrorTest extends SquelettesTestCase
 {
-    private const FIXTURE = __DIR__ . '/../fixtures/formulaireStandardWithError.html';
+    private const FIXTURE = __DIR__ . '/../fixtures/formulaires/formulaireStandardWithError.html';
 
     private static string $source = '';
 
