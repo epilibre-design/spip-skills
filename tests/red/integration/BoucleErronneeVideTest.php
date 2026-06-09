@@ -5,7 +5,7 @@ use Spip\Test\SquelettesTestCase;
 use Spip\Test\Templating;
 
 /**
- * Teste le comportement CORRECT attendu de tests/fixtures/boucleErronnee.html
+ * Teste le comportement CORRECT attendu de tests/fixtures/boucleWithError.html
  * concernant l'affichage conditionnel du message de fallback (erreur #5).
  *
  * Ce test ÉCHOUE intentionnellement car le squelette contient l'erreur #5:
@@ -26,7 +26,7 @@ use Spip\Test\Templating;
  */
 final class BoucleErronneeVideTest extends SquelettesTestCase
 {
-    private const FIXTURE = __DIR__ . '/../fixtures/boucleErronnee.html';
+    private const FIXTURE = __DIR__ . '/../fixtures/boucleWithError.html';
     private const RUB_ID  = 3;
 
     /** @var int[] Article IDs inserted for teardown */

@@ -5,7 +5,7 @@ use Spip\Test\SquelettesTestCase;
 use Spip\Test\Templating;
 
 /**
- * Tests décrivant le comportement CORRECT attendu de tests/fixtures/boucleErronnee.html.
+ * Tests décrivant le comportement CORRECT attendu de tests/fixtures/boucleWithError.html.
  *
  * Ces tests ÉCHOUENT intentionnellement car le squelette contient 4 erreurs:
  *   1. Tri manquant: {0,5} sans {par date}{inverse} → articles pas triés du plus récent au plus ancien
@@ -21,7 +21,7 @@ use Spip\Test\Templating;
  */
 final class BoucleErronneeTest extends SquelettesTestCase
 {
-    private const FIXTURE = __DIR__ . '/../fixtures/boucleErronnee.html';
+    private const FIXTURE = __DIR__ . '/../fixtures/boucleWithError.html';
     private const RUB_ID  = 3;
 
     /** @var int[] Article IDs inserted, oldest → newest */
