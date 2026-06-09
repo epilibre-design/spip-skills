@@ -28,7 +28,7 @@ final class IncludeContextWithErrorTest extends SquelettesTestCase
             ? (string) $GLOBALS['dossier_squelettes']
             : null;
 
-        $fixturesDir = dirname(__DIR__) . '/fixtures';
+        $fixturesDir = '../../../red/fixtures:../../../green/fixtures';
         $GLOBALS['dossier_squelettes'] = self::$oldDossierSquelettes
             ? $fixturesDir . ':' . self::$oldDossierSquelettes
             : $fixturesDir;
