@@ -24,7 +24,7 @@ final class IncludeContextTest extends SquelettesTestCase
             ? (string) $GLOBALS['dossier_squelettes']
             : null;
 
-        $fixturesDir = dirname(__DIR__) . '/fixtures';
+        $fixturesDir = '../../../green/fixtures';
         $GLOBALS['dossier_squelettes'] = self::$oldDossierSquelettes
             ? $fixturesDir . ':' . self::$oldDossierSquelettes
             : $fixturesDir;
