@@ -1,0 +1,28 @@
+<div class="formulaire_spip formulaire_editer formulaire_editer_inscription">
+
+  [<div class="reponse_formulaire reponse_formulaire_ok">(#ENV*{message_ok})</div>]
+  [<div class="reponse_formulaire reponse_formulaire_erreur">(#ENV*{message_erreur})</div>]
+
+  <form method="post" action="#ENV{action}">
+    #ACTION_FORMULAIRE{#ENV{action}}
+    <div class="editer-groupe">
+
+      <div class="editer editer_nom obligatoire[ (#ENV**{erreurs}|table_valeur{nom}|oui) erreur]">
+        <label for="nom">Nom</label>
+        [<span class="erreur_message">(#ENV**{erreurs}|table_valeur{nom})</span>]
+        <input type="text" class="text" name="nom" id="nom" value="[(#ENV**{nom})]" />
+      </div>
+
+      <div class="editer editer_email obligatoire[ (#ENV**{erreurs}|table_valeur{email}|oui) erreur]">
+        <label for="email">Email</label>
+        [<span class="erreur_message">(#ENV**{erreurs}|table_valeur{email})</span>]
+        <input type="email" class="email" name="email" id="email" value="[(#ENV**{email})]" />
+      </div>
+
+    </div>
+
+    <p class="boutons">
+      <input type="submit" class="submit" value="S'inscrire" />
+    </p>
+  </form>
+</div>
