@@ -37,13 +37,13 @@ errors:
     symptom: "Aucun message de confirmation affiché après inscription réussie"
 */
 
-function formulaires_inscription_with_error_charger_dist(): array
+function formulaires_inscription_with_errors_charger_dist(): array
 {
     // CHARGER_EMAIL_ABSENT : 'email' manquant dans le tableau retourné
     return ['nom' => ''];
 }
 
-function formulaires_inscription_with_error_verifier_dist(): array
+function formulaires_inscription_with_errors_verifier_dist(): array
 {
     $erreurs = [];
 
@@ -58,7 +58,7 @@ function formulaires_inscription_with_error_verifier_dist(): array
     return $erreurs;
 }
 
-function formulaires_inscription_with_error_traiter_dist(): array
+function formulaires_inscription_with_errors_traiter_dist(): array
 {
     // TRAITER_PAS_UTILISATEUR + TRAITER_SANS_MESSAGE_OK : aucune insertion, pas de message_ok
     return [];

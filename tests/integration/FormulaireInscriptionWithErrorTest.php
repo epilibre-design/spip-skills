@@ -6,11 +6,11 @@ use PHPUnit\Framework\TestCase;
 /**
  * Phase TDD RED — formulaire CVT d'inscription complet.
  *
- * Le template HTML (inscription_with_error.html) est canonique et correct.
+ * Le template HTML (inscription_with_errors.html) est canonique et correct.
  * Les erreurs sont dans le PHP CVT (charger/verifier/traiter).
  * Tous les tests ÉCHOUENT intentionnellement.
  *
- * Erreurs documentées dans fixtures/formulaires/inscription_with_error.php :
+ * Erreurs documentées dans fixtures/formulaires/inscription_with_errors.php :
  *   CHARGER_EMAIL_ABSENT    — charger() ne retourne pas la clé 'email'
  *   VERIFIER_NOM_IGNORE     — verifier() n'exige pas que 'nom' soit renseigné
  *   VERIFIER_CLE_EMAIL      — verifier() place l'erreur email sous 'mail' au lieu de 'email'
@@ -19,7 +19,7 @@ use PHPUnit\Framework\TestCase;
  */
 final class FormulaireInscriptionWithErrorTest extends TestCase
 {
-    private const FIXTURE_PHP = __DIR__ . '/../fixtures/formulaires/inscription_with_error.php';
+    private const FIXTURE_PHP = __DIR__ . '/../fixtures/formulaires/inscription_with_errors.php';
 
     public static function setUpBeforeClass(): void
     {
@@ -39,7 +39,7 @@ final class FormulaireInscriptionWithErrorTest extends TestCase
      */
     public function testChargerRetourneEmail(): void
     {
-        $valeurs = formulaires_inscription_with_error_charger_dist();
+        $valeurs = formulaires_inscription_with_errors_charger_dist();
         $this->assertIsArray($valeurs);
         $this->assertArrayHasKey(
             'email',
@@ -58,7 +58,7 @@ final class FormulaireInscriptionWithErrorTest extends TestCase
     {
         $_POST['nom'] = '';
         $_POST['email'] = 'valide@exemple.fr';
-        $erreurs = formulaires_inscription_with_error_verifier_dist();
+        $erreurs = formulaires_inscription_with_errors_verifier_dist();
         $this->assertArrayHasKey(
             'nom',
             $erreurs,
@@ -75,7 +75,7 @@ final class FormulaireInscriptionWithErrorTest extends TestCase
     {
         $_POST['nom'] = 'Alice';
         $_POST['email'] = 'pas-un-email';
-        $erreurs = formulaires_inscription_with_error_verifier_dist();
+        $erreurs = formulaires_inscription_with_errors_verifier_dist();
         $this->assertArrayHasKey(
             'email',
             $erreurs,
@@ -93,7 +93,7 @@ final class FormulaireInscriptionWithErrorTest extends TestCase
     {
         $_POST['nom'] = 'Alice';
         $_POST['email'] = 'alice@exemple.fr';
-        $result = formulaires_inscription_with_error_traiter_dist();
+        $result = formulaires_inscription_with_errors_traiter_dist();
         $this->assertArrayHasKey(
             'message_ok',
             $result,
@@ -112,7 +112,7 @@ final class FormulaireInscriptionWithErrorTest extends TestCase
         $_POST['nom'] = 'Alice';
         $_POST['email'] = 'alice@exemple.fr';
         $before = (int) sql_countsel('spip_auteurs', '1=1');
-        formulaires_inscription_with_error_traiter_dist();
+        formulaires_inscription_with_errors_traiter_dist();
         $after = (int) sql_countsel('spip_auteurs', '1=1');
         $this->assertGreaterThan(
             $before,
