@@ -4,8 +4,11 @@
     cacheDirectory=".phpunit.cache"
 >
     <testsuites>
-        <testsuite name="integration">
-            <directory suffix="Test.php">integration</directory>
+        <testsuite name="green">
+            <directory>green</directory>
+        </testsuite>
+        <testsuite name="red">
+            <directory>red</directory>
         </testsuite>
     </testsuites>
 </phpunit>
