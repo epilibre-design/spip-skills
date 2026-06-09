@@ -107,7 +107,7 @@ final class FormulaireInscriptionWithErrorTest extends TestCase
      * traiter() ne crée pas d'entrée dans spip_auteurs.
      * Correction : sql_insertq('spip_auteurs', [...]) avec les données saisies.
      */
-    public function testTraiterCreeTilisateur(): void
+    public function testTraiterCreeUtilisateur(): void
     {
         $_POST['nom'] = 'Alice';
         $_POST['email'] = 'alice@exemple.fr';
