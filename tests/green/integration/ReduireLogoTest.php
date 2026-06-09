@@ -36,7 +36,7 @@ final class ReduireLogoTest extends SquelettesTestCase
         parent::setUpBeforeClass();
 
         // dirname(__DIR__) = tests/ ; .../vendor/spip/spip/IMG est le répertoire des logos
-        self::$imgDir = dirname(__DIR__) . '/vendor/spip/spip/IMG';
+        self::$imgDir = dirname(__DIR__) . '/../vendor/spip/spip/IMG';
 
         foreach ([self::RUB_SMALL, self::RUB_LARGE, self::RUB_EXACT] as $id) {
             sql_delete('spip_rubriques', 'id_rubrique=' . $id);
