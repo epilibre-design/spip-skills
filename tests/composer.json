@@ -3,12 +3,12 @@
     "description": "Integration tests for SPIP squelettes skill verification",
     "type": "project",
     "require": {
-        "php": "^8.4",
+        "php": "^8.2",
          "ext-gd": "*",
          "ext-sqlite3": "*"
     },
     "require-dev": {
-        "phpunit/phpunit": "^13.0",
+        "phpunit/phpunit": "^11.0",
         "spip/spip": "^4.4",
         "spip/spip-cli": "dev-master",
         "spip/tests": "dev-master"
@@ -45,7 +45,8 @@
     "config": {
         "sort-packages": true,
         "allow-plugins": {
-            "composer/installers": true
+            "composer/installers": true,
+            "spip-league/composer-installer": false
         }
     }
 }
