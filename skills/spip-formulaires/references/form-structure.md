@@ -1,37 +1,50 @@
 # Standard SPIP form structure
 
-This document summarizes the expected HTML structure for SPIP forms.
+This document summarizes the expected HTML structure for SPIP forms,
+as practiced by the core forms in `prive/formulaires/` (the reference
+implementation — e.g. `editer_article.html`).
 
 ## 1) Base skeleton
 
 ```html
-<div class="formulaire_spip formulaire_editer formulaire_editer_nom formulaire_editer_nom-#ENV{id,nouveau}">
-  [<div class="reponse_formulaire reponse_formulaire_ok">(#ENV*{message_ok})</div>]
-  [<div class="reponse_formulaire reponse_formulaire_erreur">(#ENV*{message_erreur})</div>]
-
-  <a id="nomformulaire" name="nomformulaire"></a>
-  <form method="post" action="#ENV{action}">
-    #ACTION_FORMULAIRE{#ENV{action}}
-
+<div class="formulaire_spip formulaire_editer formulaire_editer_nom formulaire_editer_nom-#ENV{id_nom,nouveau}">
+  [<div class="reponse_formulaire reponse_formulaire_ok" role="status">(#ENV*{message_ok})</div>]
+  [<div class="reponse_formulaire reponse_formulaire_erreur" role="alert">(#ENV*{message_erreur})</div>]
+  [(#ENV{editable})
+  <form method='post' action='#ENV{action}'><div>
+    #ACTION_FORMULAIRE
+    <input type='hidden' name='id_nom' value='#ENV{id_nom}'>
     <div class="editer-groupe">
-      <div class="editer editer_nomchamp obligatoire[ (#ENV**{erreurs}|table_valeur{nomchamp}|oui)erreur]">
+      <div class="editer editer_nomchamp obligatoire[ (#ENV*{erreurs/nomchamp}|oui)erreur]">
         <label for="nomchamp">Libelle</label>
         [<p class="explication">Texte d explication</p>]
-        [<span class="erreur_message">(#ENV**{erreurs}|table_valeur{nomchamp})</span>]
-        <input type="text" class="text" name="nomchamp" id="nomchamp" value="[(#ENV**{nomchamp})]" />
+        [<span class='erreur_message'>(#ENV*{erreurs/nomchamp})</span>]
+        <input type='text' class='text' name='nomchamp' id='nomchamp' value="[(#ENV{nomchamp})]">
       </div>
     </div>
-
-    <p class="boutons">
-      <input type="submit" class="submit" value="<:bouton_enregistrer:>" />
-    </p>
-  </form>
+    <!--extra-->
+    <p class='boutons'><input type='submit' class='btn submit' value='<:bouton_enregistrer:>'></p>
+  </div></form>
+  ]
 </div>
 ```
 
 Notes:
-- `fieldset` is allowed but optional.
+- The whole `<form>` sits inside the `[(#ENV{editable}) … ]` conditional: when
+  `charger()`/`traiter()` returns a falsy `editable`, only the wrapper and the
+  messages render (read-only state).
+- `#ACTION_FORMULAIRE` is written **without argument**: its two optional
+  arguments default to `#ENV{action}` and `#ENV{form}`
+  (`balise_ACTION_FORMULAIRE()`, `ecrire/public/balises.php`). It also outputs
+  the `_hidden` HTML provided by `charger()`.
+- Field values use plain `#ENV{nomchamp}` — never `#ENV**`, which would bypass
+  the protections.
+- `<!--extra-->` is the marker where plugins inject extra fields; keep it
+  right before the buttons.
+- `fieldset` is allowed but optional (wrapped in `.editer … fieldset`).
 - Since SPIP 3.1, the convention is to use `div` (not `ul/li`) for `.editer-groupe` and `.editer`.
+- The old `<a id="nomformulaire" name="nomformulaire">` anchor from legacy docs
+  is not used by any `prive/formulaires` template — don't add it.
 
 ## 2) Special classes
 
@@ -43,25 +56,30 @@ Notes:
 
 ## 3) Global messages (CVT)
 
-Standard CVT feedback should be rendered:
+Standard CVT feedback should be rendered with their accessibility roles:
 
 ```html
-[<div class="reponse_formulaire reponse_formulaire_ok">(#ENV*{message_ok})</div>]
-[<div class="reponse_formulaire reponse_formulaire_erreur">(#ENV*{message_erreur})</div>]
+[<div class="reponse_formulaire reponse_formulaire_ok" role="status">(#ENV*{message_ok})</div>]
+[<div class="reponse_formulaire reponse_formulaire_erreur" role="alert">(#ENV*{message_erreur})</div>]
 ```
 
 ## 4) Field-level errors
 
-Read a field error:
+Read a field error — single `*`, never `**`: errors may contain HTML (the core
+wraps them in `<span role='alert'>`), so entity encoding must be disabled while
+`interdire_scripts` stays active:
 
 ```spip
-[(#ENV**{erreurs}|table_valeur{nom_du_champ})]
+[(#ENV*{erreurs/nom_du_champ})]
 ```
+
+This path notation is what `prive/formulaires` uses everywhere;
+`[(#ENV*{erreurs}|table_valeur{nom_du_champ})]` is an equivalent older spelling.
 
 Conditionally apply the `erreur` class:
 
 ```spip
-<div class="editer editer_titre[ (#ENV**{erreurs}|table_valeur{titre}|oui)erreur]">
+<div class="editer editer_titre[ (#ENV*{erreurs/titre}|oui)erreur]">
 ```
 
 `|oui` returns a space (` `) if the value is non-empty/non-null, empty string otherwise — equivalent to `|?{' ',''}`. This is intentional: it produces a non-empty value so that the surrounding `[ ...]` conditional block renders, adding the ` erreur` class.
@@ -69,13 +87,13 @@ Conditionally apply the `erreur` class:
 Conditionally render the error text:
 
 ```spip
-[<span class="erreur_message">(#ENV**{erreurs}|table_valeur{titre})</span>]
+[<span class='erreur_message'>(#ENV*{erreurs/titre})</span>]
 ```
 
 ## 5) CSS/HTML specifics
 
-- Every non-`hidden` `<input>` should have a class equal to its `type`.
-- Submit controls should be in `<p class="boutons">`.
+- Text-like `<input>` elements carry `class='text'` (historic rule: class = type).
+- Submit buttons use `class='btn submit'` inside `<p class='boutons'>`.
 - For radio/checkbox fields, wrap each option in `.choix`.
 
 Radio example:
@@ -108,11 +126,14 @@ Use the same pattern with any form balise (for example `#FORMULAIRE_FORUM`, `#FO
 ## 7) Quick review checklist
 
 - The main wrapper has `formulaire_spip`.
-- `message_ok` / `message_erreur` are rendered.
+- `message_ok` / `message_erreur` are rendered, with `role="status"` / `role="alert"`.
+- The `<form>` is wrapped in the `[(#ENV{editable}) … ]` conditional.
+- `#ACTION_FORMULAIRE` is called without argument.
 - All fields are inside `.editer-groupe`.
 - Each field uses `.editer editer_fieldname`.
-- Field errors use `#ENV**{erreurs}|table_valeur{...}`.
+- Field errors use `#ENV*{erreurs/...}` (single `*`, never `#ENV**`).
 - Error texts are in `.erreur_message`.
-- `input` elements have a class matching their type.
-- Submit control is inside `.boutons`.
+- Field values use plain `#ENV{...}`, never `#ENV**{...}`.
+- Text inputs have `class='text'`; the submit has `class='btn submit'` inside `.boutons`.
+- `<!--extra-->` is present before the buttons.
 - AJAX behavior (when needed) wraps the balise with `<div class="ajax">`.

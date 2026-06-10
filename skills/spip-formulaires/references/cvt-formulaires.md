@@ -87,7 +87,7 @@ function formulaires_editer_mot_charger_dist($id_mot = 'new', $id_groupe = 0, $r
 
 ## verifier() — validate the POST
 
-**Called only when the form is submitted** (after `charger()`). Returns an array of errors keyed by field name; an empty array means "all valid, proceed to `traiter()`".
+**Called only when the form is submitted**, and *before* `charger()`: on a POST hit, `traiter_formulaires_dynamiques()` (`ecrire/public/aiguiller.php`, invoked at the start of the hit by `ecrire/public.php` / `ecrire/index.php`) runs `verifier()` then `traiter()` before any squelette is computed; `charger()` only runs afterwards, when the page re-renders the form with the stored errors. `verifier()` therefore gets only the balise arguments and `_request()` — never anything computed by `charger()`. Returns an array of errors keyed by field name; an empty array means "all valid, proceed to `traiter()`".
 
 ```php
 // ecrire/public/aiguiller.php:258
@@ -109,7 +109,7 @@ return [
 
 | Key | Meaning |
 |---|---|
-| any field name | Error message for that field (accessible as `[(#ERREURS|table_valeur{titre})]` in squelette) |
+| any field name | Error message for that field (accessible as `[(#ENV*{erreurs/titre})]` in squelette) |
 | `message_erreur` | Global error banner; auto-generated from field count if absent |
 | `message_erreur => ''` | Suppress global banner (e.g. when returning a `previsu` instead) |
 
@@ -209,13 +209,7 @@ Return the minimal subset of arguments that makes two form instances distinguish
 ## Pipeline flow
 
 ```
-Page render:
-  charger_fonction('charger', 'formulaires/mon_form')
-  → pipeline('formulaire_charger', ...)     # plugins may add/modify values
-  → [if _etapes] cvtmulti_formulaire_charger_etapes()
-  → squelette context
-
-POST received:
+POST received (start of the hit, before any squelette):
   → pipeline('formulaire_receptionner', ...)   # before any validation
   charger_fonction('verifier', 'formulaires/mon_form')
   → pipeline('formulaire_verifier', ...)
@@ -223,6 +217,12 @@ POST received:
   if erreurs == []:
     charger_fonction('traiter', 'formulaires/mon_form')
     → pipeline('formulaire_traiter', ...)
+
+Page render (every hit, after POST processing if any):
+  charger_fonction('charger', 'formulaires/mon_form')
+  → pipeline('formulaire_charger', ...)     # plugins may add/modify values
+  → [if _etapes] cvtmulti_formulaire_charger_etapes()
+  → squelette context (with the erreurs stored by the POST phase)
 ```
 
 The four related pipelines (`formulaire_charger`, `formulaire_verifier`, `formulaire_traiter`,

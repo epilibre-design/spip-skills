@@ -214,7 +214,7 @@ yourself. Start from the stripped-down version of Saisies' own default template
         enctype="multipart/form-data"
     >
         <div>
-            #ACTION_FORMULAIRE{#ENV{action}}
+            #ACTION_FORMULAIRE
             <div class="editer-groupe">
                 #GENERER_SAISIES{#ENV{_saisies}}
             </div>
