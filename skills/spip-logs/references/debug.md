@@ -10,12 +10,13 @@ Append `?var_mode=debug` (or `&var_mode=debug`) to any public URL to display the
 
 | Mode | URL param | Effect |
 |---|---|---|
-| Debug overlay | `?var_mode=debug` | Shows boucles, compilation time, cache hits, template files used |
-| Force recalculation | `?var_mode=recalcul` | Bypasses cache for this request |
-| Show compiler output | `?var_mode=inclure` | Dumps compiled PHP for each included squelette |
-| Preview (no cache write) | `?var_mode=preview` | Equivalent to `_VAR_NOCACHE` — regenerates without writing |
+| Recalculation | `?var_mode=calcul` / `?var_mode=recalcul` | Recompute the page (recalcul also refreshes includes/images) |
+| Debug overlay | `?var_mode=debug` | Shows boucles, squelettes used, compiled code; no cache write |
+| Included squelettes | `?var_mode=inclure` | Displays which squelette files are included; no cache write |
+| Preview | `?var_mode=preview` | Activates preview criteria in boucles (view unpublished content); no cache write |
+| Other modes | `?var_mode=traduction,urls,images` | Language-string overlay / recompute URLs / recompute image filters |
 
-`var_mode` is only available to logged-in administrators. Anonymous requests ignore it.
+`calcul` and `recalcul` are available to everyone. The other modes require an autorisation check (`debug`, or `previsualiser` for `preview`) — by default that means a logged-in webmestre/admin; unauthorized requests are redirected to login or ignored. Source: `init_var_mode()` in `ecrire/inc/utils.php`.
 
 ---
 
@@ -34,12 +35,12 @@ Use in `config/mes_options.php` for site-wide dev mode, or conditionally in a pi
 
 ## Inspecting SQL queries
 
-```php
-// Log every SQL query to tmp/log/sql.log (very verbose)
-define('_LOG_REQUETES_LONGUES', 0); // log all queries, not just slow ones
-```
+- Append `?var_profile=1` to a public URL (with `debug` autorisation) to display the SQL queries used by the page, or define `_DEBUG_TRACE_QUERIES` to trace queries on every request.
+- Define `_DEBUG_SLOW_QUERIES` to append a SQL comment (boucle, request URI, IP) to each query, so MySQL's own slow-query log shows where a slow query came from.
 
-`_LOG_REQUETES_LONGUES` is a threshold in milliseconds. Setting it to `0` logs everything. Default is unset (no query logging).
+```php
+define('_DEBUG_SLOW_QUERIES', true);
+```
 
 Source: `ecrire/req/mysql.php`
 
@@ -53,8 +54,7 @@ Add a `spip_log()` call at the top of any pipeline function to trace when it fir
 function monplugin_pre_edition($flux) {
     spip_log(
         ['pipeline' => 'pre_edition', 'args' => $flux['args']],
-        'monplugin',
-        _LOG_DEBUG
+        'monplugin.' . _LOG_DEBUG
     );
     return $flux;
 }
@@ -73,11 +73,11 @@ This file is loaded early and is gitignored by SPIP conventions. Safe place for 
 // Enable debug log level
 define('_LOG_FILTRE_GRAVITE', _LOG_DEBUG);
 
-// Log all SQL queries
-define('_LOG_REQUETES_LONGUES', 0);
+// Tag SQL queries for the MySQL slow-query log
+define('_DEBUG_SLOW_QUERIES', true);
 
-// Disable cache for all requests
-define('_NO_CACHE', 1);
+// Disable cache: compute every request without storing
+define('_NO_CACHE', -1);
 ```
 
 Never commit `config/mes_options.php` to production.
@@ -101,8 +101,8 @@ tail -f tmp/log/*.log
 
 ## Invariants
 
-- `?var_mode` is stripped from cache keys — using it never pollutes the cache.
-- `_NO_CACHE = 1` forces regeneration **and** writes a fresh cache file (use `_VAR_NOCACHE` to regenerate without writing).
+- The no-cache `var_mode`s (`debug`, `inclure`, `preview`, `traduction`) set `_VAR_NOCACHE`, so they never pollute the cache.
+- `_NO_CACHE` values (see `cache_valide()` in `ecrire/public/cacher.php`): `1` forces regeneration **and** writes a fresh cache file; `-1` regenerates without writing (like `_VAR_NOCACHE`); `0` uses the cache when present.
 - `_LOG_FILTRE_GRAVITE` applies globally for the process; it cannot be scoped to a single plugin's log type.
 
 ---

@@ -1,59 +1,55 @@
-# journal() — admin-visible audit log
+# journal() — site event log
 
-Source: `ecrire/inc/journal.php`
+Source: `journal()` in `ecrire/inc/utils.php`, delegating to `inc_journal_dist()` in `ecrire/inc/journal.php`.
 
-The journal records human-readable events that administrators can browse at `?exec=journal` in the private space. It complements `spip_log()` (file-based developer traces) with structured, DB-stored audit entries.
+The journal API records site events ("journal de bord du site"). The core implementation is deliberately minimal: it writes to a dedicated log file. A plugin can override it to store entries in the database and provide display/selection tools.
 
 ---
 
 ## Signature
 
 ```php
-journal(string $message, array $options = []): void
+journal(string $phrase, array $opt = []): void
 ```
+
+`journal()` loads the implementation with `charger_fonction('journal', 'inc')` and calls it — so a plugin shipping its own `inc/journal.php` (function `inc_journal()`) replaces the core behavior entirely.
 
 ---
 
-## Options
+## Core behavior (`inc_journal_dist`)
 
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `qui` | int | current `$GLOBALS['visiteur_session']['id_auteur']` | Author performing the action |
-| `quand` | string | now | Timestamp override (MySQL DATETIME: `YYYY-MM-DD HH:MM:SS`) |
-| `id_objet` | int | 0 | ID of the related objet éditorial |
-| `objet` | string | `''` | Type of the related objet (e.g. `'article'`, `'rubrique'`) |
-| `etat` | string | `''` | State label displayed in the journal list |
-| `ip` | string | auto-detected | IP address of the actor |
+```php
+function inc_journal_dist($phrase, $opt = []) {
+    if (!strlen($phrase)) {
+        return;
+    }
+    if ($opt) {
+        $phrase .= ' :: ' . str_replace("\n", ' ', join(', ', $opt));
+    }
+    spip_log($phrase, 'journal');
+}
+```
+
+- An empty `$phrase` is ignored.
+- `$opt` has **no fixed schema**: its values are simply joined with `', '` and appended to the phrase after `' :: '` (keys are not written).
+- The result goes through `spip_log($phrase, 'journal')` → `tmp/log/journal.log`, at gravité `_LOG_INFO` (6). With the default `_LOG_FILTRE_GRAVITE` (= `_LOG_INFO_IMPORTANTE`, 5), journal entries are therefore **not written** unless the threshold is raised — or a plugin provides a real storage backend.
 
 ---
 
 ## Usage examples
 
-### Simple trace (no object)
+### Simple event
 
 ```php
 journal(_T('monplugin:import_complete', ['nb' => $nb]));
 ```
 
-### Linked to an objet éditorial
+### With context values
 
 ```php
 journal(
     _T('monplugin:article_archive', ['titre' => $titre]),
-    [
-        'id_objet' => $id_article,
-        'objet'    => 'article',
-        'etat'     => 'archive',
-    ]
-);
-```
-
-### On behalf of another author
-
-```php
-journal(
-    'Batch migration executed',
-    ['qui' => $id_auteur_systeme, 'etat' => 'ok']
+    ['article ' . $id_article, 'statut archive']
 );
 ```
 
@@ -63,33 +59,25 @@ journal(
 
 | Need | Use |
 |---|---|
-| Trace visible to site admins in the private space | `journal()` |
+| Site-level event that a plugin may later store/display for admins | `journal()` |
 | Developer/debug trace (arrays, raw data, stack context) | `spip_log()` |
-| Audit: who changed what, when | `journal()` |
-| Error or warning from a pipeline | `spip_log()` with `_LOG_ERREUR` / `_LOG_AVERTISSEMENT` |
-| Both (critical operation) | both — `journal()` for the admin, `spip_log()` for the developer |
+| Error or warning from a pipeline | `spip_log()` with `'type.' . _LOG_ERREUR` / `_LOG_AVERTISSEMENT` |
+| Both (critical operation) | both — `journal()` for the site event, `spip_log()` for the developer |
 
 ---
 
-## Storage
+## Storage and viewing
 
-Entries are stored in the `spip_meta` table under the key `journal`. Do not read this table directly — use `?exec=journal` to browse entries, or `lire_config('journal')` for programmatic access.
-
----
-
-## Viewing the journal
-
-Private space: `?exec=journal`
-
-The list shows entries with author, date, object link, and state. No pagination — the journal is truncated automatically by SPIP to the most recent N entries.
+In core, entries land in `tmp/log/journal.log` (subject to the same rotation as any `spip_log()` file). 
+There is no DB table and no private-space screen for the journal in core — that is left to plugins overriding `inc_journal`.
 
 ---
 
 ## Invariants
 
-- `journal()` writes to the DB — avoid calling it in hot paths (e.g. inside a loop over thousands of objects).
-- The `$message` string is stored raw; use `_T()` to produce translatable strings.
-- If no `qui` is provided and there is no active session, the entry is recorded with `id_auteur = 0`.
+- The `$phrase` string is stored raw; use `_T()` to produce translatable strings.
+- `$opt` values are flattened into the message — they carry no semantics in core.
+- The override point is `charger_fonction('journal', 'inc')`; never call `inc_journal_dist()` directly.
 
 ---
 
