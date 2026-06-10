@@ -10,14 +10,14 @@ implementation — e.g. `editer_article.html`).
 <div class="formulaire_spip formulaire_editer formulaire_editer_nom formulaire_editer_nom-#ENV{id_nom,nouveau}">
   [<div class="reponse_formulaire reponse_formulaire_ok" role="status">(#ENV*{message_ok})</div>]
   [<div class="reponse_formulaire reponse_formulaire_erreur" role="alert">(#ENV*{message_erreur})</div>]
-  [(#ENV{editable})
+  [(#ENV{editable}|oui)
   <form method='post' action='#ENV{action}'><div>
     #ACTION_FORMULAIRE
     <input type='hidden' name='id_nom' value='#ENV{id_nom}'>
     <div class="editer-groupe">
       <div class="editer editer_nomchamp obligatoire[ (#ENV*{erreurs/nomchamp}|oui)erreur]">
-        <label for="nomchamp">Libelle</label>
-        [<p class="explication">Texte d explication</p>]
+        <label for="nomchamp">Libellé</label>
+        [<p class="explication">Texte d'explication</p>]
         [<span class='erreur_message'>(#ENV*{erreurs/nomchamp})</span>]
         <input type='text' class='text' name='nomchamp' id='nomchamp' value="[(#ENV{nomchamp})]">
       </div>
@@ -30,7 +30,7 @@ implementation — e.g. `editer_article.html`).
 ```
 
 Notes:
-- The whole `<form>` sits inside the `[(#ENV{editable}) … ]` conditional: when
+- The whole `<form>` sits inside the `[(#ENV{editable}|oui) … ]` conditional: when
   `charger()`/`traiter()` returns a falsy `editable`, only the wrapper and the
   messages render (read-only state).
 - `#ACTION_FORMULAIRE` is written **without argument**: its two optional
@@ -127,7 +127,7 @@ Use the same pattern with any form balise (for example `#FORMULAIRE_FORUM`, `#FO
 
 - The main wrapper has `formulaire_spip`.
 - `message_ok` / `message_erreur` are rendered, with `role="status"` / `role="alert"`.
-- The `<form>` is wrapped in the `[(#ENV{editable}) … ]` conditional.
+- The `<form>` is wrapped in the `[(#ENV{editable}|oui) … ]` conditional.
 - `#ACTION_FORMULAIRE` is called without argument.
 - All fields are inside `.editer-groupe`.
 - Each field uses `.editer editer_fieldname`.

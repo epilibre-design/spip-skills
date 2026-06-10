@@ -34,7 +34,7 @@ A **formulaire CVT** is a SPIP form built around the PHP contract
 - Field errors use `#ENV*{erreurs/champ}` (single `*`, never `**`) and the conditional
   class `[ (#ENV*{erreurs/champ}|oui)erreur]`; field values use plain `#ENV{champ}`.
 - `#ACTION_FORMULAIRE` is called without argument; the `<form>` is wrapped in
-  `[(#ENV{editable}) … ]`.
+  `[(#ENV{editable}|oui) … ]`.
 - `charger()` may return an `array`, `false`, or a `string`; `verifier()` returns an
   errors array; `traiter()` returns a result array.
 - Use Saisies when the form is field-driven enough to justify the dependency. Preferred
@@ -49,7 +49,7 @@ A **formulaire CVT** is a SPIP form built around the PHP contract
 <div class="formulaire_spip formulaire_editer formulaire_editer_x formulaire_editer_x-#ENV{id_x,nouveau}">
   [<div class="reponse_formulaire reponse_formulaire_ok" role="status">(#ENV*{message_ok})</div>]
   [<div class="reponse_formulaire reponse_formulaire_erreur" role="alert">(#ENV*{message_erreur})</div>]
-  [(#ENV{editable})
+  [(#ENV{editable}|oui)
   <form method='post' action='#ENV{action}'><div>
     #ACTION_FORMULAIRE
     <div class="editer-groupe">
