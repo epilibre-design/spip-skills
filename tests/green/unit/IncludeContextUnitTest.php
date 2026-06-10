@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 
-require_once __DIR__ . '/helpers/IncludeContext.php';
+require_once __DIR__ . '/helpers/IncludeContextHelper.php';
 require_once __DIR__ . '/mocks/IncludeContextRendererMock.php';
 
 final class IncludeContextUnitTest extends TestCase

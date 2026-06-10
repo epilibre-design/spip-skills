@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 
-require_once __DIR__ . '/helpers/Pagination.php';
+require_once __DIR__ . '/helpers/PaginationHelper.php';
 require_once __DIR__ . '/mocks/PaginationRendererMock.php';
 
 final class PaginationUnitTest extends TestCase
