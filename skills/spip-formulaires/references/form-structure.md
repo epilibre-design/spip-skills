@@ -14,10 +14,10 @@ This document summarizes the expected HTML structure for SPIP forms.
     #ACTION_FORMULAIRE{#ENV{action}}
 
     <div class="editer-groupe">
-      <div class="editer editer_nomchamp obligatoire[ (#ENV**{erreurs}|table_valeur{nomchamp}|oui)erreur]">
+      <div class="editer editer_nomchamp obligatoire[ (#ENV*{erreurs/nomchamp}|oui)erreur]">
         <label for="nomchamp">Libelle</label>
         [<p class="explication">Texte d explication</p>]
-        [<span class="erreur_message">(#ENV**{erreurs}|table_valeur{nomchamp})</span>]
+        [<span class="erreur_message">(#ENV*{erreurs/nomchamp})</span>]
         <input type="text" class="text" name="nomchamp" id="nomchamp" value="[(#ENV**{nomchamp})]" />
       </div>
     </div>
@@ -52,16 +52,22 @@ Standard CVT feedback should be rendered:
 
 ## 4) Field-level errors
 
-Read a field error:
+Read a field error (single `*`, never `**`: errors may contain HTML — the core wraps
+them in `<span role='alert'>` — so entity encoding must be disabled, but
+`interdire_scripts` must stay active):
 
 ```spip
-[(#ENV**{erreurs}|table_valeur{nom_du_champ})]
+[(#ENV*{erreurs/nom_du_champ})]
 ```
+
+The path notation `erreurs/nom_du_champ` is what `prive/formulaires` uses
+(e.g. `editer_article.html`); `[(#ENV*{erreurs}|table_valeur{nom_du_champ})]`
+is an equivalent older spelling.
 
 Conditionally apply the `erreur` class:
 
 ```spip
-<div class="editer editer_titre[ (#ENV**{erreurs}|table_valeur{titre}|oui)erreur]">
+<div class="editer editer_titre[ (#ENV*{erreurs/titre}|oui)erreur]">
 ```
 
 `|oui` returns a space (` `) if the value is non-empty/non-null, empty string otherwise — equivalent to `|?{' ',''}`. This is intentional: it produces a non-empty value so that the surrounding `[ ...]` conditional block renders, adding the ` erreur` class.
@@ -69,7 +75,7 @@ Conditionally apply the `erreur` class:
 Conditionally render the error text:
 
 ```spip
-[<span class="erreur_message">(#ENV**{erreurs}|table_valeur{titre})</span>]
+[<span class="erreur_message">(#ENV*{erreurs/titre})</span>]
 ```
 
 ## 5) CSS/HTML specifics
@@ -111,7 +117,7 @@ Use the same pattern with any form balise (for example `#FORMULAIRE_FORUM`, `#FO
 - `message_ok` / `message_erreur` are rendered.
 - All fields are inside `.editer-groupe`.
 - Each field uses `.editer editer_fieldname`.
-- Field errors use `#ENV**{erreurs}|table_valeur{...}`.
+- Field errors use `#ENV*{erreurs/...}` (or `#ENV*{erreurs}|table_valeur{...}`), never `#ENV**`.
 - Error texts are in `.erreur_message`.
 - `input` elements have a class matching their type.
 - Submit control is inside `.boutons`.

@@ -109,7 +109,7 @@ return [
 
 | Key | Meaning |
 |---|---|
-| any field name | Error message for that field (accessible as `[(#ENV**{erreurs}|table_valeur{titre})]` in squelette) |
+| any field name | Error message for that field (accessible as `[(#ENV*{erreurs/titre})]` — or equivalently `[(#ENV*{erreurs}|table_valeur{titre})]` — in squelette) |
 | `message_erreur` | Global error banner; auto-generated from field count if absent |
 | `message_erreur => ''` | Suppress global banner (e.g. when returning a `previsu` instead) |
 

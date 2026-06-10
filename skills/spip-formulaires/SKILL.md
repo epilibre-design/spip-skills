@@ -30,8 +30,9 @@ A **formulaire CVT** is a SPIP form built around the PHP contract
 - Canonical HTML uses `formulaire_spip`, `.editer-groupe`, `.editer`,
   `reponse_formulaire`, `.erreur_message`, and `.boutons`.
 - Global banners use `#ENV*{message_ok}` / `#ENV*{message_erreur}`.
-- Field errors use `#ENV**{erreurs}|table_valeur{champ}` and the conditional class
-  `[ (#ENV**{erreurs}|table_valeur{champ}|oui)erreur]`.
+- Field errors use `#ENV*{erreurs/champ}` (single `*`, never `**`; equivalent to
+  `#ENV*{erreurs}|table_valeur{champ}`) and the conditional class
+  `[ (#ENV*{erreurs/champ}|oui)erreur]`.
 - `charger()` may return an `array`, `false`, or a `string`; `verifier()` returns an
   errors array; `traiter()` returns a result array.
 - Use Saisies when the form is field-driven enough to justify the dependency. Preferred
@@ -49,9 +50,9 @@ A **formulaire CVT** is a SPIP form built around the PHP contract
   <form method="post" action="#ENV{action}">
     #ACTION_FORMULAIRE{#ENV{action}}
     <div class="editer-groupe">
-      <div class="editer editer_titre obligatoire[ (#ENV**{erreurs}|table_valeur{titre}|oui)erreur]">
+      <div class="editer editer_titre obligatoire[ (#ENV*{erreurs/titre}|oui)erreur]">
         <label for="titre"><:info_titre:></label>
-        [<span class="erreur_message">(#ENV**{erreurs}|table_valeur{titre})</span>]
+        [<span class="erreur_message">(#ENV*{erreurs/titre})</span>]
         <input type="text" class="text" name="titre" id="titre" value="[(#ENV**{titre})]" />
       </div>
     </div>
