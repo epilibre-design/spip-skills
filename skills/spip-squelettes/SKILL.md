@@ -119,3 +119,4 @@ SPIP generates pages from **squelettes** — `.html` files mixing HTML with BOUC
 - Copy-paste complete patterns → `references/exemples.md`
 
 Not for plugin PHP development → use the `spip-plugins` skill.
+Not for PHPUnit tests on squelettes or `#BALISE` → use the `spip-testing` skill.

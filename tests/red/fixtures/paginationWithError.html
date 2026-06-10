@@ -1,0 +1,29 @@
+#CACHE{0}[(#REM)<!--spip-test
+spec: >
+  Affiche les articles publiés de la rubrique #ENV{id_rubrique}, par pages de 10,
+  du plus récent au plus ancien, dans une liste structurée (balises ul/li).
+  Affiche les liens de navigation entre pages via PAGINATION.
+  Affiche un message de fallback si aucun article publié dans la rubrique.
+errors:
+  - id: CRITERE_INVALIDE
+    location: "< BOUCLE_arts>"
+    found: "{pagination 10}"
+    expected: "{pagination 10}"
+    symptom: "Affiche tous les articles sur une seule page au lieu de 10 par page"
+
+  - id: LISTE_NON_STRUCTUREE
+    location: "contenu de < BOUCLE_arts>"
+    found: "li sans parent ul"
+    expected: "balise ul encadrant les li"
+    symptom: "HTML invalide : li sans element ul parent"
+
+  - id: PAGINATION_HORS_BOUCLE
+    location: "PAGINATION apres < /B_arts>"
+    expected: "PAGINATION avant < /B_arts>"
+    symptom: "Erreur du compilateur `Champ PAGINATION hors boucle`"
+-->]
+<BOUCLE_arts(ARTICLES){id_rubrique}{par date}{inverse}{pagination 10}>
+  <li><a href="#URL_ARTICLE">#TITRE</a></li>
+</BOUCLE_arts>
+</B_arts>
+[(#PAGINATION)]

@@ -1,0 +1,17 @@
+#CACHE{0}[(#REM)<!--spip-test
+spec: >
+  Affiche le logo de la rubrique #E NV{id_rubrique} redimensionné à exactement 300 pixels de large et 200 pixels de haut, sans déformation ni upscaling. 
+errors:
+  - id: FILTRE_INCORRECT
+    location: "#L OGO_RUBRIQUE|image_recadre{300,200}"
+    found: "image_recadre{300,200}"
+    expected: "image_reduire{300,200}|image_recadre{300,200}"
+    symptom: >
+      Le logo est recadré (coupé) au lieu d'être rédimensionné proportionnellement.
+      De plus, si le logo source est plus petit que 300×200, image_recadre l'agrandit
+      et produit un résultat flou (upscaling). Correction : image_reduire redimensionne
+      sans dépasser les dimensions cibles et sans jamais agrandir.
+-->]
+<BOUCLE_rubrique(RUBRIQUES){id_rubrique}>
+  [(#LOGO_RUBRIQUE|image_recadre{300,200})]
+</BOUCLE_rubrique>

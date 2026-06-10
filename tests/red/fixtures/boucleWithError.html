@@ -1,0 +1,42 @@
+#CACHE{0}[(#REM)<!--spip-test
+spec: >
+  Affiche les 5 derniers articles publiés de la rubrique 3,
+  du plus récent au plus ancien (titre, lien, date).
+  Affiche "Aucun article n'est publié dans cette rubrique."
+  si aucun article publié dans la rubrique.
+errors:
+  - id: CRITERE_MANQUANT
+    location: "< BOUCLE_articles>"
+    found: "{id_rubrique=3}{statut=publie}{0,5}"
+    expected: "{id_rubrique=3}{statut=publie}{par date}{inverse}{0,5}"
+    symptom: "Articles affichés dans l'ordre d'insertion, pas du plus récent au plus ancien"
+
+  - id: BALISE_INCONNUE
+    location: "#UURL_ARTICLE"
+    expected: "#URL_ARTICLE"
+    symptom: "href vide dans les liens générés"
+
+  - id: BALISE_INCONNUE
+    location: "#TITTRE"
+    expected: "#TITRE"
+    symptom: "Texte du lien vide (balise inconnue)"
+
+  - id: DOUBLE_DIESE
+    location: "##DATE"
+    expected: "#DATE"
+    symptom: "Affiche le texte littéral '#DATE' au lieu de la date formatée"
+
+  - id: SECTION_ALTERNATIVE_MAL_POSITIONNEE
+    location: "Aucun article... placé après < //B_articles>"
+    expected: "Texte alternatif entre < /B_articles> et < //B_articles>"
+    symptom: "Message 'Aucun article...' affiché inconditionnellement, même quand des articles existent"
+    -->]
+<B_articles>
+    <ul>
+<BOUCLE_articles(ARTICLES){id_rubrique=3}{statut=publie}{0,5}>
+  <li><a href="#UURL_ARTICLE">#TITTRE</a> — ##DATE</li>
+</BOUCLE_articles>
+    </ul>
+</B_articles>
+<//B_articles>
+Aucun article n'est publié dans cette rubrique.

@@ -1,0 +1,81 @@
+<!--spip-test
+spec: >
+  Formulaire CVT SPIP nommé 'inscription' avec un champ 'nom' obligatoire
+  et un champ 'email'. Affiche les messages globaux de succès et d'erreur,
+  les erreurs par champ et un bouton de soumission.
+errors:
+  - id: CLASSE_WRAPPER
+    location: "div wrapper externe"
+    found: '<div> sans attribut class'
+    expected: "class contenant au minimum formulaire_spip et formulaire_editer"
+    symptom: "Le formulaire n'est pas stylisé par le thème SPIP (classes canoniques absentes)"
+
+  - id: CLASSE_MESSAGES
+    location: "blocs de messages globaux"
+    found: 'class="message_ok" et class="alert-success"'
+    expected: 'class="reponse_formulaire reponse_formulaire_ok" et class="reponse_formulaire reponse_formulaire_erreur"'
+    symptom: "Les messages de succès/erreur globaux ne s'affichent pas avec le style SPIP attendu"
+
+  - id: SYNTAXE_ENV
+    location: "balises #ENV des messages globaux"
+    found: "#ENV{message_ok} et #ENV{message_erreur} (sans étoile)"
+    expected: "#ENV*{message_ok} et #ENV*{message_erreur} (étoile simple)"
+    symptom: "Risque XSS : les messages sont rendus sans échappement HTML"
+
+  - id: STRUCTURE_CHAMP
+    location: "champs nom et email"
+    found: "<ul><li>"
+    expected: "<div class=\"editer editer_nom\"> et <div class=\"editer editer_email\">"
+    symptom: "Structure HTML invalide pour les champs, incompatible avec le CSS SPIP"
+
+  - id: SYNTAXE_ENV
+    location: "affichage de l'erreur du champ nom"
+    found: "(#ENV*{erreurs}|table_valeur{nom}) — étoile simple"
+    expected: "(#ENV**{erreurs}|table_valeur{nom}) — double étoile"
+    symptom: "L'erreur du champ nom ne s'affiche pas (table_valeur reçoit une chaîne au lieu d'un tableau)"
+
+  - id: CLASSE_ERREUR_CHAMP
+    location: "span du texte d'erreur du champ nom"
+    found: 'class="champ_erreur"'
+    expected: 'class="erreur_message"'
+    symptom: "Le texte d'erreur de champ n'est pas stylisé par le thème SPIP"
+
+  - id: CLASSE_SUBMIT
+    location: "conteneur du bouton de soumission"
+    found: '<p class="submit-btn">'
+    expected: '<p class="boutons">'
+    symptom: "Le bouton de soumission n'est pas stylisé par le thème SPIP"
+-->
+
+<div>
+
+  [<div class="message_ok">(#ENV{message_ok})</div>]
+  [<div class="alert-success">(#ENV{message_erreur})</div>]
+
+  <form method="post" action="#ENV{action}">
+
+    <div class="editer-groupe">
+
+      <ul>
+        <li class="obligatoire[ (#ENV**{erreurs}|table_valeur{nom}|oui)erreur]">
+          <label for="nom">Nom</label>
+          [<span class="champ_erreur">(#ENV*{erreurs}|table_valeur{nom})</span>]
+          <input type="text" class="text" name="nom" id="nom" value="[(#ENV**{nom})]" />
+        </li>
+      </ul>
+
+      <ul>
+        <li>
+          <label for="email">Email</label>
+          <input type="email" class="email" name="email" id="email" value="[(#ENV**{email})]" />
+        </li>
+      </ul>
+
+    </div>
+
+    <p class="submit-btn">
+      <input type="submit" class="submit" value="S'inscrire" />
+    </p>
+
+  </form>
+</div>

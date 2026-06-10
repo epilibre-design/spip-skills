@@ -1,1 +1,9 @@
 spip-*-workspace/
+/tests/readonly-src/
+/tests/vendor/
+/tests/.phpunit.cache/
+/tests/reflexions.txt
+/tests/docs
+/tests/skills
+/tests/AGENTS.md
+

@@ -1,0 +1,43 @@
+From ff6310dae9430e345a635ca8036e792f55816852 Mon Sep 17 00:00:00 2001
+From: Pol <carre@reporterre.net>
+Date: Wed, 3 Jun 2026 18:29:41 +0200
+Subject: [PATCH] =?UTF-8?q?fix:=20Contr=C3=B4le=20des=20erreurs=20sur=20le?=
+ =?UTF-8?q?=20t=C3=A9l=C3=A9chargement=20des=20plugins?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Ce fix est composé de 2 parties:
+- un workaround qui permet de contourner le problème de typage des
+autorisations
+- un contrôle effectif pour savoir s'il y a eu une erreur et afficher
+une sortie cohérente.
+
+Closes #88
+---
+ src/Command/PluginsSvpTelecharger.php | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/src/Command/PluginsSvpTelecharger.php b/src/Command/PluginsSvpTelecharger.php
+index 8e74cee..fb6541a 100644
+--- a/src/Command/PluginsSvpTelecharger.php
++++ b/src/Command/PluginsSvpTelecharger.php
+@@ -53,8 +53,15 @@ class PluginsSvpTelecharger extends PluginsActiver
+             $actionneur->sauver_actions();
+ 
+             autoriser_exception('ajouter', '_plugins', '*');
++            autoriser_exception('ajouter', '_plugin', '*');
++
+             while ($res = $actionneur->one_action()) {
+-                $this->io->comment($res['n'] . ' action réalisée : ' . $res['todo']);
++                if (true === array_last($actionneur->done)['done']) {
++                    $this->io->comment($res['n'] . ' action réalisée : ' . $res['todo']);
++                } else {
++                    $this->io->error($res['n'] . ' action en échec : ' . $res['todo']);
++                    break;
++                }
+             }
+ 
+             $actionneur->deverrouiller();
+-- 
+GitLab
