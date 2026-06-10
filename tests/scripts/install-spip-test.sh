@@ -5,16 +5,10 @@ ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 SPIP_ROOT="$ROOT_DIR/vendor/spip/spip"
 SPIP_CLI_DIR="$ROOT_DIR/vendor/spip/spip-cli"
 SPIP_BIN="$ROOT_DIR/vendor/bin/spip"
-SPIP_SRC="$ROOT_DIR/readonly-src/spip"
 PATCH_FILE="$ROOT_DIR/spip-cli.patch"
 
-# 1. Copy SPIP core from readonly-src (no network download)
-if [ ! -f "$SPIP_ROOT/ecrire/inc_version.php" ]; then
-    [ -d "$SPIP_SRC" ] || { echo "Error: SPIP source not found at $SPIP_SRC" >&2; exit 1; }
-    echo "Copying SPIP from $SPIP_SRC ..." >&2
-    mkdir -p "$(dirname "$SPIP_ROOT")"
-    cp -a "$SPIP_SRC/." "$SPIP_ROOT/"
-fi
+# 1. Check SPIP core is installed via composer
+[ -f "$SPIP_ROOT/ecrire/inc_version.php" ] || { echo "Error: SPIP not found at $SPIP_ROOT — run composer install first" >&2; exit 1; }
 
 # 2. Apply spip-cli patch (idempotent: patch --forward exits 0 on success, 1 if already applied)
 if [ -f "$PATCH_FILE" ] && [ -d "$SPIP_CLI_DIR" ]; then
