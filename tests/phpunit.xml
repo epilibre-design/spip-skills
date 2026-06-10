@@ -6,8 +6,8 @@
         <testsuite name="unit">
             <directory>green/unit</directory>
         </testsuite>
-        <testsuite name="green">
-            <directory>green</directory>
+        <testsuite name="integration">
+		<directory>green/integration</directory>
         </testsuite>
         <testsuite name="red">
             <directory>red</directory>

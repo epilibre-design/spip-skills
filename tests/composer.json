@@ -37,9 +37,9 @@
             "if [ ! -f vendor/spip/spip/config/connect.php ]; then echo 'SPIP non installé.' >&2; composer install-spip-test || exit 1; fi",
             "vendor/bin/phpunit --colors --testsuite red --bootstrap bootstrap_integration.php"
         ],
-        "tests": [
+        "tests-integration": [
             "if [ ! -f vendor/spip/spip/config/connect.php ]; then echo 'SPIP non installé.' >&2; composer install-spip-test || exit 1; fi",
-            "vendor/bin/phpunit --colors --testsuite green --bootstrap bootstrap_integration.php"
+            "vendor/bin/phpunit --colors --testsuite integration --bootstrap bootstrap_integration.php"
         ]
     },
     "config": {
