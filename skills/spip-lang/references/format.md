@@ -143,11 +143,14 @@ Full list is available in SPIP core under `ecrire/lang/`.
 
 ## Language fallback
 
-SPIP resolves a key in this order:
+SPIP resolves a key in this order (see `charger_langue()` / `inc_traduire_dist()` in `ecrire/inc/traduire.php`):
 1. Active language (current `lang_select()` or `$GLOBALS['spip_lang']`)
-2. Reference language declared by `<traduire reference="..." />` in plugin manifest
-3. Raw key fallback (module removed, underscores converted to spaces) if `force = true`
-4. Empty string if `force = false`
+2. Site main language (meta `langue_site`)
+3. French (`_LANGUE_PAR_DEFAUT`)
+4. Raw key fallback (module removed, underscores converted to spaces) if `force = true`
+5. Empty string if `force = false`
+
+The `<traduire reference="..." />` attribute in `paquet.xml` declares the reference language for the translation workflow (salvatore); it plays no role in runtime key resolution. Local overrides in `lang/local_XX.php` (e.g. in `squelettes/`) are merged on top of any module.
 
 ---
 
