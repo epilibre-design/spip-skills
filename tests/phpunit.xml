@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit
-    bootstrap="bootstrap_integration.php"
     cacheDirectory=".phpunit.cache"
 >
     <testsuites>
+        <testsuite name="unit">
+            <directory>green/unit</directory>
+        </testsuite>
         <testsuite name="green">
             <directory>green</directory>
         </testsuite>

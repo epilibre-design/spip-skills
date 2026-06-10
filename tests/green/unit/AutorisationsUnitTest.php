@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 
-require_once __DIR__ . '/mocks/SpipUnitStubs.php';
 require_once __DIR__ . '/helpers/AutorisationsHelper.php';
 
 final class AutorisationsUnitTest extends TestCase
