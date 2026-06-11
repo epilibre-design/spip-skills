@@ -98,18 +98,20 @@ Some core keys can be reused directly (without redefining them in your plugin):
 | `info_obligatoire` | `spip:` | Required field message (CVT validation) |
 | `info_modification_enregistree` | `ecrire:` | Successful save message |
 | `bouton_enregistrer` | `spip:` | Generic submit button label |
-| `bouton_annuler` | `spip:` | Cancel button label |
-| `confirmer_supprimer` | `spip:` | Delete confirmation message |
-| `ecrire:info_acces_interdit` | `ecrire:` | Access denied |
+| `bouton_annuler` | `ecrire:` | Cancel button label |
+| `annuler` | `spip:` | Cancel label |
+| `info_acces_interdit` | `spip:` | Access denied |
 
 Do not redefine a key that already exists in core - use `_T('spip:key')` directly.
 
 ---
 
-## Special case: core keys without module prefix
+## Special case: keys without module prefix
 
-In `verifier()`, `_T('info_obligatoire')` without a module prefix resolves to `spip:`
-by default. Outside CVT context, always prefix explicitly: `_T('spip:info_obligatoire')`.
+A key without module prefix is searched in the `spip` then `ecrire` modules — in any
+context (see `inc_traduire_dist()` in `ecrire/inc/traduire.php`). So `_T('info_obligatoire')`
+works anywhere. Several modules can also be searched explicitly with
+`_T('module1|module2:cle')`. For plugin keys, always use your own module prefix.
 
 ---
 

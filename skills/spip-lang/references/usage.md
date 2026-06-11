@@ -138,7 +138,7 @@ With dynamic environment:
 $erreurs['titre'] = _T('monplugin:erreur_champ_vide', ['champ' => 'title']);
 
 // Reuse core key (no plugin redefinition needed)
-$erreurs['titre'] = _T('info_obligatoire');  // implicit 'spip:' in CVT context
+$erreurs['titre'] = _T('info_obligatoire');  // no prefix -> searched in 'spip' then 'ecrire' modules
 ```
 
 ### CVT success - global message
@@ -156,8 +156,8 @@ $sujet = _T('monplugin:email_notification_sujet');
 $corps = _T('monplugin:email_notification_corps', ['titre' => $objet['titre']]);
 lang_select(null);
 
-include_spip('inc/notifications');
-envoyer_message($destinataire_email, $sujet, $corps);
+$envoyer_mail = charger_fonction('envoyer_mail', 'inc');
+$envoyer_mail($destinataire_email, $sujet, $corps);
 ```
 
 ### Conditional key (optional label)
@@ -173,9 +173,9 @@ $label = _T('monplugin:libelle_contexte_special', [], ['force' => false])
 
 | Module | File | Example keys |
 |---|---|---|
-| `spip:` | `lang/spip_fr.php` | `info_obligatoire`, `bouton_enregistrer`, `confirmer_supprimer` |
-| `ecrire:` | `lang/ecrire_fr.php` | `info_modification_enregistree`, `info_acces_interdit` |
-| `public:` | `lang/public_fr.php` | `mots_clefs`, `info_auteur` |
+| `spip:` | `ecrire/lang/spip_fr.php` | `info_obligatoire`, `bouton_enregistrer`, `info_acces_interdit` |
+| `ecrire:` | `ecrire/lang/ecrire_fr.php` | `info_modification_enregistree`, `bouton_annuler` |
+| `public:` | `ecrire/lang/public_fr.php` | `mots_clefs`, `accueil_site`, `derniers_articles` |
 | `paquet-X:` | `lang/paquet-X_fr.php` | `X_description`, `X_slogan` |
 
 ---
