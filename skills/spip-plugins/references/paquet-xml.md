@@ -26,8 +26,7 @@ Extracted from 21 real files: SPIP 4.4 core (`ecrire/paquet.xml`) + the 20 plugi
 
 | Attribute | Required | Description | Observed values |
 |---|---|---|---|
-| `prefix` | yes | Short identifier; prefixes all the plugin's PHP files and functions | `forum`, `porte_plume`, `bigup` |
-| | | The prefix does **not** have to match the directory name: `statistiques/` → `stats`, `textwheel/` → `tw`, `filtres_images/` → `images`, `urls_etendues/` → `urls`. All conventions (`[prefix]_administrations.php`, function names…) follow the **prefix**, never the directory | |
+| `prefix` | yes | Short identifier; prefixes all the plugin's PHP files and functions. Note: the prefix does **not** have to match the directory name (`statistiques/` → `stats`, `textwheel/` → `tw`, `filtres_images/` → `images`, `urls_etendues/` → `urls`); conventions (`[prefix]_administrations.php`, function names…) follow the **prefix**, never the directory. | `forum`, `porte_plume`, `bigup` |
 | `categorie` | yes | SVP category | see below |
 | `version` | yes | Semantic version `x.y.z` | `3.1.14`, `4.4.9` |
 | `etat` | yes | Development state | `stable`, `test`, `dev` |
