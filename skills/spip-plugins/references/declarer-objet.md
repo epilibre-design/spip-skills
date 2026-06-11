@@ -121,7 +121,7 @@ function myplugin_declarer_tables_objets_sql($tables) {
 ## Real example — forum
 
 ```php
-// plugins-dist/spip/forum/base/forum.php:90
+// plugins-dist/forum/base/forum.php (forum_declarer_tables_objets_sql)
 $tables['spip_forum'] = [
     'table_objet' => 'forums',
     'type'        => 'forum',
@@ -165,7 +165,7 @@ caches consistent. Use them instead of raw SQL writes for editorial content.
 ### objet_inserer
 
 ```php
-// ecrire/action/editer_objet.php:203
+// ecrire/action/editer_objet.php — objet_inserer()
 $id = objet_inserer(
     'mon_objet',    // type (singular)
     $id_parent,     // optional: parent id (rubrique, etc.)
@@ -182,7 +182,7 @@ and the session language if the object supports multilingualism.
 ### objet_modifier
 
 ```php
-// ecrire/action/editer_objet.php:94
+// ecrire/action/editer_objet.php — objet_modifier()
 $err = objet_modifier(
     'mon_objet',    // type
     $id,            // object id
@@ -200,7 +200,7 @@ called automatically.
 ### objet_instituer
 
 ```php
-// ecrire/action/editer_objet.php:370
+// ecrire/action/editer_objet.php — objet_instituer()
 $err = objet_instituer(
     'mon_objet',    // type
     $id,            // object id

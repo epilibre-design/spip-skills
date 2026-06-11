@@ -34,7 +34,7 @@ to serve or regenerate a cached file.
 #CACHE{300, statique}
 ```
 
-Source: `ecrire/public/balises.php:1813 balise_CACHE_dist()`
+Source: `ecrire/public/balises.php` — `balise_CACHE_dist()`
 
 ---
 
@@ -68,10 +68,10 @@ regenerate. It returns:
 
 | Constant | Default | Set by | Effect |
 |---|---|---|---|
-| `_DUREE_CACHE_DEFAUT` | `86400` (24 h) | `cacher.php:431` | Default cache duration when no `#CACHE{}` balise |
+| `_DUREE_CACHE_DEFAUT` | `86400` (24 h) | `public/cacher.php` | Default cache duration when no `#CACHE{}` balise |
 | `_NO_CACHE` | not set | plugin / inc | Overrides the validation step; `0` = always regenerate |
 | `_VAR_NOCACHE` | not set | URL param `var_nocache`, `inc/utils.php` | Forces regeneration without writing cache |
-| `spip_interdire_cache` | not set | `req/mysql.php:1161` on fatal SQL error | Prevents writing cache for the current request |
+| `spip_interdire_cache` | not set | `req/mysql.php` on fatal SQL error | Prevents writing cache for the current request |
 | `_CACHE_PROFONDEUR_STOCKAGE` | `4` | site config | Cache directory depth (`16^n` max files) |
 
 ### Inhibiting the cache for a request (PHP)
@@ -99,7 +99,7 @@ meta. On the next request, any non-statique cached page whose file date is older
 `objet_modifier_champs()`), which writes the current timestamp to `meta['derniere_modif']`.
 
 ```php
-// ecrire/inc/invalideur.php:92
+// ecrire/inc/invalideur.php
 function inc_suivre_invalideur_dist($cond, $modif = true) {
     // writes meta['derniere_modif_<objet>'] and meta['derniere_modif']
 }
@@ -118,7 +118,7 @@ $GLOBALS['derniere_modif_invalide'] = ['article', 'rubrique'];
 $GLOBALS['derniere_modif_invalide'] = false;
 ```
 
-Source: `ecrire/inc/invalideur.php:107`
+Source: `ecrire/inc/invalideur.php` — `inc_suivre_invalideur_dist()`
 
 ### Invalidation from PHP (raw SQL writes)
 

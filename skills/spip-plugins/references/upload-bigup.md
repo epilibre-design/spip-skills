@@ -4,7 +4,7 @@ Bigup is a SPIP plugin (included in `plugins-dist`) that adds chunked file uploa
 and client-side image resizing to CVT formulaires. It hooks into the formulaire pipeline
 automatically once enabled from `charger()`.
 
-Source: `plugins-dist/spip/bigup/`
+Source: `plugins-dist/bigup/`
 
 ---
 

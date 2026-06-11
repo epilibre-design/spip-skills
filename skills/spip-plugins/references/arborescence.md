@@ -38,9 +38,17 @@ monplugin/
 ├── lang/                             # language files
 ├── lib/                              # third-party libraries
 ├── modeles/                          # public models
+├── notifications/                    # notification handlers
 ├── prive/                            # private space squelettes
-└── src/                              # PHP classes (PSR-4 autoload)
+├── puce_statut/                      # status-bullet widgets for objets
+├── src/                              # PHP classes (PSR-4 autoload)
+└── urls/                             # URL generators / decoders
 ```
+
+Not every plugin uses every directory — `plan/` has only `action/` and `prive/`; `medias/`
+uses almost all of them. The root-level PHP files are named after the **prefix**, which may
+differ from the directory name (`statistiques/stats_administrations.php`,
+`filtres_images/images_fonctions.php`, `urls_etendues/urls_administrations.php`).
 
 ---
 
@@ -158,7 +166,7 @@ function forum_vider_tables($nom_meta_base_version) {
 ```
 
 - `[prefix]_upgrade()` — called on activation and on every `schema` bump in `paquet.xml`
-- `[prefix]_vider_tables()` — called on deactivation when the user checks "delete data"
+- `[prefix]_vider_tables()` — called when the plugin is uninstalled (désinstallation in SVP)
 
 **Only needed when `schema` is declared in `paquet.xml`.**
 
@@ -273,15 +281,18 @@ See `cvt-formulaires.md` for the full CVT function signatures.
 
 ### `genie/`
 
-Scheduled tasks (SPIP cron), declared via `<genie>` in `paquet.xml`.
+Scheduled tasks (SPIP cron), declared via `<genie nom="..." periode="...">` in `paquet.xml`.
+SPIP **prepends the plugin prefix** to `nom` when registering the task, so:
 
 ```
 genie/
-├── medias_nettoyer_repertoire_upload.php   # function medias_nettoyer_repertoire_upload()
-└── optimiser_revisions.php                 # function optimiser_revisions()
+└── medias_nettoyer_repertoire_upload.php
+    # declared as <genie nom="nettoyer_repertoire_upload"> in medias/paquet.xml
+    # defines function genie_medias_nettoyer_repertoire_upload_dist($lastrun)
 ```
 
-The file may be named `[prefix]_[nom].php` or just `[nom].php`. The function name matches the filename (without `.php`).
+File: `genie/[prefix]_[nom].php` — function: `genie_[prefix]_[nom]_dist($lastrun)`.
+See `references/queue-jobs.md` (Periodic tasks).
 
 ---
 
@@ -399,6 +410,31 @@ Files under `prive/squelettes/inclure/` may have an associated `_fonctions.php` 
 
 ---
 
+### `notifications/`
+
+Notification handlers, triggered through the `notifications` pipeline
+(`charger_fonction($quoi, 'notifications')`). One file per event:
+
+```
+notifications/                          # plugins-dist/forum
+├── forumposte.php      # function notifications_forumposte_dist()
+└── forumvalide.php     # function notifications_forumvalide_dist()
+```
+
+---
+
+### `puce_statut/`
+
+Status-bullet widget shown next to an objet in private-space lists (used by medias, mots,
+sites). One file per objet type:
+
+```
+puce_statut/
+└── mot.php             # function puce_statut_mot_dist()
+```
+
+---
+
 ### `src/`
 
 PHP classes with PSR-4 autoloading via Composer. Used in modern plugins.
@@ -411,6 +447,20 @@ src/
 ```
 
 Must be declared in the plugin's `composer.json`.
+
+---
+
+### `urls/`
+
+URL generation/decoding. Two kinds of files (see `references/urls-objets.md`):
+
+```
+urls/
+├── generer_url_forum.php   # function urls_generer_url_forum_dist($id, $args, $ancre)
+│                            # → public URL of one objet (plugins-dist/forum)
+└── arbo.php                 # a whole URL scheme: urls_arbo_generer_url_objet_dist()
+                             # + urls_arbo_decoder_url_dist() (plugins-dist/urls_etendues)
+```
 
 ---
 
@@ -431,4 +481,7 @@ Must be declared in the plugin's `composer.json`.
 | `genie/` | Scheduled cron task |
 | `inc/` | Explicit `charger_fonction('nom', 'inc')` call |
 | `modeles/` | Model rendering inside a squelette |
+| `notifications/` | `notifications` pipeline / `charger_fonction(…, 'notifications')` |
 | `prive/` | Any private space request |
+| `puce_statut/` | Private lists showing the objet's status bullet |
+| `urls/` | URL generation (`generer_url_entite`) or decoding of a public URL |

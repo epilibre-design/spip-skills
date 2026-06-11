@@ -54,11 +54,12 @@ $code = index_pile($p->id_boucle, 'id_rubrique', $p->boucles);
 ### Simple example
 
 ```php
-// plugins-dist/spip/bigup/bigup_fonctions.php:90
-function balise_BIGUP_TOKEN(Champ $p): Champ {
-    $champ   = interprete_argument_balise(1, $p) ?? "@\$Pile[0]['nom']";
-    $form    = interprete_argument_balise(3, $p) ?? "@\$Pile[0]['form']";
-    $p->code = "calculer_balise_BIGUP_TOKEN($champ, ..., $form)";
+// plugins-dist/bigup/bigup_fonctions.php (simplified)
+function balise_BIGUP_TOKEN($p) {
+    if (!$_champ = interprete_argument_balise(1, $p)) {
+        $_champ = "@\$Pile[0]['nom']";
+    }
+    $p->code = "calculer_balise_BIGUP_TOKEN($_champ, ...)";
     $p->interdire_scripts = false;
     return $p;
 }
@@ -111,7 +112,8 @@ Usage in squelette: `[(#TITRE|mon_filtre)]` or `[(#TITRE|mon_filtre{option})]`
 For filtres defined in files that should not be loaded on every hit, register in `_fonctions.php`:
 
 ```php
-// plugins-dist/spip/images/images_fonctions.php:24
+// plugins-dist/filtres_images/images_fonctions.php (note: the plugin dir is
+// filtres_images but its prefix is "images", hence the file name)
 $GLOBALS['spip_matrice']['image_recadre'] = 'filtres/images_transforme.php';
 $GLOBALS['spip_matrice']['image_nb']      = 'filtres/images_transforme.php';
 ```
@@ -188,7 +190,7 @@ function critere_mon_critere_dist(
 ### Real example (racine critère)
 
 ```php
-// ecrire/public/criteres.php:47
+// ecrire/public/criteres.php
 function critere_racine_dist($idb, &$boucles, $crit) {
     $boucle     = &$boucles[$idb];
     $id_parent  = $GLOBALS['exceptions_des_tables'][$boucle->id_table]['id_parent'] ?? 'id_parent';

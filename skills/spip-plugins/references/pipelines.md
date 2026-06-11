@@ -18,6 +18,7 @@ SPIP 4.4 — extracted from `ecrire/paquet.xml` (122 entries) and core implement
 12. [Typography](#typography) — `pre_propre`, `post_propre`, `pre_liens`, `pre_typo`, `post_typo`
 13. [Boucle compilation](#boucle-compilation) — `pre_boucle`
 14. [Quick reference — all other pipelines](#quick-reference)
+15. [Pipelines provided by the plugins-dist plugins](#pipelines-provided-by-the-plugins-dist-plugins)
 
 ---
 
@@ -822,3 +823,32 @@ All remaining pipelines from `ecrire/paquet.xml`. Most are extension points (`ac
 | `trig_supprimer_objets_lies` | `$flux` | Delete linked objects on removal |
 | `trig_supprimer_objets_tables` | array | Cleanup when tables are dropped |
 | `trig_trace_query` | — | SQL query tracing |
+
+---
+
+## Pipelines provided by the plugins-dist plugins
+
+The 20 plugins shipped with SPIP declare their own pipelines (extension points you can hook
+into, since plugins-dist are always present). By convention their names start with the
+provider's prefix. Notable ones:
+
+| Pipeline | Provider | Used for |
+|---|---|---|
+| `ieconfig_metas` | (hooked by 12 plugins-dist) | Declare metas exportable by the *ieconfig* config import/export plugin |
+| `pre_syndication` / `post_syndication` | sites | Around fetching/recording a syndicated feed |
+| `renseigner_document` / `renseigner_document_distant` | medias | Complete metadata when a (remote) document is added |
+| `afficher_metas_document` | medias | Metadata block in the document detail view |
+| `document_desc_actions` / `editer_document_actions` | medias | Action buttons on a document |
+| `medias_documents_visibles` / `medias_methodes_upload` | medias | Which documents are listed / available upload methods |
+| `revisions_chercher_label` | revisions | Human label of a field in revision diffs |
+| `porte_plume_barre_pre_charger` / `porte_plume_barre_charger` | porte_plume | Add/modify markitup toolbar buttons |
+| `porte_plume_lien_classe_vers_icone` | porte_plume | Map a toolbar CSS class to an icon |
+| `pre_echappe_html_propre` / `pre_echappe_html_propre_args` / `post_echappe_html_propre` / `post_echappe_html_propre_args` | textwheel | Around HTML escaping in `propre()` |
+| `bigup_preparer_input_options` | bigup | Options of a bigup-enhanced file input |
+| `formulaire_receptionner` | (CVT engine; hooked by bigup) | Fired when a CVT form is submitted, before `verifier` |
+| `compagnon_messages` | compagnon | Contextual help messages in the private space |
+| `aide_index` | aide | Entries of the private-space help index |
+| `mediabox_config` | mediabox | Lightbox configuration array |
+| `mots_indexation` | mots | Extra text indexed for a mot |
+| `delete_statistiques` | statistiques | Purge of stats data |
+| `svp_afficher_paquet` | svp | Extra info in the plugin manager package view |

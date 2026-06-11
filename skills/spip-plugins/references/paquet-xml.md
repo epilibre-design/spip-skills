@@ -2,7 +2,8 @@
 
 Declarative manifest at the root of every plugin. Describes the plugin to SPIP's SVP manager: metadata, dependencies, pipelines, menus, scheduled tasks.
 
-Extracted from 22 real files: SPIP 4.4 core + plugins-dist (`/src/spip/spip`).
+Extracted from 21 real files: SPIP 4.4 core (`ecrire/paquet.xml`) + the 20 plugins-dist
+(`plugins-dist/*/paquet.xml` in the SPIP tree — see "Source of truth" in SKILL.md).
 
 ---
 
@@ -16,7 +17,7 @@ Extracted from 22 real files: SPIP 4.4 core + plugins-dist (`/src/spip/spip`).
     etat="stable"
     compatibilite="[4.2.0;4.*]"
     schema="1.0.0"
-    logo="prive/themes/spip/images/monplugin-32.png"
+    logo="prive/themes/spip/images/monplugin-xx.svg"
     documentation="https://..."
 >
 ```
@@ -26,12 +27,13 @@ Extracted from 22 real files: SPIP 4.4 core + plugins-dist (`/src/spip/spip`).
 | Attribute | Required | Description | Observed values |
 |---|---|---|---|
 | `prefix` | yes | Short identifier; prefixes all the plugin's PHP files and functions | `forum`, `porte_plume`, `bigup` |
+| | | The prefix does **not** have to match the directory name: `statistiques/` → `stats`, `textwheel/` → `tw`, `filtres_images/` → `images`, `urls_etendues/` → `urls`. All conventions (`[prefix]_administrations.php`, function names…) follow the **prefix**, never the directory | |
 | `categorie` | yes | SVP category | see below |
 | `version` | yes | Semantic version `x.y.z` | `3.1.14`, `4.4.9` |
 | `etat` | yes | Development state | `stable`, `test`, `dev` |
 | `compatibilite` | yes | Compatible SPIP version range | see notation below |
 | `schema` | no | Database schema version (triggers `_upgrade`) | `1.2.2`, `2022022303` |
-| `logo` | no | Relative path to the plugin folder | `prive/themes/spip/images/forum-32.png` |
+| `logo` | no | Path relative to the plugin folder — the file must exist there | `prive/themes/spip/images/mediabox-xx.svg` |
 | `documentation` | no | External documentation URL | URL |
 | `demonstration` | no | Demo URL | URL |
 | `developpement` | no | Source repository URL | git URL |
@@ -85,7 +87,9 @@ The XML comment immediately after serves as a short description in SVP (conventi
 
 ---
 
-### `<licence>` — Required
+### `<licence>` — Recommended
+
+(SVP displays it; note that 8 of the 20 plugins-dist omit it, so it is not enforced.)
 
 ```xml
 <licence lien="http://www.gnu.org/licenses/gpl-3.0.html">GPL</licence>
@@ -254,14 +258,27 @@ Same attributes as `<menu>`. `parent` points to the `nom` of a `<menu>` or anoth
 Registers a scheduled task (SPIP cron).
 
 ```xml
+<!-- in bigup/paquet.xml (prefix="bigup") -->
 <genie nom="nettoyer_repertoire_upload" periode="86400" />
+<!-- in revisions/paquet.xml (prefix="revisions") -->
 <genie nom="optimiser_revisions" periode="86400" />
 ```
 
 | Attribute | Description |
 |---|---|
-| `nom` | Identifier; SPIP loads `genie/[prefix]_[nom].php` and calls `[prefix]_[nom]()` |
+| `nom` | Task identifier — SPIP **automatically prepends the plugin prefix** |
 | `periode` | Interval in seconds (`86400` = 1 day) |
+
+**Naming rule (`ecrire/inc/plugin.php`, genie registration):** the registered task name is
+`[prefix]_[nom]`. SPIP resolves it with `charger_fonction('[prefix]_[nom]', 'genie')`, so the
+implementation must be:
+
+- file: `genie/[prefix]_[nom].php`
+- function: `genie_[prefix]_[nom]_dist($lastrun)` (return > 0 on success)
+
+E.g. `<genie nom="nettoyer_repertoire_upload">` in bigup → `genie/bigup_nettoyer_repertoire_upload.php`
+defining `genie_bigup_nettoyer_repertoire_upload_dist()`. Do **not** repeat the prefix in `nom`,
+or SPIP will look for `genie_bigup_bigup_…`. There is no `inclure` attribute on `<genie>`.
 
 ---
 
@@ -291,7 +308,7 @@ Declares a JS file to include.
     etat="stable"
     compatibilite="[4.2.0;4.*]"
     schema="1.0.0"
-    logo="prive/themes/spip/images/monplugin-32.png"
+    logo="prive/themes/spip/images/monplugin-xx.svg"
 >
     <nom>Mon Plugin</nom>
     <!-- Fait quelque chose d'utile -->

@@ -80,7 +80,7 @@ function monplugin_vider_tables($nom_meta_base_version) {
 ## maj_plugin() — the upgrade driver
 
 ```php
-// ecrire/base/upgrade.php:205
+// ecrire/base/upgrade.php — maj_plugin()
 maj_plugin(
     $nom_meta_base_version,   // meta key storing the installed schema version (e.g., 'monplugin_base_version')
     $version_cible,           // the schema version from paquet.xml (the target)
@@ -137,7 +137,7 @@ are arguments.
 ## maj_tables() — sync schema from descriptor
 
 ```php
-// ecrire/base/create.php:203
+// ecrire/base/create.php — maj_tables()
 maj_tables($tables = [], $serveur = ''): void
 ```
 
@@ -155,12 +155,13 @@ Always prefer passing explicit names in `_administrations.php`.
 
 ## _vider_tables() — uninstall
 
-Called when the plugin is deactivated. Must:
+Called when the plugin is **uninstalled** (désinstallation in SVP — simple deactivation does
+not trigger it). Must:
 1. Drop all plugin-created tables
 2. Clear all plugin-created metas (configuration, version marker)
 
 ```php
-// plugins-dist/spip/mots/mots_administrations.php:97
+// plugins-dist/mots/mots_administrations.php
 function mots_vider_tables($nom_meta_base_version) {
     sql_drop_table('spip_mots');
     sql_drop_table('spip_groupes_mots');

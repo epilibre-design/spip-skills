@@ -11,7 +11,7 @@ Source: `ecrire/inc/queue.php`
 ## Adding a job
 
 ```php
-// ecrire/inc/queue.php:56
+// ecrire/inc/queue.php — queue_add_job()
 $id_job = queue_add_job(
     $function,      // string: PHP function name to call
     $description,   // string: human-readable label (shown in admin)
@@ -73,7 +73,7 @@ queue_add_job(
 ## Removing a job
 
 ```php
-// ecrire/inc/queue.php:147
+// ecrire/inc/queue.php — queue_remove_job()
 queue_remove_job($id_job);
 // Returns: int|bool — result of sql_delete
 ```
@@ -89,7 +89,7 @@ Linking lets the admin UI show which object a job is associated with, and lets t
 be purged by object if needed.
 
 ```php
-// ecrire/inc/queue.php:198
+// ecrire/inc/queue.php — queue_link_job()
 queue_link_job($id_job, ['objet' => 'article', 'id_objet' => 42]);
 
 // Link to multiple objects at once
@@ -164,9 +164,13 @@ Cron tasks declared in `paquet.xml` via `<genie>` are also stored in `spip_jobs`
 automatically rescheduled after execution. To declare a periodic task:
 
 ```xml
-<!-- paquet.xml -->
-<genie nom="myplugin_maintenance" periode="86400" inclure="genie/myplugin_maintenance.php" />
+<!-- paquet.xml of the plugin with prefix="myplugin" -->
+<genie nom="maintenance" periode="86400" />
 ```
+
+`<genie>` has only `nom` and `periode` (no `inclure`). SPIP prepends the plugin prefix to
+`nom` and resolves the task with `charger_fonction('myplugin_maintenance', 'genie')`, so the
+file and function are named after `[prefix]_[nom]` (see `plugins-dist/bigup/genie/`):
 
 ```php
 // genie/myplugin_maintenance.php
@@ -192,6 +196,6 @@ function genie_myplugin_maintenance_dist($t) {
 
 ## See also
 
-- `references/pipelines.md` → `taches_generales` pipeline (to add cron tasks programmatically)
+- `references/pipelines.md` → `taches_generales_cron` pipeline (to add cron tasks programmatically)
 - `references/actions.md` → `?action=cron` and `?action=forcer_job`
 - `references/paquet-xml.md` → `<genie>` element
