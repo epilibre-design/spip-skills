@@ -11,7 +11,7 @@
         "Les messages globaux utilisent les classes reponse_formulaire reponse_formulaire_ok et reponse_formulaire reponse_formulaire_erreur (pas message_ok ni alert-success)",
         "Les messages globaux utilisent #ENV*{message_ok} et #ENV*{message_erreur} avec l'étoile simple",
         "Chaque champ est dans un div.editer.editer_{nom_champ} (pas ul/li)",
-        "Les erreurs de champ utilisent #ENV**{erreurs}|table_valeur{nom_champ} avec la double étoile",
+        "Les erreurs de champ utilisent #ENV*{erreurs/nom_champ} (étoile simple, notation chemin) ou l'ancienne forme #ENV*{erreurs}|table_valeur{nom_champ} — jamais la double étoile **",
         "Le texte d'erreur est dans un élément avec la classe erreur_message",
         "Le submit est dans un élément avec la classe boutons"
       ]
@@ -19,11 +19,11 @@
     {
       "id": 2,
       "prompt": "Dans un template de formulaire SPIP, comment afficher le message d'erreur du champ 'titre' et appliquer conditionnellement la classe CSS 'erreur' au bloc parent ?",
-      "expected_output": "Utilisation de #ENV**{erreurs}|table_valeur{titre} (double étoile) pour lire l'erreur, et du conditionnel SPIP [ (#ENV**{erreurs}|table_valeur{titre}|oui)erreur] pour la classe.",
+      "expected_output": "Utilisation de #ENV*{erreurs/titre} (étoile simple, notation chemin) pour lire l'erreur, et du conditionnel SPIP [ (#ENV*{erreurs/titre}|oui)erreur] pour la classe. La double étoile ** ne doit pas être utilisée pour les erreurs.",
       "files": [],
       "expectations": [
-        "La double étoile ** est utilisée dans #ENV**{erreurs} (et non une étoile simple ou sans étoile)",
-        "Le filtre table_valeur{titre} est utilisé pour extraire l'erreur du champ titre",
+        "L'étoile simple * est utilisée dans #ENV*{erreurs/titre} ou #ENV*{erreurs}|table_valeur{titre} — la double étoile ** est incorrecte pour les erreurs",
+        "La notation chemin #ENV*{erreurs/titre} ou le filtre table_valeur{titre} est utilisé pour extraire l'erreur du champ titre",
         "Le filtre |oui est utilisé pour convertir la chaîne en booléen dans le conditionnel de classe",
         "La classe erreur_message est appliquée à l'élément contenant le texte d'erreur",
         "La classe erreur est appliquée conditionnellement au div.editer parent (pas au label ni à l'input)"
@@ -36,7 +36,7 @@
       "files": ["files/form-broken.html"],
       "expectations": [
         "La réponse signale que les classes message_ok / message_erreur sont incorrectes et doit proposer reponse_formulaire reponse_formulaire_ok / reponse_formulaire_erreur",
-        "La réponse signale que #ENV{erreurs.titre} (dot-notation) est invalide et propose #ENV**{erreurs}|table_valeur{titre}",
+        "La réponse signale que #ENV{erreurs.titre} (dot-notation) est invalide et propose #ENV*{erreurs/titre} (étoile simple, notation chemin) ou #ENV*{erreurs}|table_valeur{titre} (étoile simple)",
         "La réponse signale que l'utilisation de ul/li pour editer-groupe n'est pas conforme (div requis depuis SPIP 3.1)",
         "La réponse signale que #ENV{message_ok} devrait être #ENV*{message_ok} (étoile simple pour éviter le double-échappement)",
         "La réponse signale l'absence de la classe submit sur le bouton"
