@@ -4,22 +4,22 @@
     {
       "id": 1,
       "prompt": "Dans un plugin SPIP avec le prefix 'acme', écris l'appel pour logger un avertissement indiquant que l'API externe n'a retourné aucun résultat. Le log doit aller dans un fichier propre au plugin, pas dans spip.log.",
-      "expected_output": "spip_log('message', 'acme', _LOG_AVERTISSEMENT) — trois arguments, $type='acme' pour créer tmp/log/acme.log, constante SPIP correcte.",
+      "expected_output": "spip_log('message', 'acme.' . _LOG_AVERTISSEMENT) — deux arguments, le $name combine le type et la gravité avec un point, pour créer tmp/log/acme.log.",
       "files": [],
       "expectations": [
         "La fonction spip_log() est utilisée",
-        "Le deuxième argument ($type) est 'acme' ou similaire (pas 'spip')",
+        "Le $name contient 'acme' comme préfixe de fichier (pour créer tmp/log/acme.log, pas spip.log)",
         "La constante de gravité est _LOG_AVERTISSEMENT (pas LOG_WARNING, ni WARNING, ni 3)",
-        "La réponse mentionne que le log sera écrit dans tmp/log/acme.log (pas logs/ ni var/log/)"
+        "La gravité est passée via la notation 'acme.' . _LOG_AVERTISSEMENT (pas en troisième argument séparé — spip_log() n'a que 2 paramètres)"
       ]
     },
     {
       "id": 2,
-      "prompt": "J'ajoute des traces de debug dans mon plugin SPIP avec spip_log($data, 'acme', _LOG_DEBUG) mais rien n'apparaît dans les logs. Pourquoi et comment y remédier en environnement de développement ?",
-      "expected_output": "Explication du mécanisme _LOG_FILTRE_GRAVITE : la valeur par défaut est _LOG_INFO (6), _LOG_DEBUG vaut 8, donc 8 > 6 → message ignoré. Solution : define('_LOG_FILTRE_GRAVITE', _LOG_DEBUG) dans config/mes_options.php.",
+      "prompt": "J'ajoute des traces de debug dans mon plugin SPIP avec spip_log($data, 'acme.' . _LOG_DEBUG) mais rien n'apparaît dans les logs. Pourquoi et comment y remédier en environnement de développement ?",
+      "expected_output": "Explication du mécanisme _LOG_FILTRE_GRAVITE : la valeur par défaut est _LOG_INFO_IMPORTANTE (5), _LOG_DEBUG vaut 7, donc 7 > 5 → message ignoré. Solution : define('_LOG_FILTRE_GRAVITE', _LOG_DEBUG) dans config/mes_options.php.",
       "files": [],
       "expectations": [
-        "La réponse explique que _LOG_DEBUG (valeur 8) est supérieur au seuil par défaut _LOG_FILTRE_GRAVITE (_LOG_INFO = 6)",
+        "La réponse explique que _LOG_DEBUG (valeur 7) est supérieur au seuil par défaut _LOG_FILTRE_GRAVITE (_LOG_INFO_IMPORTANTE = 5)",
         "La règle d'écriture est énoncée : un message est écrit seulement si gravite <= _LOG_FILTRE_GRAVITE",
         "La solution proposée est de redéfinir _LOG_FILTRE_GRAVITE à _LOG_DEBUG dans config/mes_options.php",
         "La réponse ne suggère pas de modifier les fichiers du core SPIP"
@@ -27,38 +27,37 @@
     },
     {
       "id": 3,
-      "prompt": "Dans un pipeline post_edition d'un plugin SPIP, enregistre un événement d'audit visible par les administrateurs dans l'espace privé, indiquant que l'article #42 a été publié par l'auteur $id_auteur.",
-      "expected_output": "Appel à journal() avec le message traduit et les options id_objet, objet, etat, qui — visible à ?exec=journal dans l'espace privé.",
+      "prompt": "Dans un pipeline post_edition d'un plugin SPIP, enregistre un événement d'audit indiquant que l'article #42 a été publié par l'auteur $id_auteur.",
+      "expected_output": "Appel à journal() avec le message traduit et un tableau de contexte (id_article, statut, etc.). En core, l'entrée atterrit dans tmp/log/journal.log via spip_log(). Un plugin peut surcharger inc_journal pour stocker en base et afficher via une interface dédiée.",
       "files": [],
       "expectations": [
-        "La fonction journal() est utilisée (pas spip_log())",
-        "L'option id_objet est passée avec la valeur 42 (ou $id_article)",
-        "L'option objet est passée avec la valeur 'article'",
-        "L'option etat est passée (par exemple 'publie')",
-        "La réponse mentionne que l'entrée est visible à ?exec=journal dans l'espace privé"
+        "La fonction journal() est utilisée (pas spip_log() directement)",
+        "Un message traduit (_T()) est passé comme premier argument",
+        "Un tableau de contexte est passé en deuxième argument (contenant par exemple l'identifiant et le statut de l'article)",
+        "La réponse indique que journal() écrit dans tmp/log/journal.log en core, et qu'une interface ?exec=journal dans l'espace privé nécessite un plugin qui surcharge inc_journal"
       ]
     },
     {
       "id": 4,
       "prompt": "Quelles sont les différences entre spip_log() et journal() ? Dans quel cas utiliser l'un plutôt que l'autre ?",
-      "expected_output": "spip_log() écrit dans des fichiers texte rotatifs dans tmp/log/ (usage développeur). journal() écrit en base de données, visible à ?exec=journal (usage audit administrateur).",
+      "expected_output": "spip_log() écrit dans des fichiers texte rotatifs dans tmp/log/ (usage développeur/debug). journal() est une API d'événements de site : en core elle écrit aussi dans tmp/log/journal.log via spip_log() ; un plugin peut surcharger inc_journal pour stocker en base et fournir une interface d'administration.",
       "files": [],
       "expectations": [
-        "La réponse identifie que spip_log() écrit dans des fichiers dans tmp/log/",
-        "La réponse identifie que journal() écrit en base de données",
-        "La réponse mentionne ?exec=journal comme interface de consultation pour journal()",
-        "La réponse distingue l'audience : développeurs pour spip_log(), administrateurs pour journal()"
+        "La réponse identifie que spip_log() écrit dans des fichiers rotatifs dans tmp/log/",
+        "La réponse indique que journal() délègue à spip_log() en core (tmp/log/journal.log) et non directement en base de données",
+        "La réponse mentionne que le stockage en base et l'interface d'administration nécessitent un plugin surchargeant inc_journal",
+        "La réponse distingue les usages : traces développeur pour spip_log(), événements de site (potentiellement visibles par les admins via plugin) pour journal()"
       ]
     },
     {
       "id": 5,
-      "prompt": "Je veux logger un tableau PHP $debug_data (contenant des clés 'query' et 'result') avec spip_log() dans mon plugin. Est-ce que je dois appeler var_export() moi-même avant de le passer ?",
-      "expected_output": "Non. spip_log() appelle var_export() automatiquement sur tout argument non-string. Passer le tableau directement est correct et préférable.",
+      "prompt": "Je veux logger un tableau PHP $debug_data (contenant des clés 'query' et 'result') avec spip_log() dans mon plugin. Est-ce que je dois appeler var_export() ou print_r() moi-même avant de le passer ?",
+      "expected_output": "Non. spip_log() appelle print_r() automatiquement sur tout argument non-string. Passer le tableau directement est correct et préférable.",
       "files": [],
       "expectations": [
-        "La réponse indique que var_export() n'est pas nécessaire — spip_log() le fait automatiquement",
-        "La réponse montre qu'on peut passer un tableau directement : spip_log($debug_data, 'monplugin', _LOG_DEBUG)",
-        "La réponse ne suggère pas json_encode() ou print_r() comme prétraitement obligatoire"
+        "La réponse indique qu'aucune sérialisation manuelle n'est nécessaire — spip_log() appelle print_r() automatiquement sur les non-strings",
+        "La réponse montre qu'on peut passer un tableau directement : spip_log($debug_data, 'monplugin.' . _LOG_DEBUG)",
+        "La réponse ne suggère pas json_encode(), var_export() ou print_r() comme prétraitement obligatoire"
       ]
     }
   ]
