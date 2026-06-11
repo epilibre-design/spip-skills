@@ -68,10 +68,10 @@ regenerate. It returns:
 
 | Constant | Default | Set by | Effect |
 |---|---|---|---|
-| `_DUREE_CACHE_DEFAUT` | `86400` (24 h) | `public/cacher.php` | Default cache duration when no `#CACHE{}` balise |
+| `_DUREE_CACHE_DEFAUT` | `86400` (24 h) | `ecrire/public/cacher.php` | Default cache duration when no `#CACHE{}` balise |
 | `_NO_CACHE` | not set | plugin / inc | Overrides the validation step; `0` = always regenerate |
-| `_VAR_NOCACHE` | not set | URL param `var_nocache`, `inc/utils.php` | Forces regeneration without writing cache |
-| `spip_interdire_cache` | not set | `req/mysql.php` on fatal SQL error | Prevents writing cache for the current request |
+| `_VAR_NOCACHE` | not set | URL param `var_nocache`, `ecrire/inc/utils.php` | Forces regeneration without writing cache |
+| `spip_interdire_cache` | not set | `ecrire/req/mysql.php` on fatal SQL error | Prevents writing cache for the current request |
 | `_CACHE_PROFONDEUR_STOCKAGE` | `4` | site config | Cache directory depth (`16^n` max files) |
 
 ### Inhibiting the cache for a request (PHP)
