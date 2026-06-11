@@ -200,9 +200,12 @@ function monplugin_mon_pipeline($flux) {
 
 ## Source of truth
 
-All examples in this skill are extracted from:
-- SPIP core: `/src/spip/spip/ecrire/`
-- plugins-dist: `/src/spip/spip/plugins-dist/spip/`
-- local coding standards reference: `references/coding-standards.md`
+All examples in this skill are extracted from the **SPIP 4.4.15** sources:
+- SPIP core: `ecrire/`
+- plugins-dist (the 20 reference plugins shipped with SPIP): `plugins-dist/`
+- coding standards reference: `references/coding-standards.md`
 
-When in doubt, read the source. 
+Paths inside the references are given relative to the SPIP root,
+e.g. `plugins-dist/forum/paquet.xml`.
+
+When in doubt, read the source.

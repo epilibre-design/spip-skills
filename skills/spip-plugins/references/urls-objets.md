@@ -73,6 +73,24 @@ Declare it in `paquet.xml`:
 
 ---
 
+## Overriding URL generation for one type (`urls/` directory)
+
+When the generic URL is not right for an objet (e.g. a forum message points to an anchor on
+its parent's page), provide `urls/generer_url_[type].php`. Core resolves it with
+`charger_fonction('generer_url_' . $objet, 'urls')` (see `ecrire/inc/utils.php`):
+
+```php
+// plugins-dist/forum/urls/generer_url_forum.php
+function urls_generer_url_forum_dist($id_forum, $args = '', $ancre = '') {
+    // return the full public URL of message $id_forum
+}
+```
+
+A `urls/generer_url_ecrire_[type].php` variant overrides the **private-space** URL the same
+way (see `plugins-dist/forum/urls/generer_url_ecrire_forum.php`).
+
+---
+
 ## Using a custom `#URL_*` in templates
 
 Inside a boucle on your object:

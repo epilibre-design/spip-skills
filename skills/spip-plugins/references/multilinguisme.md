@@ -22,7 +22,7 @@ Objects that support multilinguisme carry two extra columns:
 value, which is typically the `id_<objet>` of the first object in the group. This is not
 enforced structurally — it is maintained by `action_referencer_traduction_dist()`.
 
-Source: `ecrire/base/objets.php:148` (articles), `ecrire/base/objets.php:349` (rubriques)
+Source: `ecrire/base/objets.php` — `lang`/`id_trad` field declarations of `spip_articles` and `spip_rubriques`
 
 ---
 
@@ -64,7 +64,7 @@ from the edit form.
 ### Linking two objects as translations
 
 ```php
-// ecrire/action/referencer_traduction.php:41
+// ecrire/action/referencer_traduction.php
 action_referencer_traduction_dist('monobjet', $id_objet, $id_trad);
 ```
 
@@ -76,7 +76,7 @@ action_referencer_traduction_dist('monobjet', $id_objet, $id_trad);
 **Group assignment rules (from source):**
 
 ```php
-// ecrire/action/referencer_traduction.php:60-72
+// ecrire/action/referencer_traduction.php (simplified logic)
 if ($id_lier == 0) {
     // $id_trad has no group yet — create one; both objects now share id_trad = $id_trad
     sql_updateq($table, ['id_trad' => $id_trad], "id IN ($id_trad, $id_objet)");
@@ -126,7 +126,7 @@ equals `<value>` (i.e. it finds the group anchor too).
 <BOUCLE_trad(ARTICLES){traduction}>...</BOUCLE_trad>
 ```
 
-The `{traduction}` critère (source: `ecrire/public/criteres.php:399`) builds the condition:
+The `{traduction}` critère (source: `critere_traduction_dist()` in `ecrire/public/criteres.php`) builds the condition:
 `(id_trad > 0 AND id_trad = <id_trad of the parent boucle>) OR id_article = <id_trad of parent>`.
 
 ---

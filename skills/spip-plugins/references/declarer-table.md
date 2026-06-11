@@ -100,7 +100,7 @@ actual DB and adds missing columns and indexes. See `references/cycle-de-vie.md`
 For link/pivot tables (many-to-many associations) and other tables with no single-object primary key.
 
 ```php
-// plugins-dist/spip/mots/base/mots.php:60
+// plugins-dist/mots/base/mots.php
 function mots_declarer_tables_auxiliaires($tables_auxiliaires) {
     $spip_mots_liens = [
         'id_mot'   => "bigint(21) DEFAULT '0' NOT NULL",
@@ -132,7 +132,7 @@ Registers compiler-level information: how the compiler translates `<BOUCLE_(foru
 which column aliases exist, how `statut` maps to "published", and what text treatments apply.
 
 ```php
-// plugins-dist/spip/forum/base/forum.php:29
+// plugins-dist/forum/base/forum.php
 function forum_declarer_tables_interfaces($interfaces) {
 
     // map plural loop name → table suffix

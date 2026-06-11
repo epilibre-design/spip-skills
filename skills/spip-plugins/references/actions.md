@@ -59,7 +59,7 @@ from the file name.
 The same function serves both purposes depending on how it is called.
 
 ```php
-// ecrire/inc/securiser_action.php:53
+// ecrire/inc/securiser_action.php
 $securiser_action = charger_fonction('securiser_action', 'inc');
 ```
 
@@ -77,7 +77,7 @@ request and verifies the HMAC. If verification fails, it prints an error page an
 ### Generating an action URL (outside action/)
 
 ```php
-// ecrire/inc/actions.php:47
+// ecrire/inc/actions.php — generer_action_auteur()
 // Returns a URL string by default ($mode = false uses &amp; separators)
 $url = generer_action_auteur('supprimer_item', $id_item, $redirect_url);
 
@@ -107,7 +107,7 @@ generer_action_auteur(
 ### Private-space action button (redirige_action_auteur)
 
 ```php
-// ecrire/inc/actions.php:64
+// ecrire/inc/actions.php — redirige_action_auteur()
 // Returns a URL pointing at the private ecrire/ space
 $url = redirige_action_auteur(
     'supprimer_item',  // action name
@@ -120,7 +120,7 @@ $url = redirige_action_auteur(
 ### POST form (redirige_action_post)
 
 ```php
-// ecrire/inc/actions.php:108
+// ecrire/inc/actions.php — redirige_action_post()
 // Returns an HTML <form> element with a hidden hash field
 $form_html = redirige_action_post(
     'supprimer_item',

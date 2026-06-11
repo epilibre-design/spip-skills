@@ -23,7 +23,7 @@ SPIP uses a function-dispatch authorisation model. The `autoriser()` API resolve
 ## Calling autoriser()
 
 ```php
-// ecrire/inc/autoriser.php:107
+// ecrire/inc/autoriser.php — autoriser()
 autoriser(
     string $faire,        // action: 'voir', 'modifier', 'supprimer', 'publier', 'configurer', …
     string $type = '',    // object type: 'article', 'rubrique', 'forum', or '' for global
@@ -58,9 +58,11 @@ if (autoriser('configurer', '_monplugin', null, $id_auteur)) {
 }
 ```
 
-The leading `_` in `'_monplugin'` tells SPIP that this is a compound name, not an object type. SPIP
-will look for `autoriser_monplugin_configurer_dist` (not `autoriser_monplugin_configurer_dist` after
-type normalisation — see lookup chain).
+`autoriser_type()` (in `ecrire/inc/autoriser.php`) normalises `$type` before the lookup: unless it
+starts with `_`, it goes through `objet_type()` (so `'articles'` → `'article'`); a leading `_` marks
+a page/compound name and skips that alias resolution. In **both** cases all underscores are then
+stripped, so `'_monplugin'` → lookup of `autoriser_monplugin_configurer[_dist]`, and a type like
+`'groupes_mots'` becomes `autoriser_groupesmots_*`.
 
 ---
 
@@ -93,8 +95,8 @@ version in a plugin — it would prevent site-level overrides.
 ### Default fallback
 
 ```php
-// ecrire/inc/autoriser.php:313
-function autoriser_defaut_dist($faire, $type, $id, $qui, $opt): bool {
+// ecrire/inc/autoriser.php
+function autoriser_defaut_dist(string $faire, string $type, $id, array $qui, array $opt): bool {
     return $qui['statut'] === '0minirezo' and !$qui['restreint'];
 }
 ```
@@ -133,11 +135,10 @@ function autoriser_monobjet_modifier_dist($faire, $type, $id, $qui, $opt): bool 
 ### Delegating to a parent check
 
 ```php
-// "Can $qui modify a forum? If the forum is attached to an object, check that object's rights"
-// plugins-dist/spip/forum/forum_autoriser.php:89
-function autoriser_forum_modifier_dist($faire, $type, $id, $qui, $opt): bool {
-    // ... read the forum's attached objet, then:
-    return autoriser('modifier', $t['objet'], $t['id_objet'], $qui, $opt);
+// "Can $qui moderate this forum? Delegate to the rights on the object the forum is attached to"
+// plugins-dist/forum/forum_autoriser.php
+function autoriser_modererforum_dist($faire, $type, $id, $qui, $opt) {
+    return $type ? autoriser('modifier', $type, $id, $qui, $opt) : autoriser('moderer', 'forum', 0, $qui, $opt);
 }
 ```
 
@@ -234,7 +235,7 @@ apply `|oui` or `|non` to use it as a conditional.
 To grant a temporary permission override within a PHP execution (e.g. during a batch operation):
 
 ```php
-// ecrire/inc/autoriser.php:241
+// ecrire/inc/autoriser.php — autoriser_exception()
 autoriser_exception('supprimer', 'forum', $id_forum, true);   // grant
 // ... do the operation ...
 autoriser_exception('supprimer', 'forum', $id_forum, false);  // revoke
