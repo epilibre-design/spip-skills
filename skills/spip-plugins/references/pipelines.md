@@ -828,9 +828,8 @@ All remaining pipelines from `ecrire/paquet.xml`. Most are extension points (`ac
 
 ## Pipelines provided by the plugins-dist plugins
 
-The 20 plugins shipped with SPIP declare their own pipelines (extension points you can hook
-into, since plugins-dist are always present). By convention their names start with the
-provider's prefix. Notable ones:
+The 20 plugins shipped with SPIP declare their own pipelines (extension points you can hook into, since plugins-dist are always present). Many pipeline names start with the provider's prefix, but some are generic/shared conventions (e.g. `ieconfig_metas`, `formulaire_receptionner`). 
+Notable ones:
 
 | Pipeline | Provider | Used for |
 |---|---|---|
