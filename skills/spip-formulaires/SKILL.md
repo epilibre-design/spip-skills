@@ -29,9 +29,12 @@ A **formulaire CVT** is a SPIP form built around the PHP contract
   dependencies.
 - Canonical HTML uses `formulaire_spip`, `.editer-groupe`, `.editer`,
   `reponse_formulaire`, `.erreur_message`, and `.boutons`.
-- Global banners use `#ENV*{message_ok}` / `#ENV*{message_erreur}`.
-- Field errors use `#ENV**{erreurs}|table_valeur{champ}` and the conditional class
-  `[ (#ENV**{erreurs}|table_valeur{champ}|oui)erreur]`.
+- Global banners use `#ENV*{message_ok}` / `#ENV*{message_erreur}` with
+  `role="status"` / `role="alert"`.
+- Field errors use `#ENV*{erreurs/champ}` (single `*`, never `**`) and the conditional
+  class `[ (#ENV*{erreurs/champ}|oui)erreur]`; field values use plain `#ENV{champ}`.
+- `#ACTION_FORMULAIRE` is called without argument; the `<form>` is wrapped in
+  `[(#ENV{editable}|oui) … ]`.
 - `charger()` may return an `array`, `false`, or a `string`; `verifier()` returns an
   errors array; `traiter()` returns a result array.
 - Use Saisies when the form is field-driven enough to justify the dependency. Preferred
@@ -44,21 +47,22 @@ A **formulaire CVT** is a SPIP form built around the PHP contract
 
 ```html
 <div class="formulaire_spip formulaire_editer formulaire_editer_x formulaire_editer_x-#ENV{id_x,nouveau}">
-  [<div class="reponse_formulaire reponse_formulaire_ok">(#ENV*{message_ok})</div>]
-  [<div class="reponse_formulaire reponse_formulaire_erreur">(#ENV*{message_erreur})</div>]
-  <form method="post" action="#ENV{action}">
-    #ACTION_FORMULAIRE{#ENV{action}}
+  [<div class="reponse_formulaire reponse_formulaire_ok" role="status">(#ENV*{message_ok})</div>]
+  [<div class="reponse_formulaire reponse_formulaire_erreur" role="alert">(#ENV*{message_erreur})</div>]
+  [(#ENV{editable}|oui)
+  <form method='post' action='#ENV{action}'><div>
+    #ACTION_FORMULAIRE
     <div class="editer-groupe">
-      <div class="editer editer_titre obligatoire[ (#ENV**{erreurs}|table_valeur{titre}|oui)erreur]">
+      <div class="editer editer_titre obligatoire[ (#ENV*{erreurs/titre}|oui)erreur]">
         <label for="titre"><:info_titre:></label>
-        [<span class="erreur_message">(#ENV**{erreurs}|table_valeur{titre})</span>]
-        <input type="text" class="text" name="titre" id="titre" value="[(#ENV**{titre})]" />
+        [<span class='erreur_message'>(#ENV*{erreurs/titre})</span>]
+        <input type='text' class='text' name='titre' id='titre' value="[(#ENV{titre})]">
       </div>
     </div>
-    <p class="boutons">
-      <input type="submit" class="submit" value="<:bouton_enregistrer:>" />
-    </p>
-  </form>
+    <!--extra-->
+    <p class='boutons'><input type='submit' class='btn submit' value='<:bouton_enregistrer:>'></p>
+  </div></form>
+  ]
 </div>
 ```
 
