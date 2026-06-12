@@ -18,19 +18,49 @@ A plugin declares its configuration page via a private-space template; SPIP auto
 
 Create only the HTML file. **No PHP** (no `charger`, `verifier`, `traiter` functions). SPIP's built-in `inc/cvt_configurer` handles saving automatically.
 
+Follow the **exact structure used in plugins-dist** (mots, porte_plume, svp): the plugin title heading goes **outside** the `[(#ENV{editable}|oui)` condition and **outside** the `<form>`, and sections use `<fieldset>/<legend>` — not bare `<h3>`.
+
 ```html
 <!-- formulaires/configurer_myplugin.html -->
-<div>
-  <p class="explication"><:myplugin:configurer_intro:></p>
+<div class="formulaire_spip formulaire_configurer formulaire_configurer_myplugin">
 
-  <div class="editer-groupe">
-    <label for="in_the_spotlight"><:myplugin:champ_in_the_spotlight:></label>
-    <input type="text" name="in_the_spotlight"
-           value="[(#CONFIG{myplugin/in_the_spotlight})]"
-           id="in_the_spotlight" />
-  </div>
+  <!-- Title with plugin icon — OUTSIDE editable condition and form -->
+  <h3 class="titrem">[(#CHEMIN{images/myplugin-xx.svg}|balise_img{'',cadre-icone})]<:myplugin:titre_configurer:></h3>
+
+  <!-- Status messages — also outside the form -->
+  [<div class="reponse_formulaire reponse_formulaire_ok" role="status">(#ENV*{message_ok})</div>]
+  [<div class="reponse_formulaire reponse_formulaire_erreur" role="alert">(#ENV*{message_erreur})</div>]
+
+  [(#ENV{editable}|oui)
+  <form method="post" action="#ENV{action}"><div>
+    #ACTION_FORMULAIRE
+
+    <!-- Sections use fieldset/legend, not h3 -->
+    <fieldset>
+      <legend><:myplugin:titre_section_general:></legend>
+      <div class="editer-groupe">
+        <div class="editer editer_monchamp">
+          <label for="monchamp"><:myplugin:champ_monchamp:></label>
+          [<span class="erreur_message">(#ENV*{erreurs/monchamp})</span>]
+          <input type="text" name="monchamp" id="monchamp"
+                 value="[(#ENV{monchamp}|sinon{valeur_defaut})]" class="text" />
+        </div>
+      </div>
+    </fieldset>
+
+    <p class="boutons">
+      <input type="submit" value="<:bouton_enregistrer:>" class="btn submit" />
+    </p>
+  </div></form>
+  ]
 </div>
 ```
+
+Key rules:
+- `<h3 class="titrem">` is the **first child** of the outer div — before messages, before `[(#ENV{editable}|oui)`
+- Use `<:bouton_enregistrer:>` (SPIP core key) for the submit button — never invent a key name
+- Use `<:item_oui:>` / `<:item_non:>` (SPIP core, `ecrire` module) for Yes/No radio labels
+- Per-field error messages: `[<span class="erreur_message">(#ENV*{erreurs/fieldname})</span>]`
 
 Field names map directly to the config key. No hidden inputs are needed for the basic case.
 
