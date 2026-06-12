@@ -147,6 +147,16 @@ In squelettes and private-space HTML, use the SPIP balises instead of calling PH
 
 `#URL_ACTION_AUTEUR{action, arg, redirect}` wraps `generer_action_auteur()`.
 
+**Gotcha — empty `arg` with double comma breaks the parser.** If your action takes no meaningful arg, use a non-empty placeholder (e.g. `1`). The double-comma form `{action,,#SELF}` causes the SPIP template compiler to mis-parse `,#SELF}` as a filter name, producing a "Filtre ,#SELF}) non défini" error:
+
+```html
+<!-- WRONG — double comma crashes the parser -->
+<a href="[(#URL_ACTION_AUTEUR{mon_action,,#SELF})]">…</a>
+
+<!-- CORRECT — use any non-empty arg; securiser_action() reads it from the request -->
+<a href="[(#URL_ACTION_AUTEUR{mon_action,1,#SELF})]">…</a>
+```
+
 ---
 
 ## Checking authorisation inside an action
