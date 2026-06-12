@@ -26,20 +26,22 @@ SPIP generates pages from **squelettes** — `.html` files mixing HTML with BOUC
 
 ## Complete BOUCLE Syntax
 
-```html
-<BB_name>
-<!-- optional header section: always displayed -->
-<B_name>
-<!-- optional pre-section: output once before body, only if ≥1 result -->
+> **SPIP boucle tags are NOT XML.** `<//B_name>` is a custom SPIP delimiter — it CLOSES the zero-result zone, it does not open it. The zero-result content goes BEFORE `<//B_name>`, between `</B_name>` and `<//B_name>`.
+
+```
+<BB_name>                             ← opens always-displayed header
+<!-- header: always displayed -->
+<B_name>                              ← opens pre+post zone (≥1 result only)
+<!-- pre-section: before loop rows, only if ≥1 result -->
 <BOUCLE_name(TABLE){critère1}{critère2}>
-  <!-- Content repeated for each result row -->
+  <!-- body: repeated for each result row -->
 </BOUCLE_name>
-<!-- optional post-section: output once after body, only if ≥1 result -->
-</B_name>
-<!-- optional zero-result alternative: output when loop returns nothing -->
-<//B_name>
-<!-- optional footer section: always displayed -->
-</BB_name>
+<!-- post-section: after loop rows, only if ≥1 result -->
+</B_name>                             ← closes pre+post zone; opens zero-result zone
+<!-- zero-result alternative: displayed only when loop returns nothing -->
+<//B_name>                            ← closes zero-result zone; opens always-displayed footer
+<!-- footer: always displayed -->
+</BB_name>                            ← closes always-displayed footer
 ```
 
 **Example — 10 articles, newest first, paginated:**
