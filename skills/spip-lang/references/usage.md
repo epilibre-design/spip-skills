@@ -107,7 +107,7 @@ echo ($n === 1)
 **In squelettes — `singulier_ou_pluriel` filter (preferred):**
 
 ```html
-(#GRAND_TOTAL|singulier_ou_pluriel{monplugin:info_1_monobjet,monplugin:info_nb_monobjets})
+[(#GRAND_TOTAL|singulier_ou_pluriel{monplugin:info_1_monobjet,monplugin:info_nb_monobjets})]
 ```
 
 `singulier_ou_pluriel($nb, $key_singular, $key_plural)` calls `_T()` on the right key and
@@ -115,7 +115,7 @@ substitutes `@nb@` automatically. **Returns empty string when `$nb == 0`** — u
 to handle the zero case:
 
 ```html
-(#GRAND_TOTAL|singulier_ou_pluriel{info_1_article,info_nb_articles}|sinon{<:aucun_article:>})
+[(#GRAND_TOTAL|singulier_ou_pluriel{info_1_article,info_nb_articles}|sinon{<:aucun_article:>})]
 ```
 
 Keys without module prefix resolve against `spip`/`ecrire` modules (for core keys).
