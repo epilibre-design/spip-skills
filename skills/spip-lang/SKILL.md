@@ -20,6 +20,8 @@ language module in `paquet.xml`; the reference language is defined by `<traduire
 | Add a new translation file (`lang/prefix_XX.php`) | `references/format.md` |
 | Name keys consistently (prefixes, plural forms, placeholders) | `references/conventions.md` |
 | Use `_T()` in PHP or `<:module:key:>` in a squelette | `references/usage.md` |
+| Apply filters on a translated string (`\|label_nettoyer`, `\|attribut_html`) | `references/usage.md` |
+| Singular / plural in a squelette (`singulier_ou_pluriel`) | `references/usage.md` |
 | Debug missing or untranslated output | `references/usage.md` + `references/conventions.md` |
 | Declare the module in `paquet.xml` | `../spip-plugins/references/i18n.md` |
 | Send translated output in a different language (`lang_select`) | `references/usage.md` |

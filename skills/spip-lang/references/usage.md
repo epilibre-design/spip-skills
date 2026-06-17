@@ -82,9 +82,20 @@ lang_select('en');
 lang_select(null);  // or lang_select() without args
 ```
 
+**In squelettes**, `lang_select` can be used as a filter to switch language for a block,
+then restored with `#EVAL{lang_select()}`:
+
+```html
+[(#VALEUR{lang}|lang_select|vide)]
+... translated content in that language ...
+[(#EVAL{lang_select()}|vide)]
+```
+
 ---
 
 ## Singular / plural
+
+**In PHP:**
 
 ```php
 $n = sql_countsel('spip_monsobjets');
@@ -92,6 +103,22 @@ echo ($n === 1)
     ? _T('monplugin:info_1_monobjet')
     : _T('monplugin:info_nb_monobjets', ['nb' => $n]);
 ```
+
+**In squelettes — `singulier_ou_pluriel` filter (preferred):**
+
+```html
+(#GRAND_TOTAL|singulier_ou_pluriel{monplugin:info_1_monobjet,monplugin:info_nb_monobjets})
+```
+
+`singulier_ou_pluriel($nb, $key_singular, $key_plural)` calls `_T()` on the right key and
+substitutes `@nb@` automatically. **Returns empty string when `$nb == 0`** — use `|sinon`
+to handle the zero case:
+
+```html
+(#GRAND_TOTAL|singulier_ou_pluriel{info_1_article,info_nb_articles}|sinon{<:aucun_article:>})
+```
+
+Keys without module prefix resolve against `spip`/`ecrire` modules (for core keys).
 
 ---
 
@@ -103,15 +130,45 @@ echo ($n === 1)
 <:monplugin:titre_liste_objets:>
 ```
 
-With placeholder substitution:
+Core SPIP keys (from `ecrire/lang/`) can be used **without module prefix** — SPIP searches
+`spip` then `ecrire` modules automatically:
+
 ```html
-<:monplugin:info_nb_objets{nb=#TOTAL_BOUCLE}:>
+<:auteur:>
+<:date:>
+<:annuler:>
+```
+
+### With SPIP balise placeholders
+
+Placeholder values can be any SPIP balise — `#ENV{}`, `#GET{}`, `#CONFIG{}`, or a direct balise:
+
+```html
+<:form_forum_bonjour{nom=#ENV{nom}}:>
+<:nouvelle_version_spip{version=#CONFIG{derniere_maj_notifiee}}:>
+<:info_copyright_doc{spipnet=#GET{home_server},spipnet_affiche=#GET{home_server}}:>
+```
+
+### With filters
+
+Append SPIP filters directly after the key (before the closing `:`). Multiple filters can be chained:
+
+```html
+<:info_titre|label_nettoyer:>
+<:lien_trier_statut|attribut_html:>
+<:icone_modifier_article|attribut_html:>
+<:info_copyright_doc{spipnet_affiche=#GET{home_server}}|textebrut|attribut_html:>
 ```
 
 ### Via `|_T` filter
 
 ```html
 [(#VAL{monplugin:titre_liste_objets}|_T)]
+```
+
+With key built dynamically from object info:
+```html
+[(#OBJET|objet_info{info_aucun_objet}|_T)]
 ```
 
 With dynamic environment:
@@ -124,8 +181,29 @@ With dynamic environment:
 | Form | When to use |
 |---|---|
 | `<:module:key:>` | Standard static case, most readable |
-| `<:module:key{param=val}:>` | Placeholder substitution from squelette environment |
-| `[(#VAL{module:key}\|_T)]` | Key value built dynamically from SPIP balises |
+| `<:key:>` | Core SPIP key (no module prefix needed) |
+| `<:module:key{param=#BALISE}:>` | Placeholder from a SPIP balise or `#ENV{}` / `#GET{}` |
+| `<:module:key\|filter:>` | Translated string needs filtering (escaping, label cleanup) |
+| `[(#VAL{module:key}\|_T)]` | Key built dynamically from SPIP balises |
+
+---
+
+## UI label filters
+
+Two filters prepare translated strings for inline label display (table headers, form labels):
+
+| Filter | Effect |
+|---|---|
+| `label_nettoyer` | Removes trailing `:` or space; uppercases first letter |
+| `label_ponctuer` | Same as `label_nettoyer` + appends ` :` (language-aware punctuation) |
+
+```html
+<:info_titre|label_nettoyer:>         ← table column header
+<:info_maximum|label_ponctuer:>       ← form label with trailing colon
+```
+
+Use `label_nettoyer` when you control the surrounding punctuation (e.g., inside a `<th>`);
+use `label_ponctuer` when the label must end with a colon regardless of source string.
 
 ---
 
