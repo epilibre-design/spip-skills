@@ -21,7 +21,7 @@ across plugins and helps translators quickly understand what each string is for.
 | `item_` | Menu or choice-list entry | `item_statut_publie` |
 | `choix_` | `<select>` option | `choix_langue_defaut` |
 | `login_` | Authentication-screen strings | `login_connexion_requise` |
-| `paquet_` | Reserved for `paquet-prefix_XX.php` file usage | `monplugin_description` |
+| *(plugin name)* | Keys in `paquet-prefix_XX.php` — prefixed with the plugin name, **not** `paquet_` | `monplugin_description`, `monplugin_slogan` |
 
 ---
 
