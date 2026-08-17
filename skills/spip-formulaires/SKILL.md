@@ -20,6 +20,8 @@ A **formulaire CVT** is a SPIP form built around the PHP contract
 | Check `charger()` return values (`array`, `false`, `string`) and result keys | `references/cvt-formulaires.md` |
 | Decide whether Saisies is worth introducing | `references/form-structure.md` + `references/plugin-saisies.md` |
 | Use the recommended Saisies method | `references/plugin-saisies.md` |
+| Pick a Saisies field type, or look up its options | `spip-saisies` |
+| Write a custom field type, or hook a `saisies_*` pipeline | `spip-saisies` |
 | Add reusable validation or normalisation rules | `references/plugin-verifier.md` |
 | Review an existing form mixing template and PHP issues | `references/form-structure.md` + `references/cvt-formulaires.md` |
 
@@ -69,4 +71,6 @@ A **formulaire CVT** is a SPIP form built around the PHP contract
 ## Scope boundary
 
 For broader plugin architecture, SQL API, pipelines, or `paquet.xml` work, use
-`spip-plugins`.
+`spip-plugins`. For the Saisies plugin beyond its use in a CVT form — field types and their
+options, writing a custom type, `saisies_*` pipelines, the `inc/saisies*` API — use
+`spip-saisies`.
