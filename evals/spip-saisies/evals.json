@@ -1,0 +1,69 @@
+{
+  "skill_name": "spip-saisies",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Dans un plugin SPIP de préfixe 'acme', crée un nouveau type de saisie 'commune' (un champ texte avec autocomplétion sur le nom de la commune) qui soit configurable dans le constructeur de formulaires de Saisies. Donne les fichiers et leur contenu.",
+      "expected_output": "Au minimum saisies/commune.html et saisies/commune.yaml dans le plugin, le HTML ne rendant que le champ lui-même, le YAML décrivant les options sous forme de saisies avec titre, categorie et defaut.",
+      "files": [],
+      "expectations": [
+        "Le fichier du champ est saisies/commune.html et le fichier de description saisies/commune.yaml, avec le même nom de base",
+        "Le HTML utilise name=\"#ENV{nom}\" et id=\"#ENV{id}\" tels quels, sans les recalculer",
+        "Le HTML ne re-génère ni le label, ni le message d'erreur, ni le conteneur .editer — c'est saisies/_base.html qui s'en charge",
+        "La valeur est lue avec #ENV{valeur,#ENV{defaut}} et échappée avec |attribut_html",
+        "Le YAML contient au moins titre, categorie (type parmi libre/choix/structure/objet/defaut) et une clé options décrite elle-même sous forme de saisies",
+        "Les options communes sont réutilisées par 'inclure:saisies/_base/….yaml' (afficher_si, obligatoire, explication, class ou options_dev) plutôt que recopiées",
+        "Ne prétend pas qu'un fichier PHP est obligatoire : seul le .html l'est"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Un autre plugin fournit le formulaire CVT 'inscription_atelier', qui déclare ses champs avec Saisies. Depuis mon plugin 'acme', je veux ajouter un champ 'regime_alimentaire' à ce formulaire sans toucher au code de l'autre plugin. Comment faire ?",
+      "expected_output": "Le pipeline formulaire_saisies, déclaré dans paquet.xml, avec un test sur $flux['args']['form'] et un retour de $flux complet.",
+      "files": [],
+      "expectations": [
+        "Utilise le pipeline formulaire_saisies, pas une surcharge de fichier ni une modification du plugin tiers",
+        "Le pipeline est déclaré dans paquet.xml avec <pipeline nom=\"formulaire_saisies\" inclure=\"acme_pipelines.php\" />",
+        "La fonction teste $flux['args']['form'] pour ne cibler que le formulaire visé",
+        "La fonction modifie $flux['data'] et retourne $flux en entier (pas seulement le tableau des saisies)",
+        "La saisie ajoutée a bien une clé 'saisie' et un 'options' contenant 'nom'"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Dans le constructeur de formulaires de Saisies, je veux que le formulaire de configuration du type 'fichiers' propose une option supplémentaire 'type_document' propre à mon plugin 'acme'. Comment l'ajouter ?",
+      "expected_output": "Le pipeline saisies_construire_formulaire_config, avec un nom d'option imbriqué sous saisie_modifiee_{nom}[options][type_document].",
+      "files": [],
+      "expectations": [
+        "Utilise le pipeline saisies_construire_formulaire_config",
+        "Teste $flux['args'] pour ne cibler que le bon constructeur et/ou le bon type de saisie ($flux['args']['saisie']['saisie'])",
+        "Le nom de l'option suit la forme saisie_modifiee_{$nom}[options][type_document], sinon la valeur n'est pas enregistrée au bon endroit",
+        "Retourne $flux en entier"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Dans le traiter() d'un formulaire CVT construit avec Saisies, comment lire la valeur du champ dont l'option nom vaut 'adresse/ville' ?",
+      "expected_output": "saisies_request('adresse/ville') après include_spip('inc/saisies'), et non _request('adresse/ville').",
+      "files": [],
+      "expectations": [
+        "Utilise saisies_request() et non _request() directement sur 'adresse/ville'",
+        "Explique que le champ est posté sous le name HTML adresse[ville] et que _request('adresse/ville') ne renvoie donc rien",
+        "Charge l'API avec include_spip('inc/saisies') (ou inc/saisies_request)",
+        "Ne recommande pas de lire $_POST ou $_REQUEST à la main"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Mon formulaire CVT 'devis' déclare ses champs avec Saisies, dont un champ 'date_debut' et un champ 'date_fin' tous deux vérifiés par le plugin Vérifier. Je veux refuser le formulaire quand la date de fin précède la date de début. Où mettre ce contrôle ?",
+      "expected_output": "Dans formulaires_devis_verifier_post_saisies(), qui s'exécute après les vérifications déclaratives et voit donc les valeurs normalisées ; ou à défaut dans le pipeline formulaire_verifier_post_saisies.",
+      "files": [],
+      "expectations": [
+        "Propose formulaires_devis_verifier_post_saisies() (ou le pipeline formulaire_verifier_post_saisies) et explique qu'il s'exécute après les vérifications déclarées dans les saisies",
+        "Indique que verifier() s'exécute avant celles-ci et travaille donc sur des valeurs non normalisées",
+        "La fonction retourne un tableau d'erreurs indexé par le nom du champ",
+        "Ne propose pas de supprimer les 'verifier' déclarés dans les saisies pour tout refaire dans verifier()"
+      ]
+    }
+  ]
+}

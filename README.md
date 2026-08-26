@@ -16,6 +16,7 @@ In this repository, skills are version-controlled in `skills/` and installed to 
 - `spip-plugins`: SPIP plugin development (`paquet.xml`, pipelines, SQL API, plugin architecture)
 - `spip-squelettes`: SPIP template work (BOUCLE, `#BALISE`, criteres, filtres, `<INCLURE>`)
 - `spip-formulaires`: SPIP CVT form structure and conventions (HTML wrappers, `charger/verifier/traiter`, errors)
+- `spip-saisies`: the Saisies plugin (field types, custom types in `saisies/`, pipelines, `inc/saisies*` PHP API)
 - `spip-lang`: SPIP language files (`lang/prefix_XX.php`, key naming conventions, `_T()`, `<:module:key:>`)
 - `spip-logs`: SPIP logging practices (`spip_log()`, journal files, debug workflow)
 

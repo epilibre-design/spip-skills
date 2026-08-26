@@ -3,6 +3,10 @@
 This plugin adds a `formulaires_<nom>_saisies()` function to the CVT contract that lets
 you declare all fields in PHP. SPIP then generates the complete HTML automatically.
 
+This page covers Saisies **as used inside a CVT form**. For the plugin itself — the catalogue
+of field types and their options, writing a custom type, the `saisies_*` pipelines, the
+`inc/saisies*` PHP API — use the **`spip-saisies`** skill.
+
 Require it in `paquet.xml`:
 ```xml
 <necessite nom="saisies" compatibilite="[3.3.0;]" />
@@ -121,6 +125,10 @@ Place under the `'options'` key at the root of the `saisies()` return array:
 | `etapes_activer` | true/false | false | Multi-step form mode |
 | `verifier_valeurs_acceptables` | true/false | false | Validate against declared values |
 | `conteneur_class` | string | — | Extra CSS class on the form wrapper |
+
+Twenty-two of them exist; the authoritative list is
+`saisies_options_globales_lister_disponibles()` in `inc/saisies_options_globales.php`, quoted
+in `spip-saisies`, `references/saisie-types.md`.
 
 ---
 
@@ -248,54 +256,14 @@ function formulaires_mon_form_verifier_dist(): array {
 
 ## Custom saisie type
 
-Minimum to make `#SAISIE{mon_type, …}` work:
+Minimum to make `#SAISIE{mon_type, …}` work: one `saisies/mon_type.html` file rendering the
+input alone. Add `mon_type.yaml` (same basename) to make the type configurable in the Saisies
+builder, `mon_type.php` for the optional per-type hooks, and `saisies-vues/mon_type.html` for
+a read-only view.
 
-1. `saisies/mon_type.html` — the field template
-
-Minimum `mon_type.html`:
-```spip
-<input
-    type="text"
-    name="#ENV{nom}"
-    id="#ENV{id}"
-    class="text[ (#ENV{class})]"
-    [value="(#ENV{valeur,#ENV{defaut}}|attribut_html)"]
-    [(#ENV{disable}|oui)disabled="disabled"]
-    [(#ENV{readonly}|oui)readonly="readonly"]
-    [aria-describedby="(#ENV{describedby})"]
-/>
-```
-
-To make the type configurable in Saisies builders, also add:
-
-2. `saisies/mon_type.yaml` — field configuration schema (same basename as HTML)
-3. `saisies/mon_type.php` — optional helper/filter functions
-4. `saisies-vues/mon_type.html` — optional read-only view
-
-Minimal `mon_type.yaml`:
-```yaml
-titre: 'Mon type'
-description: 'Champ personnalisé'
-categorie:
-    type: 'libre'
-    rang: 10
-options:
-    -
-        saisie: fieldset
-        options:
-            nom: description
-            label: 'Description'
-        saisies:
-            -
-                saisie: input
-                options:
-                    nom: label
-                    label: 'Label'
-                    obligatoire: 'on'
-defaut:
-    options:
-        label: 'Mon type'
-```
+Full contract — what `saisies/_base.html` passes to your template, the YAML structure, type
+inheritance and the six PHP hooks — in the **`spip-saisies`** skill,
+`references/custom-saisies.md`.
 
 ---
 
@@ -322,6 +290,9 @@ function monplugin_formulaire_saisies($flux) {
     return $flux;
 }
 ```
+
+Saisies offers twelve more hooks — verification, builder, field introspection. Catalogue in
+the **`spip-saisies`** skill, `references/pipelines.md`.
 
 ---
 
