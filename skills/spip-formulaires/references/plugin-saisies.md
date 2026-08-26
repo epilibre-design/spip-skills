@@ -115,20 +115,13 @@ button from the `saisies()` declaration.
 
 ## Global form options
 
-Place under the `'options'` key at the root of the `saisies()` return array:
+Place under the `'options'` key at the root of the `saisies()` return array. Twenty-two exist,
+covering submit label, AJAX, multi-step mode, and more.
 
-| Option | Values | Default | Effect |
-|---|---|---|---|
-| `texte_submit` | string | `<:bouton_enregistrer:>` | Submit button label |
-| `obligatoire_defaut` | true/false | false | Mark all fields required by default |
-| `ajax` | true/false | false | AJAX submission |
-| `etapes_activer` | true/false | false | Multi-step form mode |
-| `verifier_valeurs_acceptables` | true/false | false | Validate against declared values |
-| `conteneur_class` | string | — | Extra CSS class on the form wrapper |
-
-Twenty-two of them exist; the authoritative list is
-`saisies_options_globales_lister_disponibles()` in `inc/saisies_options_globales.php`, quoted
-in `spip-saisies`, `references/saisie-types.md`.
+Full list of names — in the **`spip-saisies`** skill, `references/saisie-types.md`. Values and
+defaults for a given option are not transcribed there either; check
+`saisies_options_globales_lister_disponibles()` in `inc/saisies_options_globales.php` in the
+installed plugin.
 
 ---
 
