@@ -68,6 +68,27 @@ To pass a value into an INCLURE, use an explicit argument:
 #ENV{myvar}   ← "hello" ✓
 ```
 
+### Gotcha: don't wrap a plain #SET value in `[( )]`
+
+`[( )]` is the **conditional block** syntax (`[(condition) text if truthy]`) — not a generic
+value wrapper. Used as the value of a bare `#SET{}` (no condition, no text branch), it compiles
+to code that does **not** assign the variable: the filter's result is echoed straight into the
+page output instead, often with leftover syntax (e.g. a stray `}`), silently corrupting the
+surrounding HTML/JSON. No PHP error is raised — the squelette still compiles.
+
+```html
+<!-- WRONG — leaks raw output, does not assign #GET{id_rubrique} -->
+#SET{id_rubrique, [(#VAL{ressources}|mon_filtre)]}
+
+<!-- CORRECT — plain #SET, no brackets -->
+#SET{id_rubrique, #VAL{ressources}|mon_filtre}
+```
+
+`[( )]` is only needed when there is an actual condition and/or conditional text after it:
+`[(#GET{x}|=={y}|oui) some text]`. A bare filter chain assigned to a variable never needs it.
+Compiling cleanly is not enough to catch this — always render the actual page/endpoint after
+touching a `#SET{}` value expression, not just check for compile errors.
+
 ---
 
 ## #SESSION and #SESSION_SET — Session data
