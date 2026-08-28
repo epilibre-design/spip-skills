@@ -2089,3 +2089,354 @@ The following responses are preserved verbatim from independent fresh-context gu
     - Unité de restauration : identité exacte de l'ancien code partagé, configuration de mutualisation, puis, pour chaque site concerné, base et données persistantes issues du même manifeste vérifié.
     - Bases : restaurer MariaDB/MySQL ou SQLite uniquement dans un environnement isolé pour valider l'intégrité avant toute restauration de production ; ne jamais associer un ancien code à une base migrée par la nouvelle version.
     - Après retour : maintenir le service en mode contrôlé jusqu'à validation complète de tous les sites et de la frontière hôte ; les preuves d'incident restent conservées séparément.
+
+## green-incident-structural-r1
+
+    ## Constats
+
+    - Des fichiers PHP signalés dans des répertoires `IMG/` constituent un indicateur de compromission, mais aucun chemin, site concerné, racine SPIP mutualisée, répertoire effectif passé à `demarrer_site()`, horodatage, propriétaire, empreinte ou contenu n’a encore été vérifié.
+    - Aucune preuve ne permet actuellement de dire si l’incident est limité à un site, touche le code/plugins partagés, ou implique l’hôte. Un fichier dans `IMG/` n’établit pas à lui seul une portée locale.
+    - La méthode d’installation (Git, Composer, archive/SVP), les modifications locales, les versions de SPIP et des plugins, les moteurs de base de données, les sauvegardes restaurables et la compatibilité de la cible de mise à jour sont inconnus.
+
+    ## Risques
+
+    - Une unique commande `find ... -delete` détruirait les artefacts et leurs métadonnées, compromettrait l’analyse de la persistance et pourrait viser des chemins mutualisés erronés ou des liens inattendus.
+    - Purger les caches peut effacer des traces utiles; mettre à jour peut modifier du code partagé pour tous les sites et masquer le vecteur d’entrée sans retirer une persistance.
+    - La portée peut aller d’un seul site à toute la ferme ou à l’hôte. Il est donc dangereux de supprimer, purger ou mettre à jour avant d’avoir borné la topologie et préservé les éléments.
+
+    ## Procédure proposée
+
+    1. En cas de dommage actif, demander à l’opérateur d’appliquer son mécanisme documenté de confinement réversible (retrait du vhost, restriction proxy/pare-feu, ou instantané/isolation de l’hôte), sans altérer les fichiers suspects.
+    2. Établir un dossier de preuve horodaté UTC et relever la racine partagée, la configuration effective de mutualisation et la liste exacte des sites.
+    3. Inventorier, sans suivre les liens ni modifier les fichiers, les PHP présents dans `IMG/`, `local/` et `tmp/`, puis relever leurs métadonnées et empreintes.
+    4. Corréler le premier indicateur avec les journaux web/PHP/SPIP et vérifier les changements du code partagé, des plugins, tâches planifiées, comptes et processus.
+    5. Après conservation des preuves, bornage de portée, comparaison à des sources fiables et disponibilité de sauvegardes vérifiées, préparer une remédiation revue par l’opérateur: quarantaine récupérable, remplacement depuis des sources sûres, correctifs, rotation des secrets et restauration graduelle.
+
+    ## Commandes
+
+    Les commandes suivantes sont **proposées — non exécutées** et uniquement en lecture. Remplacer les valeurs entre chevrons seulement après avoir vérifié la topologie; ne pas utiliser `/`, une racine d’espace de travail, une variable non résolue, ni un chemin comportant des liens symboliques inattendus.
+
+    ```bash
+    # Définir seulement une fois le répertoire mutualisé effectif confirmé par la configuration.
+    mutu_dir='<répertoire-mutualisé-vérifié>'
+    mutu_dir="$(realpath -e -- "$mutu_dir")"
+    test -n "$mutu_dir" && test "$mutu_dir" != /
+
+    # Recenser les artefacts suspects et leurs métadonnées, sans les exécuter ni les modifier.
+    find -P "$mutu_dir" -xdev -type f \
+      \( -path '*/IMG/*.php' -o -path '*/local/*.php' -o -path '*/tmp/*.php' \) \
+      -print0 | xargs -0 -r stat --printf='%n\t%s\t%a\t%U:%G\t%y\n'
+
+    # Relever l’empreinte et le type pour chaque chemin précis préalablement inventorié.
+    sha256sum -- '<chemin-suspect-vérifié>'
+    file --brief --mime -- '<chemin-suspect-vérifié>'
+
+    # Vérifier les marqueurs SPIP, l’origine et les modifications locales sans afficher de secrets.
+    spip_root='<racine-SPIP-partagée-vérifiée>'
+    spip_root="$(realpath -e -- "$spip_root")"
+    test -n "$spip_root" && test "$spip_root" != /
+    test -f "$spip_root/ecrire/inc_version.php" && test -f "$spip_root/spip.php"
+    rg -n '\$spip_version_(affichee|branche)|SPIP_VERSION' "$spip_root/ecrire/inc_version.php"
+    git -C "$spip_root" status --short 2>/dev/null
+    test -f "$spip_root/composer.json" && test -f "$spip_root/composer.lock"
+    ```
+
+    Aucune commande de suppression, de quarantaine, de purge de cache ou de mise à jour n’est proposée à ce stade: les préconditions obligatoires — périmètre, conservation des preuves, méthode d’installation, modifications locales, sauvegarde restaurable et compatibilité — ne sont pas établies.
+
+    ## Validation
+
+    - Pour chaque site effectivement résolu, vérifier le répertoire local, l’état d’installation, le moteur de base de données sans exposer `connect.php`, la présence des répertoires persistants et la liste des artefacts suspects.
+    - Vérifier séparément le code SPIP partagé, chaque emplacement de plugins partagé ou propre à un site, et les liens symboliques sous le répertoire mutualisé.
+    - Examiner localement et avec caviardage les journaux Nginx/Apache, PHP-FPM, SPIP, authentification et tâches planifiées de part et d’autre de l’horodatage le plus ancien.
+    - Ne considérer la portée comme contenue qu’après vérification de tous les sites et de la frontière hôte, y compris processus, connexions sortantes et mécanismes de persistance lorsqu’ils sont dans le périmètre autorisé.
+
+    ## Retour arrière
+
+    Il n’y a aucune action modifiant l’état à annuler. Si une remédiation est ultérieurement autorisée, le déclencheur de retour arrière devra être défini avant son exécution et la restauration devra viser l’unité exacte affectée (site, base, code partagé ou hôte) depuis une sauvegarde vérifiée et testée de façon isolée.
+
+## green-incident-structural-r2
+
+    # Réponse incident — fichiers PHP dans `IMG/`
+
+    ## Constats
+
+    - Le signalement indique que plusieurs fichiers PHP sont apparus dans les répertoires `IMG/` de sites mutualisés. C'est un indicateur de compromission potentiel, pas une preuve que l'incident est limité à ces sites.
+    - Aucun chemin de racine partagée, répertoire effectif passé à `demarrer_site()`, liste de sites, version/provenance de SPIP, version de Mutualisation facile, pile web/PHP, moteur de base ou fenêtre de compromission n'est fourni ni vérifié.
+    - Aucun artefact, journal, hachage, instantané ni sauvegarde restaurable récente n'est attesté.
+
+    ## Risques
+
+    - Une commande unique `find ... -delete` est refusée : elle supprimerait les indicateurs, modifierait l'état avant qualification, pourrait élargir son effet à des chemins mutualisés erronés et ne traite ni le point d'entrée ni la persistance.
+    - Vider les caches maintenant peut détruire des traces SPIP/PHP utiles et compliquer la corrélation avec les journaux.
+    - Une mise à jour du cœur partagé aurait un impact sur tous les sites. Sans provenance, compatibilités, sauvegardes vérifiées et test de restauration, elle peut ajouter une indisponibilité ou rendre un retour arrière incohérent avec les schémas de bases.
+    - La présence de plusieurs charges similaires peut relever du périmètre partagé, voire de l'hôte (tâches planifiées, comptes, processus ou configuration web) ; supprimer les seuls fichiers ne permettrait pas de conclure à un assainissement.
+
+    ## Procédure proposée
+
+    1. Action: Contenir l'exposition active
+    2. Établir la topologie avec des observations bornées : racine SPIP, appel effectif à `demarrer_site()`, valeur de `repertoire`, plugin de mutualisation chargé, sites concernés et chemins physiques.
+    3. Ouvrir un relevé d'incident UTC et borner la fenêtre : métadonnées, liens symboliques, fichiers PHP suspects et journaux web/PHP/SPIP autour du premier indicateur.
+    4. Comparer le cœur et les plugins avec les sources exactes de confiance, puis rechercher point d'entrée et persistance sur les limites site, ferme et hôte.
+    5. Action: Mettre en quarantaine les artefacts examinés
+    6. Action: Créer un jeu de sauvegarde vérifié
+    7. Action: Mettre à niveau le cœur SPIP partagé
+    8. Action: Purger les caches nécessaires
+
+    ## Commandes
+
+    Toutes les commandes ci-dessous sont **proposées — non exécutées**. Les valeurs entre chevrons restent à vérifier ; ne les remplacez pas par une supposition. Aucun nettoyage, purge ni mise à jour n'est prêt à être exécuté tant que les préconditions restent inconnues.
+
+    | Action | Objectif | Préconditions | Périmètre exact | Impact | Sauvegarde/preuves | Commande proposée | Contrôle de succès | Retour arrière |
+    |---|---|---|---|---|---|---|---|---|
+    | Observation de topologie et d'incident | Déterminer le périmètre sans modifier l'hôte | Parent d'hébergement borné fourni par l'opérateur ; ne doit pas être `/` | `<hosting_root>` puis les chemins physiques validés | Lecture seule | Relever UTC et conserver la sortie hachée hors racine web | `hosting_root=<hosting_root_verifie>; test -d "$hosting_root" && test "$hosting_root" != / && find -P "$hosting_root" -xdev -maxdepth 5 -type f -path '*/ecrire/inc_version.php' -print`<br>`spip_root=<spip_root_verifie>; rg -n --no-heading 'mutualiser\.php\|demarrer_site[[:space:]]*\|repertoire\|_SITES_ADMIN_MUTUALISATION' "$spip_root/config/mes_options.php" "$spip_root/ecrire/mes_options.php" 2>/dev/null` | Racine, configuration effective et répertoire mutualisé sont identifiés sans afficher de secrets | Sans objet : lecture seule |
+    | Observation des artefacts et liens | Inventorier les fichiers suspects sans les exécuter ni suivre de liens | `mutu_dir` résolu sous la racine partagée ; horodatage de départ défini | Chaque site sous `<mutu_dir_verifie>` | Lecture seule | Liste NUL-safe, `stat`, SHA-256 et type MIME pour chaque artefact identifié ; journaux associés préservés séparément | `mutu_dir=<mutu_dir_verifie>; incident_since=<horodatage_utc_verifie>; mutu_dir="$(realpath -e -- "$mutu_dir")"; test -n "$mutu_dir" && test "$mutu_dir" != / && find -P "$mutu_dir" -xdev -type f \( -path '*/IMG/*.php' -o -path '*/local/*.php' -o -path '*/tmp/*.php' \) -print0 \| xargs -0 -r stat --printf='%n\t%s\t%a\t%U:%G\t%y\n'` | Liste de chemins, métadonnées et fenêtre d'incident obtenues ; aucun fichier exécuté ou supprimé | Sans objet : lecture seule |
+    | Contenir l'exposition active | Réduire le risque en cours tout en préservant les preuves | Activité nocive confirmée ; mécanisme de reverse proxy, pare-feu, virtual host ou isolement existant identifié ; approbation opérateur | Les virtual hosts ou flux explicitement attestés comme concernés | Peut interrompre le service des sites ciblés | Horodatage, état initial et journaux conservés avant/après | **Bloqué :** employer uniquement le mécanisme de confinement existant validé par l'opérateur ; ne pas improviser de commande destructive | L'accès ou le flux ciblé est interrompu ; preuves et accès d'investigation restent disponibles | Réappliquer la configuration/service précédemment validé après autorisation et validation |
+    | Mettre en quarantaine les artefacts examinés | Retirer de l'exécution web de façon récupérable | Chemins individuellement examinés et vérifiés sous la racine d'incident ; destination protégée hors document root ; capacité, hashes, manifest et chaîne de garde prêts ; autorisation opérateur | Uniquement la liste NUL de chemins validés, jamais un motif `find` large | Mutation limitée aux artefacts revus ; ne modifie pas le cœur partagé | Hash avant/après, préservation des chemins relatifs, métadonnées et manifest | **Bloqué :** préparer une copie/déplacement récupérable à partir d'une liste revue ; aucune commande générique ou `find -delete` n'est fournie | Tous les artefacts listés sont inaccessibles au worker web ; manifest et hashes concordent | Restaurer l'artefact exact depuis la quarantaine uniquement si l'analyse le justifie |
+    | Créer un jeu de sauvegarde vérifié | Établir une unité de restauration cohérente avant toute réparation ou mise à jour | Moteur de chaque base, noms validés sans divulgation, provenance du code, capacité, fenêtre de cohérence et stockage hors web root connus ; restauration isolée prévue | Code partagé, configuration mutualisation, `config/`, `IMG/`, modèles/plugins locaux et base de chaque site affecté | Création contrôlée d'archives/dumps hors production | Manifest UTC, tailles, checksums, versions d'outils et copie hors hôte ; test de restauration isolé | **Bloqué :** choisir la procédure MariaDB/MySQL ou SQLite après détection, sans mot de passe en ligne de commande | Chaque sauvegarde est intègre et une restauration isolée réussit pour chaque moteur/site représentatif | Sans objet : la sauvegarde est une étape de protection |
+    | Mettre à niveau le cœur SPIP partagé | Corriger la vulnérabilité confirmée à partir d'une version exacte et compatible | Incident préservé et borné ; source/provenance (Git, Composer, archive ou loader) établie ; version cible officielle vérifiée ; compatibilités SPIP/Mutualisation/plugins/PHP, modifications locales, sauvegardes restaurables, test isolé, capacité et fenêtre validés | Une seule release partagée et tous les sites qui la chargent | Mutation de toute la ferme ; migrations éventuelles par site | Identité de release antérieure/cible et manifest pré-mise à niveau | **Bloqué :** aucune commande d'upgrade n'est proposée avant satisfaction de toutes les préconditions ; ne pas lancer `composer update` ni une mise à jour en place | Registre de validation complet pour chaque site et journaux propres sous surveillance | Revenir à la release exacte ; après migration/écriture, restaurer aussi la base et les fichiers persistants du même point de contrôle |
+    | Purger les caches nécessaires | Régénérer les caches seulement si l'analyse et la procédure de release exacte l'exigent | Éléments de preuve conservés ; périmètre de cache et cause identifiés ; sauvegarde et plan de retour validés | Uniquement les répertoires de cache vérifiés des sites concernés, pas `IMG/` ni des répertoires ambiguës | Modifie les caches ; peut supprimer des traces | Copies/journaux incident déjà préservés | **Bloqué :** ne pas lancer une purge globale ; définir d'abord la méthode documentée de la version installée et son périmètre | Fonctionnement public/privé, tâches et journaux vérifiés pour chaque site | Restaurer les éléments de preuve depuis leur stockage protégé ; les caches applicatifs sont régénérables |
+    | Restaurer l'unité cohérente | Revenir à un état connu après une mise à niveau échouée ou un état incertain | Manifest et checksums vérifiés ; déclencheur documenté ; identité exacte de code et points de contrôle site/base/fichiers connus | Release partagée et, si nécessaire, site, base et fichiers persistants du même point de contrôle | Écrase l'état de production ciblé ; maintenance requise | Conserver l'état incident et le manifest avant restauration | **Bloqué :** appliquer la procédure de restauration testée et spécifique au moteur depuis le manifest ; ne jamais mélanger une ancienne release avec une base migrée | Validation complète de chaque site, schéma, médias, tâches et journaux | Sans objet : cette action est le retour à l'état validé |
+
+    ## Validation
+
+    - Refaire l'inventaire pour chaque site, pas seulement le site d'administration : pages publiques, authentification privée, formulaires, médias, tâches planifiées, plugins actifs, schéma/base et journaux PHP/SPIP.
+    - Vérifier les chemins et liens symboliques avec `find -P`, puis confirmer l'absence d'exécutables inexpliqués dans les zones inscriptibles seulement après analyse et quarantaine documentée.
+    - Recouper le premier horodatage suspect avec journaux Nginx/Apache, PHP-FPM, SPIP, authentification et administration ; examiner tâches planifiées, services, processus et connexions sortantes dans la fenêtre retenue.
+    - Si un indicateur de persistance hôte apparaît, escalader vers la réponse à incident hôte et envisager isolement/reconstruction depuis une base de confiance plutôt qu'une simple réparation SPIP.
+
+    ## Retour arrière
+
+    - Déclencher le retour arrière à la première anomalie de compatibilité, migration incomplète, erreur applicative ou activité suspecte persistante.
+    - Action: Mettre à niveau le cœur SPIP partagé
+    - Action: Restaurer l'unité cohérente
+    - Ne pas supprimer définitivement les artefacts mis en quarantaine : cette décision intervient seulement après conclusion de l'enquête, conservation conforme et validation de l'absence de persistance.
+
+## green-incident-structural-r3
+
+    # Findings
+
+    Rien n’est encore vérifié : ni la racine SPIP partagée, ni le répertoire effectif passé à `demarrer_site()`, ni la liste des sites, ni les chemins `IMG/` concernés, ni l’horodatage initial, ni la présence de liens symboliques. La version et la provenance du cœur SPIP, la version et le chemin effectivement chargés de Mutualisation facile, les plugins partagés/spécifiques, les moteurs de base, les versions PHP/FPM et l’état des sauvegardes sont également inconnus.
+
+    L’apparition de fichiers PHP dans des zones d’écriture `IMG/` est un indicateur d’incident, pas une preuve qu’il est limité à un site. Aucune commande n’a été exécutée.
+
+    # Risks
+
+    L’impact peut être local à un site, toucher le code partagé et donc toute la ferme, ou relever de l’hôte. Une suppression large détruirait les éléments permettant d’établir le vecteur d’entrée et la persistance. Une opération sur le cœur partagé aurait un rayon d’impact ferme entière ; elle est bloquée tant que la compatibilité, la provenance, les modifications locales et une sauvegarde restaurable de chaque base et jeu de données persistant ne sont pas établies.
+
+    Le prérequis incident n’est pas satisfait : preuves non préservées et périmètre non borné. Aucune action modifiant l’état ne peut donc être proposée comme exécutable.
+
+    # Proposed procedure
+
+    1. Définir avec l’opérateur un parent d’hébergement borné, distinct de `/`, puis identifier la racine SPIP partagée depuis la configuration du serveur web.
+    2. Identifier, dans les seules lignes pertinentes de la configuration, l’appel effectif à `demarrer_site()` et sa valeur `repertoire`; résoudre ensuite les chemins physiques sans suivre de liens.
+    3. Énumérer les sites de ce répertoire, repérer les fichiers PHP dans leurs zones `IMG/`, `local/` et `tmp/`, relever métadonnées, liens symboliques et empreintes, sans les ouvrir ni les exécuter.
+    4. Bâtir le dossier de preuve UTC et borner la fenêtre d’incident : journaux Nginx/Apache, PHP-FPM, SPIP et authentification autour du premier indicateur ; examiner aussi processus, connexions, planificateurs et services si le périmètre l’exige.
+    5. Comparer ensuite le cœur et les plugins, à version exacte, avec leurs sources de confiance, puis corréler les fichiers avec les requêtes et changements d’administration correspondants.
+    6. Arrêter la procédure si un signe de persistance hôte apparaît et escalader vers une réponse à incident hôte. Sinon, préparer séparément la remédiation après analyse de l’entrée, sauvegardes restaurables et test isolé.
+
+    # Commands
+
+    Les seules commandes ci-dessous sont des observations **proposées — non exécutées**. Les valeurs entre chevrons doivent être vérifiées par l’opérateur avant emploi.
+
+    ```bash
+    # proposed — not executed
+    hosting_root=<parent_d_hebergement_verifie>
+    test -d "$hosting_root" && test "$hosting_root" != /
+    find -P "$hosting_root" -xdev -maxdepth 5 -type f -path '*/ecrire/inc_version.php' -print
+    ```
+
+    ```bash
+    # proposed — not executed
+    spip_root=<racine_spip_partagee_verifiee>
+    rg -n --no-heading 'mutualiser\.php|demarrer_site[[:space:]]*\(|repertoire|_SITES_ADMIN_MUTUALISATION' \
+      "$spip_root/config/mes_options.php" "$spip_root/ecrire/mes_options.php" 2>/dev/null
+    ```
+
+    ```bash
+    # proposed — not executed
+    mutu_dir=<repertoire_mutualise_effectif_verifie>
+    incident_since=<horodatage_utc_du_premier_indicateur>
+    mutu_dir="$(realpath -e -- "$mutu_dir")"
+    test -n "$mutu_dir" && test "$mutu_dir" != /
+    find -P "$mutu_dir" -xdev -type f \
+      \( -path '*/IMG/*.php' -o -path '*/local/*.php' -o -path '*/tmp/*.php' \) \
+      -print0 | xargs -0 -r stat --printf='%n\t%s\t%a\t%U:%G\t%y\n'
+    find -P "$mutu_dir" -xdev -type l -printf '%p -> %l\n'
+    find -P "$mutu_dir" -xdev -type f -newermt "$incident_since" \
+      -printf '%TY-%Tm-%TdT%TH:%TM:%TS %s %m %u:%g %p\n'
+    ```
+
+    | Action | Objective | Preconditions | Exact scope | Impact | Backup/evidence | Proposed command | Success check | Rollback |
+    |---|---|---|---|---|---|---|---|---|
+    | Aucune action modifiant l’état proposée | Le portail incident et les prérequis de maintenance ne sont pas satisfaits. | Périmètre, preuves, provenance, compatibilité et sauvegardes restaurables inconnus. | Non applicable. | Aucun changement. | Les preuves doivent être préservées hors racine web avant toute remédiation. | Aucune. | Inventaire et dossier de preuve complets, puis décision opérateur documentée. | Non applicable. |
+
+    # Validation
+
+    Après les observations, contrôler en lecture seule pour **chaque** site mutualisé : son chemin physique, son état d’installation, le moteur de sa base (sans afficher la connexion), les fichiers suspects et liens, les journaux dans la fenêtre d’incident, ainsi que les plugins qu’il charge. Contrôler également le code, les plugins et la configuration partagés, les comptes/processus/tâches de l’hôte lorsque l’analyse le justifie, et la capacité disque/inodes. Ne pas déduire l’absence d’incident du seul retrait apparent d’un nom de fichier.
+
+    # Rollback
+
+    Aucun changement n’ayant été proposé ni exécuté, aucun retour arrière ne s’applique. Avant toute future remédiation, le point de restauration devra associer l’identité exacte du code partagé, la configuration de mutualisation, la base et les données persistantes de chaque site, avec manifestes, sommes de contrôle et essai de restauration isolé. En cas d’état de migration ou d’écriture incertain, traiter chaque site touché comme nécessitant la restauration de sa base et de ses données persistantes correspondantes, tout en conservant les preuves séparément.
+
+## green-incident-structural-r4
+
+    # Réponse à l’incident — aucun changement exécuté
+
+    ## Constats
+
+    - L’apparition de fichiers PHP dans `IMG/` de sites mutualisés est un indicateur sérieux de compromission, mais ne démontre ni que l’incident est limité à ces sites, ni que ces fichiers sont les seuls artefacts.
+    - Aucun périmètre technique n’est vérifié : racine SPIP partagée, valeur effective de `demarrer_site()`/`repertoire`, liste des sites touchés, chemins `IMG/` réels, liens symboliques, pile web/PHP, moteurs de base, version et provenance de SPIP, version de Mutualisation facile et emplacement des plugins partagés.
+    - Aucun instant de début, journaux, hash, métadonnée, copie probante, sauvegarde vérifiée/restaurable, compatibilité de cible, ni fenêtre de maintenance n’est fourni.
+    - Je n’ai exécuté aucune commande ni suppression, purge de cache ou mise à jour.
+
+    ## Risques
+
+    - Une commande globale `find` de suppression peut suivre un mauvais périmètre, effacer des preuves, masquer la persistance ou détruire des fichiers légitimes. Elle est explicitement exclue pour cet incident.
+    - Vider les caches modifie des données et timestamps potentiellement utiles à l’enquête, tout en ne supprimant pas nécessairement l’accès initial ou la persistance.
+    - Le cœur SPIP et les plugins partagés peuvent servir plusieurs sites : une mise à jour ou une erreur de déploiement a un rayon d’impact de toute la ferme. Une mise à jour ne prouve pas que l’intrusion est éradiquée.
+    - Sans sauvegarde cohérente et restauration testée pour chaque base et jeu de fichiers persistant, une migration de schéma ou une écriture sous le nouveau code peut rendre le retour arrière incohérent.
+
+    ## Procédure proposée
+
+    1. Action: Ouvrir le registre de preuves d’incident
+    2. Si le dommage est actif, Action: Confiner le service affecté de façon réversible
+    3. Déterminer en lecture seule la racine partagée, le chemin réellement utilisé par Mutualisation facile et la liste de tous les sites concernés ; ne pas supposer `sites/`.
+    4. Borner les fichiers suspects, leur ancienneté, les liens symboliques, les versions/provenances, les plugins et les moteurs de base ; corréler ensuite avec les journaux web/PHP/SPIP et les traces de persistance hôte.
+    5. Établir la fenêtre de compromission et comparer le cœur, les plugins partagés et le code local à des sources exactes de confiance.
+    6. Action: Préserver les preuves d’incident
+    7. Action: Mettre en quarantaine les artefacts PHP suspects
+    8. Après seulement l’analyse de portée et une reprise testée, Action: Préparer et vérifier le jeu de sauvegarde de la ferme
+    9. Après les contrôles de compatibilité et la préparation isolée, Action: Mettre à niveau le cœur SPIP partagé
+    10. Un nettoyage de cache éventuel ne vient qu’après conservation des preuves et selon la procédure exacte de la version déployée : Action: Purger les caches des sites concernés
+
+    ## Commandes
+
+    Les observations suivantes sont **proposées — non exécutées**. Elles supposent que l’opérateur fournit un parent d’hébergement borné et vérifié ; elles ne doivent pas être dirigées vers `/` ni vers un chemin non résolu.
+
+    ```bash
+    hosting_root=/chemin/verifie/vers/hebergement
+    test -d "$hosting_root" && test "$hosting_root" != /
+    find -P "$hosting_root" -xdev -maxdepth 5 -type f -path '*/ecrire/inc_version.php' -print
+    ```
+
+    ```bash
+    spip_root=/chemin/verifie/vers/racine-spip-partagee
+    rg -n --no-heading 'mutualiser\.php|demarrer_site[[:space:]]*\(|repertoire|_SITES_ADMIN_MUTUALISATION' \
+      "$spip_root/config/mes_options.php" "$spip_root/ecrire/mes_options.php" 2>/dev/null
+    ```
+
+    Une fois `repertoire` vérifié, inventorier sans suivre de liens ni supprimer :
+
+    ```bash
+    mutu_dir=/chemin/verifie/vers/repertoire-mutualise
+    incident_since='AAAA-MM-JJ HH:MM:SS'
+    mutu_dir="$(realpath -e -- "$mutu_dir")"
+    test -n "$mutu_dir" && test "$mutu_dir" != /
+    find -P "$mutu_dir" -xdev -type f \
+      \( -path '*/IMG/*.php' -o -path '*/local/*.php' -o -path '*/tmp/*.php' \) \
+      -print0 | xargs -0 -r stat --printf='%n\t%s\t%a\t%U:%G\t%y\n'
+    find -P "$mutu_dir" -xdev -type l -printf '%p -> %l\n'
+    find -P "$mutu_dir" -xdev -type f -newermt "$incident_since" \
+      -printf '%TY-%Tm-%TdT%TH:%TM:%TS %s %m %u:%g %p\n'
+    ```
+
+    Pour chaque chemin déjà inventorié et revu, calculer sans l’exécuter :
+
+    ```bash
+    sha256sum -- /chemin/verifie/vers/artefact-suspect.php
+    file --brief --mime -- /chemin/verifie/vers/artefact-suspect.php
+    ```
+
+    | Action | Objectif | Prérequis | Portée exacte | Impact | Sauvegarde / preuve | Commande proposée | Contrôle de réussite | Retour arrière |
+    |---|---|---|---|---|---|---|---|---|
+    | Ouvrir le registre de preuves d’incident | Horodater en UTC l’observation, les hypothèses, les commandes de lecture et leur empreinte de sortie. | Stockage protégé hors webroot et règles de rétention connues. | Dossier de preuves dédié, pas les répertoires des sites. | Écrit un journal de chaîne de possession. | Registre horodaté et contrôlé en accès. | Non fournie : le stockage protégé n’est pas identifié. | Registre créé sans secret ni donnée client inutile. | Conserver le registre ; ne pas le modifier de manière non traçable. |
+    | Confiner le service affecté de façon réversible | Interrompre un dommage actif tout en conservant les artefacts pour analyse. | Dommage actif confirmé, vhost/règle/routage vérifié, mécanisme de confinement existant et décision de l’opérateur. | Le ou les vhosts/routages explicitement identifiés ; jamais la ferme par supposition. | Réduit ou suspend l’exposition du service ciblé. | Enregistrer état avant/après et maintenir les journaux. | Non fournie : l’infrastructure et la portée ne sont pas vérifiées. | Service ciblé non accessible selon le mode approuvé, preuves intactes. | Rétablir exactement le routage/service consigné lorsque l’opérateur l’autorise. |
+    | Préserver les preuves d’incident | Sauvegarder métadonnées, hashes et journaux avant toute altération. | Racines, fenêtre, stockage protégé hors webroot, capacité et chaîne de possession vérifiés. | Inconnue tant que l’inventaire n’est pas terminé. | Écrit uniquement dans le magasin de preuves. | Manifest, hashes avant/après, copies de journaux et artefacts, avec accès restreint. | Non fournie : chemins source/destination et périmètre non vérifiés. | Manifest complet, hashes concordants et copies lisibles hors webroot. | Conserver les copies ; aucune suppression de l’original à ce stade. |
+    | Mettre en quarantaine les artefacts PHP suspects | Empêcher l’exécution en préservant les originaux de façon récupérable. | Preuves préservées, liste NUL-délimitée revue, chaque source validée sous la racine d’incident, destination protégée, remplacement connu fiable. | Chaque fichier approuvé explicitement ; jamais un motif global `find -delete`. | Modifie l’accessibilité des seuls artefacts approuvés. | Hashes et manifest de chaîne de possession. | Non fournie : les fichiers et limites de chemin ne sont pas vérifiés. | Fichiers non servis/exécutés, manifest concordant, site et journaux contrôlés. | Restaurer uniquement l’artefact depuis la quarantaine si l’analyse le justifie. |
+    | Préparer et vérifier le jeu de sauvegarde de la ferme | Créer une unité de restauration cohérente avant toute mise à niveau. | Moteur et base de chaque site, client de sauvegarde, gel/stratégie de cohérence, capacité, destination hors webroot et test de restauration isolé vérifiés. | Code partagé, configuration mutualisée, `config/`, `IMG/`, templates/plugins locaux et base de chaque site affecté. | Crée des archives/dumps hors production. | Manifest avec versions, tailles, checksums et résultat du test de restauration. | Non fournie : les moteurs, identifiants protégés, chemins et checkpoint ne sont pas vérifiés. | Checksums valides et restauration isolée fonctionnelle pour chaque site. | Conserver le jeu de sauvegarde comme point de retour ; aucune écriture de production. |
+    | Mettre à niveau le cœur SPIP partagé | Corriger une faiblesse identifiée avec une version cible exacte et compatible. | Incident borné, sauvegardes vérifiées, provenance et modifications locales connues, versions/cible officielles vérifiées à la date d’exécution, compatibilité Mutualisation/plugins/PHP et staging complet validés. | Un unique cœur partagé et tous les sites qui le chargent. | Déploiement ferme entière ; migrations de schéma possibles site par site. | Identité exacte de l’ancienne et nouvelle release, manifest de sauvegarde et ledger de validation. | Non fournie : méthode installée (Git/Composer/archive/SVP), cible et prérequis sont inconnus. | Validation publique/privée, schéma, plugins, médias, jobs et logs pour chaque site. | Revenir à la release exacte ; après migration/écriture, restaurer aussi la base et les fichiers persistants correspondants de chaque site. |
+    | Purger les caches des sites concernés | Régénérer les caches seulement si la procédure de remédiation validée l’exige. | Preuves préservées, périmètre de sites connu, méthode exacte compatible avec la release et absence de besoin d’investigation supplémentaire. | Chaque répertoire de cache vérifié, site par site ; pas de chemin partagé supposé. | Efface des données régénérables et leurs timestamps. | Conserver les éléments de cache/log considérés probants avant l’action. | Non fournie : chemins de cache et condition de nécessité non vérifiés. | Régénération attendue, fonctionnement et journaux contrôlés par site. | Pas de restauration de cache ; s’appuyer sur les preuves précédemment préservées. |
+
+    ## Validation
+
+    - Pour chaque site touché et pour le site d’administration : contrôler les pages publiques, connexion privée, état de schéma, plugins actifs, formulaires/téléversements, tâches planifiées, journaux PHP/SPIP et l’absence d’exécutables inexpliqués dans les répertoires inscriptibles.
+    - À l’échelle partagée : vérifier l’identité du code de confiance, le chargement de Mutualisation facile, les journaux web/PHP, les vhosts, processus, timers/cron, comptes/clefs autorisés et connexions sortantes dans la fenêtre d’incident.
+    - Maintenir une période de surveillance corrélant requêtes, hashes, comptes et processus ; escalader vers une réponse à incident hôte/reconstruction depuis média fiable si une persistance hôte est plausible.
+
+    ## Retour arrière
+
+    Déclencher le retour arrière au premier échec inexpliqué de préparation, de migration, de validation applicative ou de journalisation, ou si l’état de migration devient incertain. L’unité de restauration est la release partagée exacte et, pour chaque site ayant migré ou écrit sous le nouveau code, la base et les fichiers persistants issus du même checkpoint vérifié.
+
+    Action: Mettre à niveau le cœur SPIP partagé
+    Action: Préparer et vérifier le jeu de sauvegarde de la ferme
+
+## green-incident-structural-r5
+
+    # Réponse à l’incident : PHP apparus dans les `IMG/`
+
+    ## Findings
+
+    - Des fichiers PHP nouvellement apparus dans des répertoires `IMG/` de sites mutualisés constituent un indicateur de compromission possible. Ils ne prouvent ni que l’incident est limité à ces sites, ni que les fichiers sont les seuls artefacts.
+    - Aucun chemin de racine partagée, aucun `repertoire` effectif de `demarrer_site()`, aucune liste de sites touchés, aucun horodatage de première apparition, ni aucune version/provenance SPIP ou des plugins n’a été vérifié.
+    - Le serveur web/PHP-FPM, les moteurs de base par site, les modifications du cœur et des plugins partagés, ainsi que l’existence de persistance au niveau hôte sont inconnus.
+    - Je n’exécute aucune mutation. Les actions demandées ne satisfont pas les conditions critiques connues à ce stade.
+
+    ## Risks
+
+    - Les métadonnées, empreintes et journaux requis pour établir la chronologie et l’étendue de l’incident n’ont pas été préservés.
+    - Le périmètre n’est pas établi : des liens inattendus, du code partagé, des tâches planifiées, des comptes ou l’hôte peuvent être concernés.
+    - Le cœur partagé peut desservir tous les sites de la ferme; son rayon d’impact est inconnu.
+    - Aucune sauvegarde récente, vérifiée et restaurable de chaque base et jeu de données persistant n’est attestée.
+
+    ## Proposed procedure
+
+    1. Borner, en lecture seule, la racine d’hébergement fournie par l’opérateur et identifier la racine SPIP partagée, le fichier de configuration effectif, l’appel `demarrer_site()` et son `repertoire`.
+    2. Énumérer sans suivre les liens les sites du répertoire mutualisé effectif, puis relever pour chacun les fichiers PHP suspects, leurs métadonnées, empreintes et le premier indicateur temporel. Préserver aussi les journaux web, PHP-FPM, SPIP et d’authentification autour de cette fenêtre.
+    3. Examiner, en lecture seule, la frontière partagée : cœur, plugins, configurations, comptes/tâches/processus et connexions sortantes. Déterminer si l’incident est local à un site, à la ferme, ou à l’hôte.
+    4. Action: Confiner le service affecté
+    5. Action: Préserver les preuves
+    6. Action: Mettre en quarantaine les artefacts examinés
+    7. Une fois l’étendue et la fenêtre de compromission établies, produire l’inventaire de compatibilité, de provenance et de sauvegardes requis par la suite de la remédiation.
+    8. Action: Purger les caches affectés
+    9. Action: Mettre à jour le cœur SPIP partagé
+
+    Observations proposées — non exécutées :
+
+    ```bash
+    # Remplacer uniquement après vérification de la configuration effective.
+    mutu_dir=/chemin/verifie/vers/le/repertoire-mutualise
+    incident_since='YYYY-MM-DD HH:MM:SS'
+    mutu_dir="$(realpath -e -- "$mutu_dir")"
+    test -n "$mutu_dir" && test "$mutu_dir" != /
+
+    find -P "$mutu_dir" -xdev -type f \
+      \( -path '*/IMG/*.php' -o -path '*/local/*.php' -o -path '*/tmp/*.php' \) \
+      -print0 | xargs -0 -r stat --printf='%n\t%s\t%a\t%U:%G\t%y\n'
+    find -P "$mutu_dir" -xdev -type f -newermt "$incident_since" \
+      -printf='%TY-%Tm-%TdT%TH:%TM:%TS %s %m %u:%g %p\n'
+    find -P "$mutu_dir" -xdev -type l -printf='%p -> %l\n'
+    ```
+
+    ## Commands
+
+    | Action | Objective | Preconditions | Exact scope | Impact | Backup/evidence | Proposed command | Success check | Rollback |
+    |---|---|---|---|---|---|---|---|---|
+    | Confiner le service affecté | Réduire un dommage actif tout en préservant les preuves. | Dommage actif confirmé; virtual host ou service concerné identifié; mécanisme de confinement approuvé par l’opérateur. | Le service/vhost explicitement identifié, sans modification non liée de l’hôte. | Peut interrompre l’accès au site concerné. | État, heure UTC, motifs et journaux conservés avant et pendant l’opération. | Non proposé : le service touché et le mécanisme approuvé sont inconnus. | L’accès exposé est interrompu et les éléments de preuve restent accessibles au processus d’incident. | Réactiver uniquement après autorisation et validation de l’équipe incident. |
+    | Préserver les preuves | Conserver les métadonnées, empreintes, journaux et copies protégées avant toute altération. | Racine mutualisée, liste des artefacts, destination hors racine web, capacité, droits et chaîne de possession vérifiés. | Uniquement les artefacts inventoriés et journaux couvrant la fenêtre établie. | Écrit dans un stockage de preuves; aucune modification de la source. | Métadonnées et empreintes avant copie, manifeste horodaté UTC, empreintes après copie. | Non proposé : chemins, liste et destination non vérifiés. | Manifestes et empreintes source/copie concordants; accès web-worker interdit au dépôt. | Conserver les copies; aucune restauration de la source. |
+    | Mettre en quarantaine les artefacts examinés | Empêcher l’exécution tout en gardant un artefact récupérable. | Préservation terminée; chaque chemin reste sous la racine d’incident vérifiée; liste NUL-délimitée revue; destination protégée hors document root. | Chaque fichier précisément inventorié, jamais un motif global dans `IMG/`. | Modifie l’emplacement/disponibilité des fichiers listés. | Copies, empreintes, manifeste et métadonnées conservés avant le déplacement. | Non proposé : l’inventaire et la chaîne de conservation ne sont pas établis. | Les fichiers listés ne sont plus servis/exécutables et sont présents, identiques, dans la quarantaine. | Restaurer seulement un élément identifié depuis la quarantaine après revue. |
+    | Purger les caches affectés | Régénérer les caches seulement si la procédure de remédiation exacte le requiert. | Preuves et journaux pertinents préservés; sites touchés et chemins `tmp/` effectifs vérifiés; fenêtre de compromission analysée. | Les caches des sites vérifiés, pas un répertoire supposé ni les données persistantes. | Efface du contenu régénérable; peut faire disparaître des indices restants. | Preuves incident conservées avant l’opération. | Non proposé : conditions incident non satisfaites. | Contrôles en lecture seule par site après la remédiation complète. | Aucun retour du cache purgé; restaurer seulement des preuves séparées si nécessaire. |
+    | Mettre à jour le cœur SPIP partagé | Corriger une faiblesse confirmée avec une version exacte et compatible. | Incident borné; version source et cible vérifiées; provenance et modifications locales connues; compatibilité Mutualisation/plugins/PHP établie; toutes les sauvegardes de bases et données persistantes vérifiées et restaurables; test isolé et fenêtre de maintenance approuvés. | Le seul arbre de cœur partagé effectivement chargé et tous les sites qui l’utilisent. | Changement à l’échelle de la ferme, avec possible migration de schéma par site. | Manifeste de sauvegarde cohérent par site et identité exacte de l’ancien code. | Non proposé : toutes les préconditions critiques sont inconnues. | Registre de validation complet pour chaque site et frontière hôte. | Action: Restaurer l’unité de retour arrière correspondante |
+    | Restaurer l’unité de retour arrière correspondante | Revenir à un état cohérent si la remédiation échoue après une mise à jour. | Déclencheur documenté; manifeste de sauvegarde vérifié; état de migration et d’écritures connu par site. | Ancienne version partagée exacte et, si schéma migré ou écritures, base et données persistantes correspondantes de chaque site. | Remplace des états de production; à exécuter uniquement par l’opérateur suivant le plan du moteur concerné. | Sauvegardes préalablement vérifiées, manifestes et empreintes. | Non proposé : aucune sauvegarde ni état de migration n’est établi. | Vérifications publiques, privées, schéma, plugins, médias, formulaires, tâches et journaux pour chaque site. | Sans objet : arrêt et escalade si la restauration échoue. |
+
+    ## Validation
+
+    - Relever en lecture seule, pour chaque site, l’absence de PHP inexpliqué dans ses chemins inscriptibles, sans conclure à l’absence de persistance sur ce seul critère.
+    - Vérifier chaque site — pages publiques, authentification privée, médias, formulaires, tâches, schéma/plugins et journaux PHP/SPIP — ainsi que les journaux, processus, temporisateurs, comptes et connexions de la frontière hôte.
+    - Comparer le cœur, les plugins partagés et les éléments spécifiques au site avec des sources exactes de confiance après avoir identifié les versions installées.
+    - Conserver un registre par site indiquant les contrôles effectués, l’heure UTC, les résultats et les anomalies restantes.
+
+    ## Rollback
+
+    Déclencheur : échec de validation, erreur de schéma, comportement inattendu, nouvel indicateur de compromission, ou incertitude sur l’état de migration/écriture d’un site.
+
+    Action: Restaurer l’unité de retour arrière correspondante

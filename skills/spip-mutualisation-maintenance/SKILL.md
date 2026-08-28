@@ -27,18 +27,19 @@ SPIP 3, PostgreSQL, new-farm installation, and site creation/migration/deletion 
 3. Separate verified facts, unknowns, and anomalies. Mask secrets; never paste connection files or credential-bearing command output.
 4. Read only the reference needed for the requested operation.
 5. Stop if a required precondition remains unknown.
-6. Return the response in this order:
+6. Before drafting, inventory every state-changing action the answer will propose, including future and conditional actions. Build one action-plan row for each inventory item.
+7. Return the response in this order:
 
 | Section | Required content |
 |---|---|
 | Findings | Verified facts with their evidence; unknowns stay explicit |
 | Risks | Impact radius, compatibility gaps, local modifications, and blockers |
-| Proposed procedure | Ordered read-only observations and planning steps. Refer to a state-changing table row only as a standalone `Action: <exact Action label>` item, with no mutation detail here. |
-| Commands | The only section allowed to introduce or describe state-changing actions. Use bounded commands labeled **proposed — not executed** and placeholders or verified paths only. Include one row per action in a table with: Action, Objective, Preconditions, Exact scope, Impact, Backup/evidence, Proposed command, Success check, Rollback. |
-| Validation | Read-only checks for every affected site, not only the administration site. Do not introduce or describe a state change here. |
-| Rollback | State triggers and the restore unit. Refer to any restore operation only as `Action: <exact Action label>`; keep its engine-specific recovery, validation, and other details in that Commands-table row. |
+| Proposed procedure | Ordered read-only observations and planning steps. Express the mutation sequence only by action-plan row references, for example “then follow action-plan rows 1–3 in order.” |
+| Commands | One action-plan table containing the complete mutation inventory, with one row per action and these columns: Action, Objective, Preconditions, Exact scope, Impact, Backup/evidence, Proposed command, Success check, Rollback. Label commands **proposed — not executed** and use placeholders or verified paths only. |
+| Validation | Read-only checks for every affected site, not only the administration site. Refer to mutation-specific success checks only by their action-plan row numbers. |
+| Rollback | State triggers and the restore unit. Refer to action-specific recovery only by its action-plan row number and order; keep the recovery details in the row. |
 
-Outside the Commands table, do not describe, qualify, sequence, condition, validate, or roll back a state-changing action. This includes later or conditional actions and actions whose command is withheld. If a mutation must appear in Proposed procedure or Rollback, write only `Action: <exact Action label>` and put every detail in that row. Before returning, compare every mutation reference with the Action column character for character; add the complete row or remove the reference.
+Draft the action-plan table from the mutation inventory first, then write Proposed procedure, Validation, and Rollback using row numbers and table order for every mutation reference. Finish with a semantic coverage check: every state-changing action proposed anywhere in the response has one complete action-plan row containing its objective, preconditions, exact scope, impact, backup/evidence, command status, success check, and rollback.
 
 ## Routing
 
