@@ -49,6 +49,28 @@ mariadb --defaults-extra-file="$client_opts" --batch --skip-column-names \
 
 Do not generate the credential file or copy credentials out of SPIP configuration.
 
+### Read-only client and server detection
+
+Detect the installed dump client before proposing a command shape. Record both the chosen client version and the database server version before continuing:
+
+```bash
+client_opts=/etc/mysql/spip-backup.cnf  # mode 0600, prepared by the operator
+db_name=verified_database_name
+
+if command -v mariadb-dump >/dev/null 2>&1; then
+  dump_client=mariadb-dump
+elif command -v mysqldump >/dev/null 2>&1; then
+  dump_client=mysqldump
+else
+  echo 'STOP: no MariaDB/MySQL logical dump client found' >&2
+  exit 1
+fi
+
+"$dump_client" --version
+mariadb --defaults-extra-file="$client_opts" --batch --skip-column-names \
+  -e 'SELECT VERSION();' "$db_name"
+```
+
 ### Consistency decision
 
 Inspect table engines before selecting the dump strategy:
@@ -63,7 +85,7 @@ mariadb --defaults-extra-file="$client_opts" --batch --skip-column-names \
 - All relevant tables transactional (normally InnoDB): `--single-transaction --quick` can provide a consistent logical snapshot when DDL is frozen.
 - Non-transactional tables or concurrent DDL: schedule an application write freeze and choose a reviewed lock/snapshot method. Do not claim `--single-transaction` protects those tables.
 
-Proposed dump shape:
+### Proposed shape when `mariadb-dump` is installed
 
 ```bash
 dump_path="$backup_root/databases/$site_key.sql"
@@ -73,7 +95,17 @@ mariadb-dump --defaults-extra-file="$client_opts" \
 test -s "$dump_path"
 ```
 
-Use `mysqldump` only when that is the installed compatible client. Record `mariadb-dump --version` or `mysqldump --version`. Check the actual exit code before compression; a non-empty partial file is not success.
+### Proposed shape when `mysqldump` is installed
+
+```bash
+dump_path="$backup_root/databases/$site_key.sql"
+mysqldump --defaults-extra-file="$client_opts" \
+  --single-transaction --quick --routines --events --triggers \
+  --databases "$db_name" >"$dump_path"
+test -s "$dump_path"
+```
+
+Use the branch that matches the detected installed client. Check the actual exit code before compression; a non-empty partial file is not success.
 
 ### Restore verification
 
@@ -91,7 +123,7 @@ mariadb --defaults-extra-file="$client_opts" --batch --skip-column-names \
 
 ## 4. SQLite backup
 
-Locate the exact database from the site's sanitized connection inventory; it is commonly under the site's `config/bases/`. Do not use a raw hot `cp` as the consistency mechanism.
+Locate the exact database from the site's sanitized connection inventory; it is commonly under the site's `config/bases/`. Do not use a raw hot `cp` as the consistency mechanism. SQLite's own CLI documents `.backup` as the online backup command, and `PRAGMA integrity_check` is the first integrity gate after the copy ([SQLite CLI `.backup`](https://sqlite.org/cli.html#special_commands_to_sqlite3_dot_commands_), [SQLite integrity check pragma](https://sqlite.org/pragma.html#pragma_integrity_check)).
 
 Proposed online backup and validation:
 
@@ -107,7 +139,7 @@ test "$(sqlite3 "$sqlite_backup" 'PRAGMA integrity_check;')" = ok
 sqlite3 "$sqlite_backup" 'PRAGMA foreign_key_check;'
 ```
 
-If the CLI version does not accept the proposed invocation, stop and adapt it in staging; do not fall back silently to a live raw copy.
+If the CLI version does not accept the proposed invocation, stop and adapt it in staging; do not fall back silently to a live raw copy. `PRAGMA foreign_key_check` is an additional logical consistency check, not a replacement for `PRAGMA integrity_check` ([SQLite integrity check pragma](https://sqlite.org/pragma.html#pragma_integrity_check), [SQLite foreign key check pragma](https://sqlite.org/pragma.html#pragma_foreign_key_check)).
 
 For a restore drill, restore/copy the backup to a new isolated filename, point an isolated site copy at it, run `PRAGMA integrity_check`, then exercise SPIP. Preserve the production database until the restored site passes.
 
