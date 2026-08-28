@@ -34,11 +34,11 @@ SPIP 3, PostgreSQL, new-farm installation, and site creation/migration/deletion 
 | Findings | Verified facts with their evidence; unknowns stay explicit |
 | Risks | Impact radius, compatibility gaps, local modifications, and blockers |
 | Proposed procedure | Ordered operator actions, including a maintenance window when needed |
-| Commands | Bounded commands labeled **proposed — not executed**; placeholders or verified paths only |
+| Commands | Bounded commands labeled **proposed — not executed**; placeholders or verified paths only. Whenever any state-changing action is proposed, include one row per action in a table with: Action, Objective, Preconditions, Exact scope, Impact, Backup/evidence, Proposed command, Success check, Rollback. |
 | Validation | Checks for every affected site, not only the administration site |
 | Rollback | Trigger, restore unit, engine-specific database recovery, and validation |
 
-Every proposed mutation must name its objective, prerequisites, exact scope, likely impact, required backup, success check, and matching rollback.
+Do not propose a mutation elsewhere without its Commands-table row.
 
 ## Routing
 
