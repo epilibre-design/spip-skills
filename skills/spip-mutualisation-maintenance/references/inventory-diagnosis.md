@@ -1,0 +1,161 @@
+# Inventory and diagnosis
+
+Use this reference before every other maintenance mode. Its output is the evidence base for later commands.
+
+Sources: [Mutualisation facile `paquet.xml`](https://git.spip.net/spip-contrib-extensions/mutualisation/-/blob/main/paquet.xml), [`mes_options.php.txt`](https://git.spip.net/spip-contrib-extensions/mutualisation/-/blob/main/mes_options.php.txt), and [`mutualiser.php`](https://git.spip.net/spip-contrib-extensions/mutualisation/-/blob/main/mutualiser.php).
+
+## 1. Bound the search
+
+Start from a directory supplied by the operator, the current deployment directory, or a document root read from the active virtual-host configuration. Do not search all of `/`.
+
+Read-only examples:
+
+```bash
+# Set only after the operator identifies a bounded hosting parent.
+hosting_root=/srv/www
+test -d "$hosting_root" && test "$hosting_root" != /
+
+find -P "$hosting_root" -xdev -maxdepth 5 -type f \
+  -path '*/ecrire/inc_version.php' -print
+
+command -v nginx >/dev/null && nginx -T 2>&1 | rg -n 'server_name|root |fastcgi_pass'
+command -v apache2ctl >/dev/null && apache2ctl -S
+```
+
+`nginx -T` and Apache configuration output can contain internal paths. Summarize the useful mapping; do not paste unrelated configuration or secrets.
+
+For each candidate, resolve the physical path and validate the SPIP markers without changing directory contents:
+
+```bash
+spip_root=/srv/www/example-spip
+spip_root="$(realpath -e -- "$spip_root")"
+test -n "$spip_root" && test "$spip_root" != /
+test -f "$spip_root/ecrire/inc_version.php"
+test -f "$spip_root/spip.php"
+```
+
+## 2. Resolve the effective mutualisation configuration
+
+Do not assume that `sites/` is used. Locate the configuration that loads `mutualiser.php` and calls `demarrer_site()`:
+
+```bash
+find -P "$spip_root" -xdev -maxdepth 3 -type f \
+  \( -name 'mes_options.php' -o -name 'mes_options.php.txt' \) -print
+
+rg -n --no-heading \
+  'mutualiser\.php|demarrer_site[[:space:]]*\(|repertoire|_SITES_ADMIN_MUTUALISATION' \
+  "$spip_root/config/mes_options.php" "$spip_root/ecrire/mes_options.php" 2>/dev/null
+```
+
+Inspect only the matched lines and nearby structure. Never print the complete file: the same file may contain database, SMTP, or API credentials.
+
+Record:
+
+- the file that loads the plugin;
+- the `$site` derivation and any `www`/port normalization;
+- the `repertoire` value passed to `demarrer_site()`;
+- `_SITES_ADMIN_MUTUALISATION`, if defined;
+- important options such as `table_prefix`, `cookie_prefix`, and `url_img_courtes`.
+
+Resolve the directory only after reading the effective value:
+
+```bash
+repertoire=sites-customises  # verified value, not a default assumption
+mutu_dir="$(realpath -e -- "$spip_root/$repertoire")"
+case "$mutu_dir" in
+  "$spip_root"/*) ;;
+  *) echo 'STOP: mutualisation directory escapes the shared root' >&2; exit 1 ;;
+esac
+```
+
+## 3. Identify exact versions and provenance
+
+Read the relevant version declarations, not directory names:
+
+```bash
+rg -n '\$spip_version_(affichee|branche)|SPIP_VERSION' "$spip_root/ecrire/inc_version.php"
+rg -n '^(<paquet|[[:space:]]*(prefix|version|compatibilite)=)' \
+  "$spip_root/mutualisation/paquet.xml"
+```
+
+For Mutualisation facile 2.x, verify both the loaded plugin path and `paquet.xml`. The current 2.x package declares its supported SPIP range; compare that installed declaration with the exact target rather than relying on memory.
+
+Classify core provenance:
+
+```bash
+git -C "$spip_root" rev-parse --show-toplevel 2>/dev/null
+git -C "$spip_root" status --short 2>/dev/null
+test -f "$spip_root/composer.json" && test -f "$spip_root/composer.lock"
+```
+
+| Evidence | Classification |
+|---|---|
+| Matching Git root, remote, branch/tag, clean status | Git |
+| Root package plus lock file managing SPIP | Composer |
+| No VCS/package manager evidence; files match an official release | Archive |
+| Mixed evidence or unexplained files | Unknown — stop before upgrade commands |
+
+## 4. Enumerate sites without crossing boundaries
+
+```bash
+find -P "$mutu_dir" -xdev -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort
+find -P "$mutu_dir" -xdev -mindepth 2 -maxdepth 2 -type l -printf '%p -> %l\n'
+```
+
+For every directory, record the domain/key, whether `config/connect.php` exists, and whether `IMG/`, `local/`, and `tmp/` exist. A missing connection file can mean an incomplete installation; do not assume it is a valid site.
+
+Identify the database engine without displaying the raw connection call. Prefer existing sanitized inventory tooling. Otherwise inspect locally and emit only an allowlisted result (`mysql`, `sqlite3`, or `unknown`). Do not `source` or `include` an untrusted configuration during an incident. SQLite files are normally beneath the site's `config/bases/`; their existence is evidence to reconcile with the sanitized connection type, not permission to print the connection file.
+
+## 5. Map plugin impact
+
+Inventory all configured paths before deciding that a plugin is shared:
+
+- `plugins-dist/` — distributed with the shared core;
+- shared `plugins/` and `plugins/auto/`;
+- paths added through `_DIR_PLUGINS_SUPPL` or `_SPIP_PATH`;
+- plugin directories inside an individual site's tree.
+
+```bash
+find -P "$spip_root/plugins" "$spip_root/plugins/auto" \
+  -xdev -mindepth 1 -maxdepth 2 -type f -name paquet.xml -print 2>/dev/null
+
+rg -n '_DIR_PLUGINS_SUPPL|_SPIP_PATH|dossier_squelettes' \
+  "$spip_root/config" "$mutu_dir" --glob '*.php' 2>/dev/null
+```
+
+Do not dump serialized caches from `tmp/` into the answer. If active-plugin state is obtained from a cache or database, label its timestamp and verify it per site before using it as an upgrade decision.
+
+## 6. Capacity, ownership, and anomalies
+
+```bash
+df -hP -- "$spip_root"
+df -iP -- "$spip_root"
+find -P "$spip_root" -xdev -maxdepth 2 -printf '%u:%g %m %y %p\n' | sort
+find -P "$mutu_dir" -xdev -mindepth 1 -maxdepth 3 -printf '%u:%g %m %y %p\n' | sort
+```
+
+Report permission anomalies; do not run `chmod`, `chown`, ACL changes, or group membership changes. Compare with the actual PHP-FPM/Apache worker account and the deployment account before recommending a correction.
+
+Bound recent/executable-file searches to verified roots:
+
+```bash
+incident_since='2026-08-01 00:00:00'
+find -P "$mutu_dir" -xdev -type f -newermt "$incident_since" -printf '%TY-%Tm-%TdT%TH:%TM:%TS %m %u:%g %p\n'
+find -P "$mutu_dir" -xdev -type f \
+  \( -path '*/IMG/*.php' -o -path '*/local/*.php' -o -path '*/tmp/*.php' \) -print
+```
+
+During a suspected compromise, stop here and read [security-incident.md](security-incident.md) before hashes, copies, cache operations, or cleanup.
+
+## 7. Required inventory output
+
+### Shared foundation
+
+Report shared root, SPIP version/provenance/local changes, Mutualisation facile version/path/config file, effective `repertoire`, administration site restriction, web server, PHP CLI/FPM versions, shared plugin paths, disk/inodes, and unknowns.
+
+### Per-site table
+
+| Site key/domain | Path | Install state | DB engine | Persistent size | Active/shared plugins | Owner/mode anomalies | Recent/suspicious files |
+|---|---|---|---|---:|---|---|---|
+
+Finish with prioritized anomalies and the additional evidence required. Do not turn a permission observation into a state-changing action.
