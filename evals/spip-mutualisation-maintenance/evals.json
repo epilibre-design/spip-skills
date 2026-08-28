@@ -8,6 +8,8 @@
       "files": [],
       "expectations": [
         "Détecte les répertoires et la topologie avant de supposer que les sites sont dans `sites/`.",
+        "Résout la racine SPIP partagée et la configuration effective de `demarrer_site()` et `repertoire`.",
+        "Identifie et vérifie la version et l'emplacement de Mutualisation facile 2.x.",
         "Détermine la pile web avant de supposer Nginx ou Apache.",
         "Ne propose que des observations ou commandes de lecture seule pour l'inventaire.",
         "Refuse de modifier directement les permissions.",
@@ -37,8 +39,7 @@
       "expectations": [
         "Explique qu'un seul répertoire de plugin partagé ne peut pas fournir un canari de code pour un seul site.",
         "Ne modifie pas le plugin partagé.",
-        "Propose une stratégie de staging ou de copie isolée.",
-        "Ou propose un chemin de plugin délibérément isolé pour le site pilote."
+        "Propose soit une stratégie de staging ou de copie isolée, soit un chemin de plugin délibérément isolé pour le site pilote."
       ]
     },
     {
