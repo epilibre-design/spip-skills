@@ -38,7 +38,7 @@ SPIP 3, PostgreSQL, new-farm installation, and site creation/migration/deletion 
 | Validation | Checks for every affected site, not only the administration site |
 | Rollback | Trigger, restore unit, engine-specific database recovery, and validation |
 
-Do not propose a mutation elsewhere without its Commands-table row. This includes later or conditional state-changing actions even when their command is withheld: give each its own row and write why no command is provided yet.
+Do not propose a mutation elsewhere without its Commands-table row. This includes later or conditional state-changing actions even when their command is withheld: give each its own row and write why no command is provided yet. Before returning, perform a closure check across every section: each state-changing action mentioned anywhere — including containment, evidence copying, quarantine, replacement, cache purge, update, secret rotation, or permanent deletion — must appear under the same action label in its own complete Commands-table row; otherwise remove it from the response.
 
 ## Routing
 
