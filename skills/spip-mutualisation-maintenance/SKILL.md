@@ -33,12 +33,12 @@ SPIP 3, PostgreSQL, new-farm installation, and site creation/migration/deletion 
 |---|---|
 | Findings | Verified facts with their evidence; unknowns stay explicit |
 | Risks | Impact radius, compatibility gaps, local modifications, and blockers |
-| Proposed procedure | Ordered operator actions, including a maintenance window when needed |
-| Commands | Bounded commands labeled **proposed — not executed**; placeholders or verified paths only. Whenever any state-changing action is proposed, include one row per action in a table with: Action, Objective, Preconditions, Exact scope, Impact, Backup/evidence, Proposed command, Success check, Rollback. |
-| Validation | Checks for every affected site, not only the administration site |
-| Rollback | Trigger, restore unit, engine-specific database recovery, and validation |
+| Proposed procedure | Ordered read-only observations and planning steps. Refer to a state-changing table row only as a standalone `Action: <exact Action label>` item, with no mutation detail here. |
+| Commands | The only section allowed to introduce or describe state-changing actions. Use bounded commands labeled **proposed — not executed** and placeholders or verified paths only. Include one row per action in a table with: Action, Objective, Preconditions, Exact scope, Impact, Backup/evidence, Proposed command, Success check, Rollback. |
+| Validation | Read-only checks for every affected site, not only the administration site. Do not introduce or describe a state change here. |
+| Rollback | State triggers and the restore unit. Refer to any restore operation only as `Action: <exact Action label>`; keep its engine-specific recovery, validation, and other details in that Commands-table row. |
 
-Do not propose a mutation elsewhere without its Commands-table row. This includes later or conditional state-changing actions even when their command is withheld: give each its own row and write why no command is provided yet. Before returning, perform a closure check across every section: each state-changing action mentioned anywhere — including containment, evidence copying, quarantine, replacement, cache purge, update, secret rotation, or permanent deletion — must appear under the same action label in its own complete Commands-table row; otherwise remove it from the response.
+Outside the Commands table, do not describe, qualify, sequence, condition, validate, or roll back a state-changing action. This includes later or conditional actions and actions whose command is withheld. If a mutation must appear in Proposed procedure or Rollback, write only `Action: <exact Action label>` and put every detail in that row. Before returning, compare every mutation reference with the Action column character for character; add the complete row or remove the reference.
 
 ## Routing
 
