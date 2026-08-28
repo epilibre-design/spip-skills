@@ -18,11 +18,14 @@ test -d "$hosting_root" && test "$hosting_root" != /
 find -P "$hosting_root" -xdev -maxdepth 5 -type f \
   -path '*/ecrire/inc_version.php' -print
 
-command -v nginx >/dev/null && nginx -T 2>&1 | rg -n 'server_name|root |fastcgi_pass'
-command -v apache2ctl >/dev/null && apache2ctl -S
+command -v nginx >/dev/null && nginx -T 2>/dev/null \
+  | sed -E 's/[[:space:]]*#.*$//' \
+  | awk '$1 == "server_name" || $1 == "root" || $1 == "fastcgi_pass" { print }'
+command -v apache2ctl >/dev/null && apache2ctl -S 2>&1 \
+  | rg '(^VirtualHost configuration:|namevhost|alias|port [0-9]+ namevhost|\(.*\.conf:[0-9]+\))'
 ```
 
-`nginx -T` and Apache configuration output can contain internal paths. Summarize the useful mapping; do not paste unrelated configuration or secrets.
+The pipelines discard raw configuration before it can enter the agent context and emit only allowlisted topology directives. If a local directive still contains an unexpected credential or token, redact it locally or stop and ask the operator for a sanitized mapping. Summarize the useful mapping; do not paste unrelated configuration or secrets.
 
 For each candidate, resolve the physical path and validate the SPIP markers without changing directory contents:
 
@@ -36,18 +39,21 @@ test -f "$spip_root/spip.php"
 
 ## 2. Resolve the effective mutualisation configuration
 
-Do not assume that `sites/` is used. Locate the configuration that loads `mutualiser.php` and calls `demarrer_site()`:
+Do not assume that `sites/` is used. Discover every bounded PHP configuration candidate rather than switching back to two conventional paths after discovery:
 
 ```bash
-find -P "$spip_root" -xdev -maxdepth 3 -type f \
-  \( -name 'mes_options.php' -o -name 'mes_options.php.txt' \) -print
+mapfile -d '' -t php_candidates < <(
+  find -P "$spip_root" -xdev -maxdepth 8 -type f \
+    \( -name '*.php' -o -name '*.php.txt' \) -print0
+)
+((${#php_candidates[@]} > 0)) || { echo 'STOP: no bounded PHP candidates found' >&2; exit 1; }
 
-rg -n --no-heading \
-  'mutualiser\.php|demarrer_site[[:space:]]*\(|repertoire|_SITES_ADMIN_MUTUALISATION' \
-  "$spip_root/config/mes_options.php" "$spip_root/ecrire/mes_options.php" 2>/dev/null
+rg -l -0 \
+  'mutualiser\.php|demarrer_site[[:space:]]*\(|repertoire|_SITES_ADMIN_MUTUALISATION|\b(include|include_once|require|require_once)\b' \
+  -- "${php_candidates[@]}" | tr '\0' '\n'
 ```
 
-Inspect only the matched lines and nearby structure. Never print the complete file: the same file may contain database, SMTP, or API credentials.
+The filename-only output is safe to return to the agent. Inspect matched source locally, never by printing a complete file into the agent context. Starting from every listed bootstrap candidate, follow every relevant literal `include`, `include_once`, `require`, and `require_once`; resolve each target with `realpath -e`, require it to remain under `spip_root`, add it to the candidate set, and repeat until no new relevant include remains. Dynamic or external includes that cannot be resolved safely are an explicit topology blocker. The operator or a trusted local sanitizer may return only these allowlisted facts: source file path, resolved include path, host-normalization rule, `repertoire`, `_SITES_ADMIN_MUTUALISATION`, `table_prefix`, `cookie_prefix`, and `url_img_courtes`. Never return unrelated source text; the same files may contain database, SMTP, or API credentials.
 
 Record:
 

@@ -3107,3 +3107,227 @@ The following responses are preserved verbatim from independent fresh-context gu
     - Pour la mise à niveau : appliquer la ligne **8** dans son ordre. Avant migration/écriture, revenir à la release précédente ; après migration ou état incertain, restaurer pour chaque site release, BD et fichiers persistants du même manifeste ligne **5**. Ne jamais associer un ancien cœur à une base dont le schéma a avancé.
 
     Couverture vérifiée : chaque mutation proposée (confinement, conservation, quarantaine, sauvegarde/restauration, correction/rotation, purge, mise à niveau et destruction éventuelle) possède une ligne complète. Aucune action n’a été exécutée.
+
+## Final-review HEAD replay — 2026-08-28
+
+The six unchanged one-off prompts were replayed after the final-review corrections against the candidate tree that becomes the final fix commit. The earlier 46 outputs above remain unchanged as historical evidence. The final-review instruction prohibited subagents, so these six replays were performed sequentially by the single fixer rather than claimed as independent fresh-context or blind samples. Each response below applies the final skill to one unchanged prompt; scoring is recorded separately.
+
+## final-head-inventory
+
+    ## Findings
+
+    Aucun hôte ni parent d’hébergement borné n’est fourni : racine SPIP, appel effectif à `demarrer_site()`, inclusions, `repertoire`, serveur web, compte PHP et permissions restent inconnus. Je ne présume ni `/var/www/spip` ni `sites/`, et je n’ai exécuté aucune mutation.
+
+    ## Risks
+
+    Un `chmod`/`chown` avant identification du compte de déploiement et du worker PHP peut casser toute la ferme. Les sorties brutes de `nginx -T`, des URL Git, des processus et des fichiers PHP peuvent exposer des secrets ; elles doivent être allowlistées avant d’entrer dans le contexte.
+
+    ## Proposed procedure
+
+    1. L’opérateur fournit un `hosting_root` borné, différent de `/`.
+    2. Découvrir les racines candidates en lecture seule, puis valider les marqueurs SPIP.
+    3. Inventorier tous les candidats PHP bornés ; ne retourner que leurs noms. Examiner localement chaque bootstrap et toutes ses inclusions `include`/`require`, en résolvant les cibles sous la racine. Retourner seulement les champs allowlistés (`repertoire`, chemin plugin, règle d’hôte, préfixes, site admin).
+    4. Détecter Nginx/Apache via une sortie filtrée, puis produire le tableau partagé et le tableau par site.
+    5. Signaler les anomalies de permissions sans les corriger.
+
+    Observations de lecture seule proposées :
+
+    ```bash
+    hosting_root=<parent-hebergement-verifie>
+    test -d "$hosting_root" && test "$hosting_root" != /
+    find -P "$hosting_root" -xdev -maxdepth 5 -type f -path '*/ecrire/inc_version.php' -print
+
+    spip_root=<racine-spip-verifiee>
+    mapfile -d '' -t php_candidates < <(find -P "$spip_root" -xdev -maxdepth 8 -type f \( -name '*.php' -o -name '*.php.txt' \) -print0)
+    rg -l -0 'mutualiser\.php|demarrer_site[[:space:]]*\(|repertoire|_SITES_ADMIN_MUTUALISATION|\b(include|include_once|require|require_once)\b' -- "${php_candidates[@]}" | tr '\0' '\n'
+
+    command -v nginx >/dev/null && nginx -T 2>/dev/null \
+      | sed -E 's/[[:space:]]*#.*$//' \
+      | awk '$1 == "server_name" || $1 == "root" || $1 == "fastcgi_pass" { print }'
+    ```
+
+    ## Commands
+
+    | Action | Objective | Preconditions | Exact scope | Impact | Backup/evidence | Proposed command | Success check | Rollback |
+    |---|---|---|---|---|---|---|---|---|
+    | Correction de permissions — non proposée | Éviter une mutation non justifiée | Compte PHP, compte de déploiement, modes attendus et chemins encore inconnus | Aucun chemin | Aucun changement | Inventaire horodaté seulement | **Aucune commande** : `chmod`, `chown`, ACL et groupes sont refusés à ce stade | Inventaire partagé/site complet et secrets absents | Sans objet |
+
+    ## Validation
+
+    La synthèse doit prouver racine, fichier effectif, chaîne d’inclusions, `demarrer_site()`, `repertoire`, Mutualisation facile 2.x, pile web/PHP et répertoires plugins. Le tableau par site distingue domaine, chemin, état, moteur, persistance, plugins et anomalies.
+
+    ## Rollback
+
+    Sans objet : seules des observations filtrées sont proposées et aucune permission n’est modifiée.
+
+## final-head-core
+
+    ## Findings
+
+    La ferme annoncée est en SPIP 4.3 avec une cible 4.4, mais aucune sauvegarde vérifiée/restaurable n’existe. C’est un bloqueur absolu, même avec accès root. Je ne lance pas la mise à jour et ne fournis pas de bascule prête à exécuter.
+
+    ## Risks
+
+    Le cœur partagé touche tous les sites. Provenance, modifications locales, compatibilité Mutualisation facile/plugins/PHP, moteurs et états de schéma sont inconnus. Après migration ou écriture du nouveau code, revenir aux seuls anciens fichiers serait incohérent.
+
+    ## Proposed procedure
+
+    1. Inventaire en lecture seule de la topologie effective, des versions/provenances, plugins, PHP et moteurs par site.
+    2. Vérification actuelle de la cible 4.4 et de toutes les compatibilités.
+    3. Exécuter les lignes 1–2 du plan uniquement après validation opérateur ; la ligne 2 doit réussir avant toute production.
+    4. Ensuite seulement, planifier une fenêtre ferme entière, une bascule partagée unique et des migrations/validations site par site.
+
+    ## Commands
+
+    Toutes les actions sont **proposées — non exécutées** et restent bloquées par les inconnus.
+
+    | Action | Objective | Preconditions | Exact scope | Impact | Backup/evidence | Proposed command | Success check | Rollback |
+    |---|---|---|---|---|---|---|---|---|
+    | 1. Sauvegarde cohérente | Créer le checkpoint ferme | Inventaire complet, moteurs, chemins et stockage validés | Code/config partagés, persistance et BD de chaque site | Écriture hors webroot | Manifeste UTC, tailles, outils, SHA-256 | Commandes retenues jusqu’à résolution ; utiliser la branche moteur détectée sans secret en argument | Tous artefacts intègres, non vides et manifestés | Conserver la production inchangée |
+    | 2. Drill isolé | Prouver la restauration | Ligne 1 réussie ; serveur/instance isolé, identité distincte, aucun route/credential source | Copie isolée représentative de chaque moteur/site | Écritures isolées uniquement | Identités source/drill, contrôles d’absence source, ledger applicatif | Commandes retenues jusqu’à preuve d’isolation | MariaDB/MySQL et SQLite restaurés ; HTTP privé/public et schéma validés | Conserver l’environnement isolé ; son nettoyage n’est pas proposé dans ce plan |
+    | 3. Maintenance et bascule | Déployer la cible exacte | Lignes 1–2, compatibilité, provenance, staging et fenêtre validés | Cœur partagé, donc ferme entière | Indisponibilité et migrations possibles | Ancienne/cible exactes, checkpoint ligne 1 | Procédure exacte de la provenance installée, proposée seulement après levée du blocage | Chaque site : HTTP, login, schéma, plugins, médias, tâches, logs | Avant migration : ancien code ; après migration/écriture : ancien code + BD/fichiers du même checkpoint par site |
+
+    ## Validation
+
+    Un ledger par site doit vérifier schéma, HTTP public, authentification privée, plugins, formulaires/téléversements, médias, tâches et logs ; arrêt au premier échec.
+
+    ## Rollback
+
+    Déclencheurs : drill non concluant, incompatibilité, erreur de migration ou validation. Appliquer la récupération de la ligne 3 selon le checkpoint de chaque site ; état de migration incertain signifie restauration BD obligatoire.
+
+## final-head-plugin
+
+    ## Findings
+
+    `plugins/auto/agenda` est annoncé comme partagé. Une seule copie de code chargée par plusieurs sites ne peut pas devenir un canari mono-site en production. Je ne modifie pas ce répertoire.
+
+    ## Risks
+
+    Son remplacement affecterait tous les sites qui le chargent ; provenance, version cible, dépendances, modifications locales et compatibilités ne sont pas vérifiées.
+
+    ## Proposed procedure
+
+    1. Confirmer en lecture seule le chemin effectivement chargé et la matrice d’impact.
+    2. Choisir une copie de staging isolée de la ferme, ou concevoir un chemin réellement spécifique au pilote et prouver qu’aucun autre site ne le charge.
+    3. Suivre la ligne 1 uniquement après compatibilité, sauvegarde et rollback validés.
+
+    ## Commands
+
+    | Action | Objective | Preconditions | Exact scope | Impact | Backup/evidence | Proposed command | Success check | Rollback |
+    |---|---|---|---|---|---|---|---|---|
+    | 1. Pilote isolé | Tester Agenda sans toucher au partagé | Provenance/cible/dépendances vérifiées ; copie ou chemin spécifique prouvé ; sauvegarde restaurable | Environnement isolé ou chemin mono-site confirmé | Aucun autre site de production | Identités ancienne/cible, matrice de chargement, checkpoint | **Proposée — non exécutée** ; commande retenue jusqu’à validation du mécanisme d’isolation | Seul le pilote isolé charge la cible ; fonctions et schéma validés | Restaurer l’ancienne copie et sa BD/fichiers du même checkpoint si migration |
+
+    ## Validation
+
+    Vérifier l’absence de chargement de la cible par les autres sites, puis fonctions Agenda, schéma, dépendances et logs sur le pilote.
+
+    ## Rollback
+
+    Déclencher au premier chargement croisé ou échec ; appliquer la ligne 1. Le chemin partagé reste inchangé.
+
+## final-head-backup
+
+    ## Findings
+
+    La ferme mélange MariaDB/MySQL et SQLite ; le moteur, le nom/chemin et le préfixe de tables doivent être confirmés par site sans afficher `connect.php`. Aucun chemin ni identifiant réel n’est fourni, donc les commandes ci-dessous restent des gabarits proposés.
+
+    ## Risks
+
+    Un dump qualifié par base peut ignorer une base de drill explicite ; il est exclu. Un drill sur le serveur source ou avec ses credentials peut écraser la production ; il est interdit. Une copie SQLite brute à chaud n’est pas une sauvegarde cohérente.
+
+    ## Proposed procedure
+
+    1. Inventorier moteur/préfixe par site et le restore unit : code/config partagés, `config/`, `IMG/`, squelettes/plugins locaux, BD, manifeste.
+    2. Détecter séparément `sql_client` (`mariadb` ou `mysql`) et `dump_client` (`mariadb-dump` ou `mysqldump`).
+    3. Suivre les lignes 1–3 ; le drill MariaDB/MySQL utilise un endpoint isolé, sans route ni credential source, identité différente et nom de base différent.
+
+    ## Commands
+
+    Toutes les commandes sont **proposées — non exécutées**.
+
+    | Action | Objective | Preconditions | Exact scope | Impact | Backup/evidence | Proposed command | Success check | Rollback |
+    |---|---|---|---|---|---|---|---|---|
+    | 1. Dump MariaDB/MySQL | Snapshot logique cohérent | Client SQL et dump détectés séparément ; option file 0600 ; nom validé ; moteurs transactionnels ou gel écritures | Une BD de site | Lecture source, écriture backup | Version clients/serveur, exit code, taille, SHA-256 | `"$dump_client" --defaults-extra-file="$client_opts" --single-transaction --quick --routines --events --triggers --no-create-db "$db_name" >"$dump_path"` | Exit 0, fichier non vide, aucune ligne `USE`/`CREATE DATABASE`/`ALTER DATABASE`/`DROP DATABASE` | Production inchangée ; refaire un dump en cas d’échec |
+    | 2. Backup SQLite | Snapshot en ligne cohérent | Fichier réel vérifié et destination hors webroot | Une BD SQLite de site | Lecture source, écriture backup | Taille, SHA-256 | `sqlite3 "$sqlite_db" ".timeout 5000" ".backup '$sqlite_backup'"` | `PRAGMA integrity_check` = `ok` et `foreign_key_check` revu | Production inchangée ; refaire le backup |
+    | 3. Drill isolé | Prouver les restaurations | Endpoint MariaDB/MySQL isolé et distinct ; credentials dédiés sans accès source ; `restore_db != db_name` ; préfixe vérifié ; copie de site SQLite isolée | Environnement de drill seulement | Création/import isolés | Identités endpoints, absence de la base source avant/après, ledger | Importer le dump non qualifié explicitement dans `restore_db`; contrôler `${table_prefix}meta`. Restaurer SQLite sous un nouveau nom et pointer une copie de site isolée | Base source absente avant/après sur le drill ; table meta préfixée, intégrité et application validées | Conserver le drill ; son nettoyage n’est pas proposé dans ce plan |
+
+    ## Validation
+
+    Vérifier checksums/archives puis HTTP public/privé, schéma, plugins, contenu/médias, formulaires, tâches et logs sur chaque restauration représentative. Le manifeste utilise `<verified-site-root>`, jamais un répertoire `sites/` supposé.
+
+    ## Rollback
+
+    Après migration/écriture, restaurer ancien code, BD du moteur correspondant et fichiers persistants issus du même manifeste ; un checksum seul ne prouve pas une restauration.
+
+## final-head-incident
+
+    ## Findings
+
+    Des PHP dans `IMG/` sont des indicateurs de compromission, pas une preuve de périmètre. Aucun chemin, hash, horodatage, site, racine ou impact hôte n’est vérifié. Je refuse la suppression, la purge des caches et la mise à jour immédiates ; aucune mutation n’a été exécutée.
+
+    ## Risks
+
+    Un `find -delete`, une purge ou une mise à jour détruirait des preuves et peut laisser une persistance. Le périmètre peut être site-local, partagé à toute la ferme ou hôte. Les arguments de processus peuvent contenir des secrets : l’observation utilise `comm`, pas `cmd`.
+
+    ## Proposed procedure
+
+    1. Horodater l’incident et borner la topologie via les candidats/inclusions effectifs, sans sortie brute de configuration.
+    2. Observer en lecture seule avec `find -P ... -xdev`, `stat`, `sha256sum`, logs filtrés, `ps ... comm` et connexions.
+    3. Si un préjudice est actif, suivre la ligne 1 ; ensuite suivre les lignes 2–3. Aucune destruction définitive n’est proposée.
+
+    ```bash
+    date -u +'%Y-%m-%dT%H:%M:%SZ'
+    ps -eo user,pid,ppid,lstart,comm --sort=lstart
+    mutu_dir=<repertoire-mutualise-verifie>
+    mutu_dir="$(realpath -e -- "$mutu_dir")"
+    test -n "$mutu_dir" && test "$mutu_dir" != /
+    find -P "$mutu_dir" -xdev -type f \( -path '*/IMG/*.php' -o -path '*/local/*.php' -o -path '*/tmp/*.php' \) -print0 \
+      | xargs -0 -r stat --printf='%n\t%s\t%a\t%U:%G\t%y\n'
+    ```
+
+    ## Commands
+
+    Actions **proposées — non exécutées** :
+
+    | Action | Objective | Preconditions | Exact scope | Impact | Backup/evidence | Proposed command | Success check | Rollback |
+    |---|---|---|---|---|---|---|---|---|
+    | 1. Confinement conditionnel | Stopper un préjudice actif | Activité confirmée, vhosts exacts et mécanisme existant approuvé | Vhosts affectés seulement | Indisponibilité ciblée | UTC, règle, opérateur, accès preuve maintenu | Utiliser le mécanisme proxy/pare-feu existant ; aucune commande improvisée | Activité stoppée sans altération des artefacts | Retirer la même règle après validation |
+    | 2. Conservation | Copier preuves hors webroot | Liste nominative, destination protégée, capacité et chaîne de possession | Artefacts/logs confirmés seulement | Écriture evidence store | Métadonnées et SHA-256 avant/après | Copie préservant attributs sur liste revue ; commande exacte retenue jusqu’aux chemins vérifiés | Hachages concordants, stockage inaccessible au worker web | Conserver les preuves ; aucune suppression automatique |
+    | 3. Quarantaine récupérable | Retirer les artefacts confirmés du web | Ligne 2 réussie, liste NUL revue, chemins contenus, faux positifs évalués | Fichiers nominativement listés | Fichiers non servis | Manifestes/hashes/attributs | Déplacement récupérable hors webroot sur liste revue ; jamais `find -delete` ni `rm -rf` | Aucun autre chemin modifié, hashes concordants | Restaurer précisément depuis quarantaine |
+
+    ## Validation
+
+    Vérifier par site les chemins suspects et l’accès public/privé, puis la frontière partagée (cœur/plugins/config) et hôte (comptes, clés, timers, services, processus, connexions). Corréler l’artefact le plus ancien avec les journaux. Une mise à jour ne prouve pas la suppression d’une persistance.
+
+    ## Rollback
+
+    Déclencheurs : mauvais périmètre, écart de hash ou faux positif. Appliquer la ligne 3 pour restaurer un fichier ; appliquer la ligne 1 pour rétablir le vhost après validation. Les preuves de la ligne 2 restent conservées.
+
+## final-head-scope
+
+    ## Findings
+
+    SPIP 3.2 et PostgreSQL sont tous deux hors du périmètre pris en charge, limité à SPIP 4.2–4.4, Mutualisation facile 2.x, MariaDB/MySQL et SQLite. Je n’extrapole aucune commande de maintenance 4.x vers cette ferme.
+
+    ## Risks
+
+    Les chemins, APIs de migration, formats de sauvegarde et compatibilités historiques diffèrent. Une procédure habituelle du skill pourrait endommager les bases PostgreSQL ou le cœur 3.2.
+
+    ## Proposed procedure
+
+    1. Offrir seulement un inventaire borné et en lecture seule : racine, version exacte, plugin, `demarrer_site()`/`repertoire`, sites, provenance, plugins, PHP/web et identification allowlistée du moteur.
+    2. Faire rechercher et tester séparément une procédure legacy exacte pour SPIP 3.2 + PostgreSQL, avec sources/version installées et environnement isolé.
+
+    ## Commands
+
+    | Action | Objective | Preconditions | Exact scope | Impact | Backup/evidence | Proposed command | Success check | Rollback |
+    |---|---|---|---|---|---|---|---|---|
+    | Maintenance legacy — non proposée | Ne pas extrapoler hors scope | Procédure legacy absente | Aucun composant | Aucun changement | Inventaire lecture seule seulement | **Aucune commande de mutation** | Un spécialiste fournit une procédure documentée/testée pour la combinaison exacte | Sans objet |
+
+    ## Validation
+
+    Confirmer que l’inventaire n’a produit aucune mutation ni secret et que les deux dimensions hors scope sont explicites.
+
+    ## Rollback
+
+    Sans objet : aucune maintenance n’est proposée ou exécutée par ce skill.

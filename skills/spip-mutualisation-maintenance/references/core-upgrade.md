@@ -40,10 +40,12 @@ Read-only evidence:
 
 ```bash
 git -C "$spip_root" status --short
-git -C "$spip_root" remote -v
+git -C "$spip_root" remote
 git -C "$spip_root" branch --show-current
 git -C "$spip_root" describe --tags --always --dirty
 ```
+
+Do not return `git remote -v` or a raw remote URL to the agent: URLs may embed credentials. Verify the URL locally against the operator's allowlisted upstream and return only the remote name, scheme/hostname with userinfo/query redacted, and a trusted/untrusted verdict.
 
 Any unexplained tracked or untracked change is a blocker until classified. A later operator proposal may fetch and check out an exact reviewed tag/commit, but must not use an unpinned moving branch as the rollback identity.
 

@@ -40,12 +40,12 @@ Read-only examples, adapted to the verified host:
 ```bash
 date -u +'%Y-%m-%dT%H:%M:%SZ'
 uname -a
-ps -eo user,pid,ppid,lstart,cmd --sort=lstart
+ps -eo user,pid,ppid,lstart,comm --sort=lstart
 ss -plant
 systemctl list-timers --all
 ```
 
-System/process output may contain secrets in command arguments. Inspect locally and redact before including it in a report.
+Do not request process arguments: `comm` returns the executable name without the credential-bearing command line. Filter any other system observation to an explicit allowlist before it enters the agent context; redact unexpected customer data, tokens, endpoints, or credentials locally.
 
 Search without following links and without deletion:
 

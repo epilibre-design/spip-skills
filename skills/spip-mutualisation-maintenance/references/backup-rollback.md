@@ -37,13 +37,23 @@ Creating `backup_root` and changing its mode are proposed mutations; show them i
 
 ## 3. MariaDB/MySQL backup
 
-### Authentication
+### Authentication and independent client detection
 
-Never put a password in `-pPASSWORD`, a URI, the answer, or a process argument. Reuse a protected option file or socket authentication already approved by the operator:
+Never put a password in `-pPASSWORD`, a URI, the answer, or a process argument. Reuse a protected option file or socket authentication already approved by the operator. Detect the SQL client independently from the dump client; either family may be installed without the other:
 
 ```bash
 client_opts=/etc/mysql/spip-backup.cnf  # mode 0600, prepared by the operator
-mariadb --defaults-extra-file="$client_opts" --batch --skip-column-names \
+
+if command -v mariadb >/dev/null 2>&1; then
+  sql_client=mariadb
+elif command -v mysql >/dev/null 2>&1; then
+  sql_client=mysql
+else
+  echo 'STOP: no MariaDB/MySQL SQL client found' >&2
+  exit 1
+fi
+
+"$sql_client" --defaults-extra-file="$client_opts" --batch --skip-column-names \
   -e 'SELECT VERSION();'
 ```
 
@@ -51,7 +61,7 @@ Do not generate the credential file or copy credentials out of SPIP configuratio
 
 ### Read-only client and server detection
 
-Detect the installed dump client before proposing a command shape. Record both the chosen client version and the database server version before continuing:
+Detect the installed dump client separately before proposing a command shape. Record the SQL client, dump client, and database server versions before continuing:
 
 ```bash
 client_opts=/etc/mysql/spip-backup.cnf  # mode 0600, prepared by the operator
@@ -66,8 +76,9 @@ else
   exit 1
 fi
 
+"$sql_client" --version
 "$dump_client" --version
-mariadb --defaults-extra-file="$client_opts" --batch --skip-column-names \
+"$sql_client" --defaults-extra-file="$client_opts" --batch --skip-column-names \
   -e 'SELECT VERSION();' "$db_name"
 ```
 
@@ -77,7 +88,7 @@ Inspect table engines before selecting the dump strategy:
 
 ```bash
 db_name=verified_database_name
-mariadb --defaults-extra-file="$client_opts" --batch --skip-column-names \
+"$sql_client" --defaults-extra-file="$client_opts" --batch --skip-column-names \
   -e "SELECT COALESCE(ENGINE,'VIEW'), COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() GROUP BY ENGINE" \
   "$db_name"
 ```
@@ -85,41 +96,59 @@ mariadb --defaults-extra-file="$client_opts" --batch --skip-column-names \
 - All relevant tables transactional (normally InnoDB): `--single-transaction --quick` can provide a consistent logical snapshot when DDL is frozen.
 - Non-transactional tables or concurrent DDL: schedule an application write freeze and choose a reviewed lock/snapshot method. Do not claim `--single-transaction` protects those tables.
 
-### Proposed shape when `mariadb-dump` is installed
+### Proposed dump shape
 
 ```bash
 dump_path="$backup_root/databases/$site_key.sql"
-mariadb-dump --defaults-extra-file="$client_opts" \
+"$dump_client" --defaults-extra-file="$client_opts" \
   --single-transaction --quick --routines --events --triggers \
-  --databases "$db_name" >"$dump_path"
+  --no-create-db "$db_name" >"$dump_path"
+dump_status=$?
+test "$dump_status" -eq 0
 test -s "$dump_path"
 ```
 
-### Proposed shape when `mysqldump` is installed
-
-```bash
-dump_path="$backup_root/databases/$site_key.sql"
-mysqldump --defaults-extra-file="$client_opts" \
-  --single-transaction --quick --routines --events --triggers \
-  --databases "$db_name" >"$dump_path"
-test -s "$dump_path"
-```
-
-Use the branch that matches the detected installed client. Check the actual exit code before compression; a non-empty partial file is not success.
+`--databases` is deliberately forbidden for this workflow because it embeds database-selection statements that can defeat a restore target. Use the independently detected `dump_client`. Check the actual exit code before compression; a non-empty partial file is not success.
 
 ### Restore verification
 
-Do not first overwrite production. Restore to an isolated server or explicitly temporary database with a validated identifier, then check tables and SPIP behavior:
+Do not run a drill on the source server or reuse its credentials. The drill server/instance must be isolated from production, have no route or credentials capable of reaching the source, and expose an identity different from the source endpoint. Its dedicated option file must authenticate only to that isolated endpoint. Reject dumps containing database-selection or database-lifecycle statements before import, then restore to a validated database name different from the source name:
 
 ```bash
+restore_client_opts=/etc/mysql/spip-restore-drill.cnf  # dedicated isolated endpoint, mode 0600
 restore_db=restore_test_verified_name
-mariadb --defaults-extra-file="$client_opts" -e "CREATE DATABASE \`$restore_db\`"
-mariadb --defaults-extra-file="$client_opts" "$restore_db" <"$dump_path"
-mariadb --defaults-extra-file="$client_opts" --batch --skip-column-names \
-  -e 'CHECK TABLE spip_meta' "$restore_db"
+table_prefix=verified_table_prefix
+
+case "$db_name" in ''|*[!A-Za-z0-9_]* ) echo 'STOP: invalid source database identifier' >&2; exit 1;; esac
+case "$restore_db" in ''|*[!A-Za-z0-9_]* ) echo 'STOP: invalid restore database identifier' >&2; exit 1;; esac
+case "$table_prefix" in ''|*[!A-Za-z0-9_]* ) echo 'STOP: invalid table prefix' >&2; exit 1;; esac
+test "$restore_db" != "$db_name"
+test "$(realpath -e -- "$restore_client_opts")" != "$(realpath -e -- "$client_opts")"
+
+source_identity="$("$sql_client" --defaults-extra-file="$client_opts" --batch --skip-column-names \
+  -e "SELECT CONCAT(@@hostname, ':', @@port, ':', @@datadir)")"
+restore_identity="$("$sql_client" --defaults-extra-file="$restore_client_opts" --batch --skip-column-names \
+  -e "SELECT CONCAT(@@hostname, ':', @@port, ':', @@datadir)")"
+test -n "$source_identity" && test -n "$restore_identity"
+test "$source_identity" != "$restore_identity"
+
+if LC_ALL=C rg -n '^(CREATE|ALTER|DROP)[[:space:]]+DATABASE|^USE[[:space:]]' "$dump_path"; then
+  echo 'STOP: dump can select or mutate a database outside the explicit restore target' >&2
+  exit 1
+fi
+
+test -z "$("$sql_client" --defaults-extra-file="$restore_client_opts" --batch --skip-column-names \
+  -e "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '$db_name'")"
+"$sql_client" --defaults-extra-file="$restore_client_opts" -e "CREATE DATABASE \`$restore_db\`"
+"$sql_client" --defaults-extra-file="$restore_client_opts" "$restore_db" <"$dump_path"
+test -z "$("$sql_client" --defaults-extra-file="$restore_client_opts" --batch --skip-column-names \
+  -e "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '$db_name'")"
+meta_table="${table_prefix}meta"
+"$sql_client" --defaults-extra-file="$restore_client_opts" --batch --skip-column-names \
+  -e "CHECK TABLE \`$meta_table\`" "$restore_db"
 ```
 
-`CREATE DATABASE` and import are state-changing examples for the operator, not agent actions. Quote/validate identifiers instead of interpolating arbitrary input. Clean up the test database only after results are recorded and the operator approves.
+The endpoint-identity difference is necessary but not sufficient: the operator must also verify the drill network/credential isolation before import. The two absence checks prove the dump did not create or select the source-named database on the isolated endpoint. `CREATE DATABASE` and import are state-changing examples for the operator, not agent actions. Clean up the test database only after results and isolation evidence are recorded and the operator approves.
 
 ## 4. SQLite backup
 
@@ -150,12 +179,12 @@ Archive an explicit list; do not recursively archive the whole hosting parent. `
 Example manifest inputs:
 
 ```text
-shared/config/mes_options.php
-shared/mutualisation/paquet.xml
-sites/<verified-site>/config/
-sites/<verified-site>/IMG/
-sites/<verified-site>/squelettes/        (when present)
-sites/<verified-site>/plugins/           (when present)
+<verified-global-config-path>
+<verified-mutualisation-plugin-path>/paquet.xml
+<verified-site-root>/config/
+<verified-site-root>/IMG/
+<verified-site-root>/squelettes/        (when present)
+<verified-site-root>/plugins/           (when present)
 ```
 
 For every archive/dump:

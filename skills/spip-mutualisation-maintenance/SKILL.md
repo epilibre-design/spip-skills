@@ -24,7 +24,7 @@ SPIP 3, PostgreSQL, new-farm installation, and site creation/migration/deletion 
 
 1. Resolve the candidate scope and read [inventory-diagnosis.md](references/inventory-diagnosis.md).
 2. Detect the shared root, the effective `demarrer_site()` call and `repertoire`, the plugin version, the web/PHP stack, and the database engine for every affected site.
-3. Separate verified facts, unknowns, and anomalies. Mask secrets; never paste connection files or credential-bearing command output.
+3. Separate verified facts, unknowns, and anomalies. Put every potentially credential-bearing diagnostic behind an allowlist/redaction filter **before** its output enters the agent context; never paste connection files or raw process, remote-URL, or web-server configuration output.
 4. Read only the reference needed for the requested operation.
 5. Stop if a required precondition remains unknown.
 6. Before drafting, inventory every state-changing action the answer will propose, including future and conditional actions. Build one action-plan row for each inventory item.
