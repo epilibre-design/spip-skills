@@ -8,7 +8,7 @@ Sources: installed code/configuration, exact official [SPIP source](https://git.
 
 Do not begin with `find -delete`, `rm`, cache purge, core/plugin update, or “repair permissions.” These actions alter timestamps/content and can destroy the evidence needed to find persistence or the entry point.
 
-If active harm is continuing, propose containment that preserves evidence: remove the affected virtual host from service, restrict access at the reverse proxy/firewall, or snapshot/isolate the host using the operator's existing mechanism. Do not improvise a destructive containment command.
+If active harm is continuing, propose containment that preserves evidence: remove the affected virtual host from service, restrict access at the reverse proxy/firewall, or snapshot/isolate the host using the operator's existing mechanism. Conditional containment is a state-changing action and therefore needs its own complete action-plan row; do not leave it as a prose instruction. Do not improvise a destructive containment command.
 
 ## 1. Open an evidence record
 
