@@ -104,8 +104,14 @@ dump_path="$backup_root/databases/$site_key.sql"
   --single-transaction --quick --routines --events --triggers \
   --no-create-db "$db_name" >"$dump_path"
 dump_status=$?
-test "$dump_status" -eq 0
-test -s "$dump_path"
+if test "$dump_status" -ne 0; then
+  echo 'STOP: database dump failed; do not accept a partial file as a backup' >&2
+  exit 1
+fi
+if ! test -s "$dump_path"; then
+  echo 'STOP: database dump is empty' >&2
+  exit 1
+fi
 ```
 
 `--databases` is deliberately forbidden for this workflow because it embeds database-selection statements that can defeat a restore target. Use the independently detected `dump_client`. Check the actual exit code before compression; a non-empty partial file is not success.
@@ -122,30 +128,30 @@ table_prefix=verified_table_prefix
 case "$db_name" in ''|*[!A-Za-z0-9_]* ) echo 'STOP: invalid source database identifier' >&2; exit 1;; esac
 case "$restore_db" in ''|*[!A-Za-z0-9_]* ) echo 'STOP: invalid restore database identifier' >&2; exit 1;; esac
 case "$table_prefix" in ''|*[!A-Za-z0-9_]* ) echo 'STOP: invalid table prefix' >&2; exit 1;; esac
-test "$restore_db" != "$db_name"
-test "$(realpath -e -- "$restore_client_opts")" != "$(realpath -e -- "$client_opts")"
+if test "$restore_db" = "$db_name"; then echo 'STOP: drill database must differ from source' >&2; exit 1; fi
+if test "$(realpath -e -- "$restore_client_opts")" = "$(realpath -e -- "$client_opts")"; then echo 'STOP: drill must use a dedicated option file' >&2; exit 1; fi
 
-source_identity="$("$sql_client" --defaults-extra-file="$client_opts" --batch --skip-column-names \
-  -e "SELECT CONCAT(@@hostname, ':', @@port, ':', @@datadir)")"
-restore_identity="$("$sql_client" --defaults-extra-file="$restore_client_opts" --batch --skip-column-names \
-  -e "SELECT CONCAT(@@hostname, ':', @@port, ':', @@datadir)")"
-test -n "$source_identity" && test -n "$restore_identity"
-test "$source_identity" != "$restore_identity"
+if ! source_identity="$("$sql_client" --defaults-extra-file="$client_opts" --batch --skip-column-names -e "SELECT CONCAT(@@hostname, ':', @@port, ':', @@datadir)")"; then echo 'STOP: cannot identify source endpoint' >&2; exit 1; fi
+if ! restore_identity="$("$sql_client" --defaults-extra-file="$restore_client_opts" --batch --skip-column-names -e "SELECT CONCAT(@@hostname, ':', @@port, ':', @@datadir)")"; then echo 'STOP: cannot identify drill endpoint' >&2; exit 1; fi
+if test -z "$source_identity" || test -z "$restore_identity" || test "$source_identity" = "$restore_identity"; then echo 'STOP: source and drill endpoints are not proven distinct' >&2; exit 1; fi
 
-if LC_ALL=C rg -n '^(CREATE|ALTER|DROP)[[:space:]]+DATABASE|^USE[[:space:]]' "$dump_path"; then
-  echo 'STOP: dump can select or mutate a database outside the explicit restore target' >&2
-  exit 1
-fi
+LC_ALL=C rg -q -i '^[[:space:]]*(CREATE|ALTER|DROP)[[:space:]]+DATABASE|^[[:space:]]*USE[[:space:]]|/\\*![0-9]+' "$dump_path"
+dump_sql_status=$?
+case "$dump_sql_status" in
+  0) echo 'STOP: dump can select or mutate a database outside the explicit restore target' >&2; exit 1;;
+  1) ;;
+  *) echo 'STOP: cannot inspect dump for database-selection statements' >&2; exit 1;;
+esac
 
-test -z "$("$sql_client" --defaults-extra-file="$restore_client_opts" --batch --skip-column-names \
-  -e "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '$db_name'")"
-"$sql_client" --defaults-extra-file="$restore_client_opts" -e "CREATE DATABASE \`$restore_db\`"
-"$sql_client" --defaults-extra-file="$restore_client_opts" "$restore_db" <"$dump_path"
-test -z "$("$sql_client" --defaults-extra-file="$restore_client_opts" --batch --skip-column-names \
-  -e "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '$db_name'")"
+if ! source_schema="$("$sql_client" --defaults-extra-file="$restore_client_opts" --batch --skip-column-names -e "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '$db_name'")"; then echo 'STOP: cannot check source schema absence on drill endpoint' >&2; exit 1; fi
+if test -n "$source_schema"; then echo 'STOP: drill endpoint exposes the source database' >&2; exit 1; fi
+"$sql_client" --defaults-extra-file="$restore_client_opts" -e "CREATE DATABASE \`$restore_db\`" || { echo 'STOP: cannot create isolated drill database' >&2; exit 1; }
+"$sql_client" --defaults-extra-file="$restore_client_opts" "$restore_db" <"$dump_path" || { echo 'STOP: restore import failed' >&2; exit 1; }
+if ! source_schema="$("$sql_client" --defaults-extra-file="$restore_client_opts" --batch --skip-column-names -e "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '$db_name'")"; then echo 'STOP: cannot recheck source schema absence' >&2; exit 1; fi
+if test -n "$source_schema"; then echo 'STOP: restore created or exposed the source database' >&2; exit 1; fi
 meta_table="${table_prefix}meta"
 "$sql_client" --defaults-extra-file="$restore_client_opts" --batch --skip-column-names \
-  -e "CHECK TABLE \`$meta_table\`" "$restore_db"
+  -e "CHECK TABLE \`$meta_table\`" "$restore_db" || { echo 'STOP: drill integrity check failed' >&2; exit 1; }
 ```
 
 The endpoint-identity difference is necessary but not sufficient: the operator must also verify the drill network/credential isolation before import. The two absence checks prove the dump did not create or select the source-named database on the isolated endpoint. `CREATE DATABASE` and import are state-changing examples for the operator, not agent actions. Clean up the test database only after results and isolation evidence are recorded and the operator approves.
