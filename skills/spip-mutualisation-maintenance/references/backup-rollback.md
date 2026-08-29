@@ -26,11 +26,12 @@ Use explicit resolved values. Do not repurpose `HOME`, use an unresolved glob, o
 spip_root=/srv/www/example-spip
 backup_root=/srv/backups/spip-farm/2026-08-28T120000Z
 
-spip_root="$(realpath -e -- "$spip_root")"
-backup_parent="$(realpath -e -- "$(dirname -- "$backup_root")")"
-test -n "$spip_root" && test "$spip_root" != /
-test -n "$backup_parent" && test "$backup_parent" != /
-case "$backup_parent" in "$spip_root"|"$spip_root"/*) exit 1;; esac
+if ! spip_root="$(realpath -e -- "$spip_root")"; then echo 'STOP: SPIP root is missing' >&2; exit 1; fi
+if ! backup_parent="$(realpath -e -- "$(dirname -- "$backup_root")")"; then echo 'STOP: backup parent is missing' >&2; exit 1; fi
+if test -z "$spip_root" || test "$spip_root" = /; then echo 'STOP: unsafe SPIP root' >&2; exit 1; fi
+if test -z "$backup_parent" || test "$backup_parent" = /; then echo 'STOP: unsafe backup parent' >&2; exit 1; fi
+case "$backup_root" in *'/../'*|*/..|*'//'*) echo 'STOP: backup root must not contain traversal or empty path components' >&2; exit 1;; esac
+case "$backup_parent" in "$spip_root"|"$spip_root"/*) echo 'STOP: backup parent is inside SPIP root' >&2; exit 1;; esac
 ```
 
 Creating `backup_root` and changing its mode are proposed mutations; show them in the operator plan only after the assertions.
@@ -39,7 +40,7 @@ Creating `backup_root` and changing its mode are proposed mutations; show them i
 
 ### Authentication and independent client detection
 
-Never put a password in `-pPASSWORD`, a URI, the answer, or a process argument. Reuse a protected option file or socket authentication already approved by the operator. Detect the SQL client independently from the dump client; either family may be installed without the other:
+Never put a password in `-pPASSWORD`, a URI, the answer, or a process argument. Reuse a protected option file or socket authentication already approved by the operator. The operator must verify that each option file is minimal, mode `0600`, has no `!include`/`!includedir` or executable client options such as `init-command`; do not expose its contents to the agent. Use it as the exclusive option file with `--defaults-file` and disable login paths: a login-path file can otherwise be read even with other default-file controls ([MySQL option-file handling](https://dev.mysql.com/doc/refman/8.4/en/option-file-options.html)). Detect the SQL client independently from the dump client; either family may be installed without the other:
 
 ```bash
 client_opts=/etc/mysql/spip-backup.cnf  # mode 0600, prepared by the operator
@@ -53,7 +54,13 @@ else
   exit 1
 fi
 
-"$sql_client" --defaults-extra-file="$client_opts" --batch --skip-column-names \
+if ! "$sql_client" --no-defaults --help 2>/dev/null | rg -q -- '--defaults-file' \
+  || ! "$sql_client" --no-defaults --help 2>/dev/null | rg -q -- '--no-login-paths'; then
+  echo 'STOP: client cannot prove deterministic option-file handling; use a separately reviewed recipe' >&2
+  exit 1
+fi
+
+"$sql_client" --defaults-file="$client_opts" --no-login-paths --batch --skip-column-names \
   -e 'SELECT VERSION();'
 ```
 
@@ -66,6 +73,7 @@ Detect the installed dump client separately before proposing a command shape. Re
 ```bash
 client_opts=/etc/mysql/spip-backup.cnf  # mode 0600, prepared by the operator
 db_name=verified_database_name
+case "$db_name" in ''|*[!A-Za-z0-9_]* ) echo 'STOP: invalid database identifier' >&2; exit 1;; esac
 
 if command -v mariadb-dump >/dev/null 2>&1; then
   dump_client=mariadb-dump
@@ -76,9 +84,15 @@ else
   exit 1
 fi
 
+if ! "$dump_client" --no-defaults --help 2>/dev/null | rg -q -- '--defaults-file' \
+  || ! "$dump_client" --no-defaults --help 2>/dev/null | rg -q -- '--no-login-paths'; then
+  echo 'STOP: dump client cannot prove deterministic option-file handling; use a separately reviewed recipe' >&2
+  exit 1
+fi
+
 "$sql_client" --version
 "$dump_client" --version
-"$sql_client" --defaults-extra-file="$client_opts" --batch --skip-column-names \
+"$sql_client" --defaults-file="$client_opts" --no-login-paths --batch --skip-column-names \
   -e 'SELECT VERSION();' "$db_name"
 ```
 
@@ -88,7 +102,8 @@ Inspect table engines before selecting the dump strategy:
 
 ```bash
 db_name=verified_database_name
-"$sql_client" --defaults-extra-file="$client_opts" --batch --skip-column-names \
+case "$db_name" in ''|*[!A-Za-z0-9_]* ) echo 'STOP: invalid database identifier' >&2; exit 1;; esac
+"$sql_client" --defaults-file="$client_opts" --no-login-paths --batch --skip-column-names \
   -e "SELECT COALESCE(ENGINE,'VIEW'), COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() GROUP BY ENGINE" \
   "$db_name"
 ```
@@ -99,10 +114,21 @@ db_name=verified_database_name
 ### Proposed dump shape
 
 ```bash
-dump_path="$backup_root/databases/$site_key.sql"
-"$dump_client" --defaults-extra-file="$client_opts" \
-  --single-transaction --quick --routines --events --triggers \
-  --no-create-db "$db_name" >"$dump_path"
+case "$db_name" in ''|*[!A-Za-z0-9_]* ) echo 'STOP: invalid database identifier' >&2; exit 1;; esac
+case "$site_key" in ''|*[!A-Za-z0-9._-]* ) echo 'STOP: invalid site key' >&2; exit 1;; esac
+if ! backup_root="$(realpath -e -- "$backup_root")"; then echo 'STOP: backup root must be created and resolved before writing' >&2; exit 1; fi
+case "$backup_root" in "$backup_parent"/*) ;; *) echo 'STOP: resolved backup root escapes backup parent' >&2; exit 1;; esac
+if ! database_backup_dir="$(realpath -e -- "$backup_root/databases")"; then echo 'STOP: database backup directory is missing' >&2; exit 1; fi
+case "$database_backup_dir" in "$backup_root"/*) ;; *) echo 'STOP: database backup directory escapes backup root' >&2; exit 1;; esac
+dump_path="$database_backup_dir/$site_key.sql"
+if test -e "$dump_path" || test -L "$dump_path"; then echo 'STOP: refusing to overwrite an existing dump path' >&2; exit 1; fi
+(
+  umask 077
+  set -C
+  "$dump_client" --defaults-file="$client_opts" --no-login-paths \
+    --single-transaction --quick --routines --events --triggers \
+    --no-create-db "$db_name" >"$dump_path"
+)
 dump_status=$?
 if test "$dump_status" -ne 0; then
   echo 'STOP: database dump failed; do not accept a partial file as a backup' >&2
@@ -118,24 +144,34 @@ fi
 
 ### Restore verification
 
-Do not run a drill on the source server or reuse its credentials. The drill server/instance must be isolated from production, have no route or credentials capable of reaching the source, and expose an identity different from the source endpoint. Its dedicated option file must authenticate only to that isolated endpoint. Reject dumps containing database-selection or database-lifecycle statements before import, then restore to a validated database name different from the source name:
+Do not run a drill on the source server or reuse its credentials. The drill server/instance must be isolated from production, have no route or credentials capable of reaching the source, and expose an identity different from the source endpoint. Its dedicated option file must authenticate only to that isolated endpoint.
+
+Pre-create the empty drill database by the isolation platform, then use an import account with privileges limited to that one database; it must have no global (`*.*`) privileges, no `CREATE DATABASE`, and no access to the source endpoint. This least-privilege boundary, rather than a text filter, prevents a dump from modifying another database. Reject obvious database-selection or database-lifecycle statements before import as an additional gate:
 
 ```bash
 restore_client_opts=/etc/mysql/spip-restore-drill.cnf  # dedicated isolated endpoint, mode 0600
 restore_db=restore_test_verified_name
-table_prefix=verified_table_prefix
+table_prefix=verified_table_prefix_without_trailing_underscore
+database_backup_dir=verified_resolved_backup_databases_directory
+dump_path=verified_dump_path
 
 case "$db_name" in ''|*[!A-Za-z0-9_]* ) echo 'STOP: invalid source database identifier' >&2; exit 1;; esac
 case "$restore_db" in ''|*[!A-Za-z0-9_]* ) echo 'STOP: invalid restore database identifier' >&2; exit 1;; esac
 case "$table_prefix" in ''|*[!A-Za-z0-9_]* ) echo 'STOP: invalid table prefix' >&2; exit 1;; esac
 if test "$restore_db" = "$db_name"; then echo 'STOP: drill database must differ from source' >&2; exit 1; fi
-if test "$(realpath -e -- "$restore_client_opts")" = "$(realpath -e -- "$client_opts")"; then echo 'STOP: drill must use a dedicated option file' >&2; exit 1; fi
+if ! restore_client_opts_path="$(realpath -e -- "$restore_client_opts")"; then echo 'STOP: drill option file is missing' >&2; exit 1; fi
+if ! source_client_opts_path="$(realpath -e -- "$client_opts")"; then echo 'STOP: source option file is missing' >&2; exit 1; fi
+if test "$restore_client_opts_path" = "$source_client_opts_path"; then echo 'STOP: drill must use a dedicated option file' >&2; exit 1; fi
+if ! database_backup_dir="$(realpath -e -- "$database_backup_dir")"; then echo 'STOP: backup directory is missing' >&2; exit 1; fi
+if ! dump_path="$(realpath -e -- "$dump_path")"; then echo 'STOP: dump path is missing' >&2; exit 1; fi
+case "$dump_path" in "$database_backup_dir"/*) ;; *) echo 'STOP: dump path escapes backup directory' >&2; exit 1;; esac
+if ! test -f "$dump_path" || test -L "$dump_path"; then echo 'STOP: dump must be a regular non-symlink file' >&2; exit 1; fi
 
-if ! source_identity="$("$sql_client" --defaults-extra-file="$client_opts" --batch --skip-column-names -e "SELECT CONCAT(@@hostname, ':', @@port, ':', @@datadir)")"; then echo 'STOP: cannot identify source endpoint' >&2; exit 1; fi
-if ! restore_identity="$("$sql_client" --defaults-extra-file="$restore_client_opts" --batch --skip-column-names -e "SELECT CONCAT(@@hostname, ':', @@port, ':', @@datadir)")"; then echo 'STOP: cannot identify drill endpoint' >&2; exit 1; fi
+if ! source_identity="$("$sql_client" --defaults-file="$client_opts" --no-login-paths --batch --skip-column-names -e "SELECT CONCAT(@@hostname, ':', @@port, ':', @@datadir)")"; then echo 'STOP: cannot identify source endpoint' >&2; exit 1; fi
+if ! restore_identity="$("$sql_client" --defaults-file="$restore_client_opts" --no-login-paths --batch --skip-column-names -e "SELECT CONCAT(@@hostname, ':', @@port, ':', @@datadir)")"; then echo 'STOP: cannot identify drill endpoint' >&2; exit 1; fi
 if test -z "$source_identity" || test -z "$restore_identity" || test "$source_identity" = "$restore_identity"; then echo 'STOP: source and drill endpoints are not proven distinct' >&2; exit 1; fi
 
-LC_ALL=C rg -q -i '^[[:space:]]*(CREATE|ALTER|DROP)[[:space:]]+DATABASE|^[[:space:]]*USE[[:space:]]|/\\*![0-9]+' "$dump_path"
+LC_ALL=C rg -q -i '^[[:space:]]*(CREATE|ALTER|DROP)[[:space:]]+DATABASE|^[[:space:]]*USE[[:space:]]|^[[:space:]]*/\*![0-9]+[[:space:]]+(CREATE|ALTER|DROP)[[:space:]]+DATABASE|^[[:space:]]*/\*![0-9]+[[:space:]]+USE[[:space:]]' "$dump_path"
 dump_sql_status=$?
 case "$dump_sql_status" in
   0) echo 'STOP: dump can select or mutate a database outside the explicit restore target' >&2; exit 1;;
@@ -143,18 +179,21 @@ case "$dump_sql_status" in
   *) echo 'STOP: cannot inspect dump for database-selection statements' >&2; exit 1;;
 esac
 
-if ! source_schema="$("$sql_client" --defaults-extra-file="$restore_client_opts" --batch --skip-column-names -e "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '$db_name'")"; then echo 'STOP: cannot check source schema absence on drill endpoint' >&2; exit 1; fi
+if ! source_schema="$("$sql_client" --defaults-file="$restore_client_opts" --no-login-paths --batch --skip-column-names -e "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '$db_name'")"; then echo 'STOP: cannot check source schema absence on drill endpoint' >&2; exit 1; fi
 if test -n "$source_schema"; then echo 'STOP: drill endpoint exposes the source database' >&2; exit 1; fi
-"$sql_client" --defaults-extra-file="$restore_client_opts" -e "CREATE DATABASE \`$restore_db\`" || { echo 'STOP: cannot create isolated drill database' >&2; exit 1; }
-"$sql_client" --defaults-extra-file="$restore_client_opts" "$restore_db" <"$dump_path" || { echo 'STOP: restore import failed' >&2; exit 1; }
-if ! source_schema="$("$sql_client" --defaults-extra-file="$restore_client_opts" --batch --skip-column-names -e "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '$db_name'")"; then echo 'STOP: cannot recheck source schema absence' >&2; exit 1; fi
+if ! target_schema="$("$sql_client" --defaults-file="$restore_client_opts" --no-login-paths --batch --skip-column-names -e "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '$restore_db'")"; then echo 'STOP: cannot check drill target database' >&2; exit 1; fi
+if test "$target_schema" != "$restore_db"; then echo 'STOP: pre-created isolated drill database is unavailable' >&2; exit 1; fi
+"$sql_client" --defaults-file="$restore_client_opts" --no-login-paths "$restore_db" <"$dump_path" || { echo 'STOP: restore import failed' >&2; exit 1; }
+if ! source_schema="$("$sql_client" --defaults-file="$restore_client_opts" --no-login-paths --batch --skip-column-names -e "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '$db_name'")"; then echo 'STOP: cannot recheck source schema absence' >&2; exit 1; fi
 if test -n "$source_schema"; then echo 'STOP: restore created or exposed the source database' >&2; exit 1; fi
-meta_table="${table_prefix}meta"
-"$sql_client" --defaults-extra-file="$restore_client_opts" --batch --skip-column-names \
-  -e "CHECK TABLE \`$meta_table\`" "$restore_db" || { echo 'STOP: drill integrity check failed' >&2; exit 1; }
+meta_table="${table_prefix}_meta"
+if ! meta_table_present="$("$sql_client" --defaults-file="$restore_client_opts" --no-login-paths --batch --skip-column-names -e "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = '$restore_db' AND TABLE_NAME = '$meta_table'")"; then echo 'STOP: cannot inspect expected SPIP meta table' >&2; exit 1; fi
+if test "$meta_table_present" != "$meta_table"; then echo 'STOP: expected SPIP meta table is absent; verify the inventory table prefix' >&2; exit 1; fi
+if ! check_table_output="$("$sql_client" --defaults-file="$restore_client_opts" --no-login-paths --batch --skip-column-names -e "CHECK TABLE \`$meta_table\`" "$restore_db")"; then echo 'STOP: drill integrity check command failed' >&2; exit 1; fi
+if ! printf '%s\n' "$check_table_output" | awk -F '\t' 'NR != 1 || $3 != "status" || $4 != "OK" { exit 1 } END { if (NR != 1) exit 1 }'; then echo 'STOP: drill integrity check did not return one OK status' >&2; exit 1; fi
 ```
 
-The endpoint-identity difference is necessary but not sufficient: the operator must also verify the drill network/credential isolation before import. The two absence checks prove the dump did not create or select the source-named database on the isolated endpoint. `CREATE DATABASE` and import are state-changing examples for the operator, not agent actions. Clean up the test database only after results and isolation evidence are recorded and the operator approves.
+The endpoint-identity difference is necessary but not sufficient: the operator must also verify the drill network/credential isolation and restricted import grants before import. The absence checks are diagnostics only—`information_schema` hides schemas for which an account has no privilege. Database provisioning and import are state-changing examples for the operator, not agent actions. Clean up the test database only after results and isolation evidence are recorded and the operator approves.
 
 ## 4. SQLite backup
 
@@ -164,14 +203,21 @@ Proposed online backup and validation:
 
 ```bash
 sqlite_db=/srv/www/example-spip/site-data/example/config/bases/spip.sqlite
-sqlite_backup="$backup_root/databases/$site_key.sqlite"
+case "$site_key" in ''|*[!A-Za-z0-9._-]* ) echo 'STOP: invalid site key' >&2; exit 1;; esac
+if ! backup_root="$(realpath -e -- "$backup_root")"; then echo 'STOP: backup root must be created and resolved before writing' >&2; exit 1; fi
+case "$backup_root" in "$backup_parent"/*) ;; *) echo 'STOP: resolved backup root escapes backup parent' >&2; exit 1;; esac
+if ! database_backup_dir="$(realpath -e -- "$backup_root/databases")"; then echo 'STOP: database backup directory is missing' >&2; exit 1; fi
+case "$database_backup_dir" in "$backup_root"/*) ;; *) echo 'STOP: database backup directory escapes backup root' >&2; exit 1;; esac
+sqlite_backup="$database_backup_dir/$site_key.sqlite"
+if test -e "$sqlite_backup" || test -L "$sqlite_backup"; then echo 'STOP: refusing to overwrite an existing SQLite backup path' >&2; exit 1; fi
 
-sqlite_db="$(realpath -e -- "$sqlite_db")"
-test -f "$sqlite_db"
-sqlite3 "$sqlite_db" ".timeout 5000" ".backup '$sqlite_backup'"
-test -s "$sqlite_backup"
-test "$(sqlite3 "$sqlite_backup" 'PRAGMA integrity_check;')" = ok
-sqlite3 "$sqlite_backup" 'PRAGMA foreign_key_check;'
+if ! sqlite_db="$(realpath -e -- "$sqlite_db")"; then echo 'STOP: SQLite database path is missing' >&2; exit 1; fi
+if ! test -f "$sqlite_db"; then echo 'STOP: SQLite database is not a regular file' >&2; exit 1; fi
+sqlite3 "$sqlite_db" ".timeout 5000" ".backup '$sqlite_backup'" || { echo 'STOP: SQLite online backup failed' >&2; exit 1; }
+if ! test -s "$sqlite_backup"; then echo 'STOP: SQLite backup is empty' >&2; exit 1; fi
+if ! test "$(sqlite3 "$sqlite_backup" 'PRAGMA integrity_check;')" = ok; then echo 'STOP: SQLite integrity check failed' >&2; exit 1; fi
+if ! foreign_key_output="$(sqlite3 "$sqlite_backup" 'PRAGMA foreign_key_check;')"; then echo 'STOP: SQLite foreign-key check command failed' >&2; exit 1; fi
+if test -n "$foreign_key_output"; then echo 'STOP: SQLite foreign-key check reported violations' >&2; exit 1; fi
 ```
 
 If the CLI version does not accept the proposed invocation, stop and adapt it in staging; do not fall back silently to a live raw copy. `PRAGMA foreign_key_check` is an additional logical consistency check, not a replacement for `PRAGMA integrity_check` ([SQLite integrity check pragma](https://sqlite.org/pragma.html#pragma_integrity_check), [SQLite foreign key check pragma](https://sqlite.org/pragma.html#pragma_foreign_key_check)).
