@@ -191,3 +191,30 @@ The original results above are retained as historical evidence. After the final-
 **PASS — 34/34 on the six final-HEAD one-off scenarios.** The critical restore-drill path is now isolated from the source by endpoint, credentials, and network policy, uses an unqualified dump with explicit target and pre/post absence checks, and validates the configured table prefix. The old one-off and repetition scores remain above as history; they were not substituted for this replay.
 
 The same limitation remains: these are manual prompt-level evaluations without a live SPIP farm. The sequential final-review replay is evidence of final-skill behavior, not an independent statistical sample; the documented five guided repetitions remain the repeatability control for the two safety scenarios.
+
+## Final backup hardening — five inline guided replays
+
+Date: 2026-08-29. The final backup hardening commits `5a86092` and `ff5e71e` changed the behavior of the `mixed-database-backup` route after the previous final-HEAD replay. At the user's request, this focused acceptance exercise was performed inline by the primary evaluator, without a subagent. The unchanged frozen prompt from `evals.json` was replayed five times against the final skill at `ff5e71e`; complete responses are recorded as `final-backup-inline-r1` through `r5` in the raw archive.
+
+This is a sequential inline repeatability check, not a set of independent fresh-context samples. It replaces the plan's originally proposed delegated method only for this final targeted replay; the earlier independent controls remain documented above.
+
+| Run | Engine per site | Protected SQL authentication | SQLite `.backup` + integrity | Persistent files + manifest | Isolated restore verification | Schema-aware rollback | Result |
+|---|---|---|---|---|---|---|---|
+| r1 | PASS | PASS | PASS | PASS | PASS | PASS | 7/7 PASS |
+| r2 | PASS | PASS | PASS | PASS | PASS | PASS | 7/7 PASS |
+| r3 | PASS | PASS | PASS | PASS | PASS | PASS | 7/7 PASS |
+| r4 | PASS | PASS | PASS | PASS | PASS | PASS | 7/7 PASS |
+| r5 | PASS | PASS | PASS | PASS | PASS | PASS | 7/7 PASS |
+
+The five responses consistently:
+
+- choose the MariaDB/MySQL or SQLite procedure only after per-site engine inventory;
+- keep credentials out of commands and use a dedicated minimal option file through `--defaults-file`, followed by `--no-login-paths`, with a fail-closed capability check;
+- use SQLite's `.backup`, require `PRAGMA integrity_check = ok`, and reject any `foreign_key_check` output;
+- include shared code/configuration, `config/`, `IMG/`, site-specific code, database, checksums, and an off-host manifest in the restore unit;
+- require a non-source, network/credential-isolated SQL drill account restricted to the pre-created drill database, plus a distinct SQLite file and isolated SPIP copy;
+- restore the matching shared release, database, and persistent files from one checkpoint after a schema migration or new-version writes.
+
+### Focused final-verification verdict
+
+**PASS — 5/5 inline replays, 7/7 frozen expectations each.** The late hardening is represented in every replay: no `--defaults-extra-file`, no source-server drill, no source credentials in the drill, no qualified dump, and no acceptance of SQLite foreign-key violations merely because the command exits successfully. The remaining limitation is methodological: an inline sequential replay provides targeted regression evidence but is not an independent fresh-context sample.

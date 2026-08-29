@@ -3331,3 +3331,141 @@ The six unchanged one-off prompts were replayed after the final-review correctio
     ## Rollback
 
     Sans objet : aucune maintenance n’est proposée ou exécutée par ce skill.
+
+## final-backup-inline-r1
+
+    ## Constats
+
+    Le moteur, le nom de la base, le préfixe et les chemins persistants doivent être relevés site par site ; ils ne doivent pas être déduits de la seule ferme. Aucune commande n'a été exécutée.
+
+    ## Risques
+
+    Une copie SQLite à chaud peut être incohérente. Un dump MySQL qualifié ou restauré avec les identifiants source peut viser une mauvaise base. Le retour arrière doit restaurer le code partagé, la base et les fichiers persistants issus du même manifeste.
+
+    ## Procédure proposée
+
+    1. Inventorier pour chaque site `mysql`/`mariadb` ou `sqlite`, le préfixe réel, `config/`, `IMG/`, les squelettes/plugins locaux et la provenance du code partagé.
+    2. Créer un checkpoint hors webroot avec manifeste UTC, tailles, versions d'outils, checksums et copie hors hôte.
+    3. Exécuter les actions 1–3 ci-dessous uniquement après validation opérateur ; le drill est isolé et n'emploie jamais les credentials de production.
+
+    ## Commandes
+
+    Toutes les actions sont **proposées — non exécutées**.
+
+    | Action | Objectif | Préconditions | Portée | Preuve | Commande proposée | Succès | Retour arrière |
+    |---|---|---|---|---|---|---|---|
+    | 1. Dump MariaDB/MySQL | Sauvegarde logique cohérente d'une base de site | `db_name` validé, clients SQL/dump détectés séparément, fichier d'options minimal 0600 approuvé, `--defaults-file` et `--no-login-paths` supportés, tables transactionnelles ou gel des écritures | Une base de site | Version outils, taille et SHA-256 | `"$dump_client" --defaults-file="$client_opts" --no-login-paths --single-transaction --quick --routines --events --triggers --no-create-db "$db_name" >"$dump_path"` | Exit 0, dump non vide, manifeste ; aucun `USE`/cycle de vie de base | Production inchangée ; refaire le dump si contrôle échoue |
+    | 2. Backup SQLite | Snapshot en ligne | Chemin SQLite réel, destination neuve hors webroot | Une base SQLite de site | Taille et SHA-256 | `sqlite3 "$sqlite_db" ".timeout 5000" ".backup '$sqlite_backup'"` | `PRAGMA integrity_check` renvoie `ok` et `PRAGMA foreign_key_check` ne renvoie aucune ligne | Production inchangée ; refaire le snapshot |
+    | 3. Drill de restauration | Prouver la restauration | Instance isolée sans route/credential vers la source ; base drill précréée, distincte ; compte limité à `restore_db.*` | Drill uniquement | Identités distinctes, dump vérifié, ledger applicatif | Importer le dump non qualifié avec le fichier d'options drill exclusif dans `restore_db`; restaurer SQLite vers un nouveau fichier et une copie SPIP isolée | Schéma source absent sur le drill, `${table_prefix}_meta` vérifiée, HTTP/public/privé, plugins, médias, formulaires, tâches et logs validés | Conserver le drill pour diagnostic ; ne pas toucher à la production |
+
+    ## Validation et retour arrière
+
+    Le manifeste inclut aussi la configuration mutualisée et tous les fichiers persistants. Après une migration ou des écritures, le retour arrière restaure l'ancien code partagé exact, la base correspondante du même checkpoint pour chaque site et les fichiers persistants modifiés ; un checksum seul ne suffit pas.
+
+## final-backup-inline-r2
+
+    ## Constats
+
+    La ferme peut mélanger MariaDB/MySQL et SQLite : la branche de sauvegarde est choisie seulement après inventaire par site, sans afficher `connect.php` ni mot de passe. Aucune mutation n'est exécutée.
+
+    ## Risques
+
+    `--defaults-extra-file` n'est pas retenu : des options usuelles ou un login path pourraient modifier l'endpoint ou le comportement du client. Une restauration sur le serveur source est interdite.
+
+    ## Procédure proposée
+
+    D'abord produire une table site → moteur → base/fichier → préfixe → taille persistante. Puis préparer le manifeste code/configuration/fichiers/base et suivre les actions 1–3 dans l'ordre.
+
+    ## Commandes
+
+    | Action | Objectif | Préconditions | Portée | Preuve | Commande proposée — non exécutée | Succès | Retour arrière |
+    |---|---|---|---|---|---|---|---|
+    | 1. Détection et dump SQL | Créer un dump non qualifié | `mariadb` ou `mysql`, puis `mariadb-dump` ou `mysqldump`, supportent `--defaults-file`/`--no-login-paths`; `db_name` est `[A-Za-z0-9_]+` | Base d'un site MariaDB/MySQL | Versions, moteur des tables, checksum | `"$dump_client" --defaults-file="$client_opts" --no-login-paths --single-transaction --quick --no-create-db "$db_name" >"$dump_path"` | Exit 0 et fichier non vide ; pas de `--databases` | Aucun changement de source |
+    | 2. Snapshot SQLite | Copier une base cohérente en ligne | Fichier régulier vérifié, destination absente sous le répertoire de backup | Base SQLite d'un site | Hash, taille | `sqlite3 "$sqlite_db" ".timeout 5000" ".backup '$sqlite_backup'"` | `integrity_check=ok`; sortie de `foreign_key_check` vide | Aucun changement de source |
+    | 3. Restauration test | Tester les deux moteurs | Endpoint SQL isolé, option file drill dédié, identité distincte, compte sans privilège global et limité à la base précréée ; copie de site SQLite isolée | Environnement de test | Manifest/checksum, table prefix inventorié | Import SQL vers `restore_db` seulement ; ouvrir une copie SPIP pointant vers le nouveau fichier SQLite | `CHECK TABLE <prefix>_meta` = un unique `status OK`; contrôles SPIP réussis | Garder production/code source intacts ; restaurer depuis le même manifeste si le déploiement réel échoue |
+
+    ## Validation et retour arrière
+
+    Archiver `config/`, `IMG/`, squelettes/plugins spécifiques et la configuration globale, pas seulement les bases. Après mise à jour du noyau avec migration, rétablir le release partagé antérieur **et** la base/fichiers du même point de cohérence pour chaque site affecté.
+
+## final-backup-inline-r3
+
+    ## Constats
+
+    Sans inventaire, l'association site ↔ moteur et l'étendue d'un chemin de plugin partagé sont inconnues. Les exemples sont donc des gabarits contrôlés, jamais des commandes exécutées.
+
+    ## Risques
+
+    Un client chargé avec des options implicites, un nom de base non validé, un dump contenant `USE`, ou une base de drill identique à la source sont des bloqueurs. SQLite requiert `.backup`, non un `cp` à chaud.
+
+    ## Procédure proposée
+
+    1. Relever par site le moteur, la table `${table_prefix}_meta`, les répertoires persistants et l'identité du code partagé.
+    2. Écrire le manifeste du checkpoint : sites, versions SPIP/plugins, chemins, outils, tailles, SHA-256 et copie hors hôte.
+    3. Suivre le plan de sauvegarde puis le drill isolé avant toute mise à jour du noyau.
+
+    ## Commandes
+
+    | Action | Objectif | Préconditions | Portée | Preuve | Commande proposée — non exécutée | Succès | Retour arrière |
+    |---|---|---|---|---|---|---|---|
+    | 1. Export SQL | Export cohérent | InnoDB ou gel validé ; option file exclusif approuvé et clients compatibles | Une base MariaDB/MySQL | Exit code, fichier non vide, SHA-256 | `"$dump_client" --defaults-file="$client_opts" --no-login-paths --single-transaction --quick --routines --events --triggers --no-create-db "$db_name" >"$dump_path"` | Filtre SQL sans sélection/création de base, artefact manifesté | Reprendre l'export, source inchangée |
+    | 2. Export SQLite | Sauvegarde cohérente | Fichier et dossier de destination résolus | Une base SQLite | SHA-256 et journal de contrôle | `sqlite3 "$sqlite_db" ".backup '$sqlite_backup'"` puis `sqlite3 "$sqlite_backup" 'PRAGMA integrity_check;'` | `ok`, puis aucune violation `foreign_key_check` | Reprendre l'export, source inchangée |
+    | 3. Drill | Tester rollback réel | Import SQL avec compte limité à `restore_db.*` sur instance sans accès source ; fichier SQLite restauré sous un nouveau nom | Test isolé | Endpoints distincts, absence de `db_name` sur drill, manifest | Importer uniquement dans `restore_db`, valider `${table_prefix}_meta`, puis démarrer la copie SPIP SQLite | Intégrité BD et parcours SPIP représentatifs réussis | Conserver le test, ne pas détruire la production |
+
+    ## Validation et retour arrière
+
+    Le retour arrière n'est recevable qu'avec le manifest exact : après schéma/écritures, restaurer code partagé, base du moteur correspondant et `config/`/`IMG/`/code local du même checkpoint. Vérifier ensuite HTTP, privé, plugins, médias, formulaires, tâches et logs pour tous les sites concernés.
+
+## final-backup-inline-r4
+
+    ## Constats
+
+    Les sauvegardes doivent former une unité de restauration cohérente : code partagé et Mutualisation facile, configuration globale, données propres à chaque site et moteur détecté par site. Je ne fournis aucun mot de passe ni exécution.
+
+    ## Risques
+
+    Un rollback de fichiers après migration de schéma est insuffisant. Un compte de drill trop privilégié rendrait le filtre du dump insuffisant ; le compte doit être restreint à la base de test.
+
+    ## Procédure proposée
+
+    Inventorier d'abord les moteurs. Préparer ensuite un répertoire hors document root, des artefacts non écrasables et leur manifeste ; enfin tester une restauration SQL et SQLite isolée.
+
+    ## Commandes
+
+    | Action | Objectif | Préconditions | Portée | Preuve | Commande proposée — non exécutée | Succès | Retour arrière |
+    |---|---|---|---|---|---|---|---|
+    | 1. Sauvegarde MariaDB/MySQL | Dump de site | `db_name`/`site_key` validés ; fichier d'options minimal 0600, `--defaults-file` premier argument, `--no-login-paths` disponible | Une base | Client/serveur, tables, hash | `"$dump_client" --defaults-file="$client_opts" --no-login-paths --single-transaction --quick --routines --events --triggers --no-create-db "$db_name" >"$dump_path"` | Exit 0, non vide, SQL sans `USE` | Source intacte |
+    | 2. Sauvegarde SQLite | Backup en ligne | Chemin SQLite réel et destination nouvelle | Une base | Taille/hash | `sqlite3 "$sqlite_db" ".timeout 5000" ".backup '$sqlite_backup'"` | `PRAGMA integrity_check` = `ok`, `foreign_key_check` vide | Source intacte |
+    | 3. Drill de restauration | Vérifier sauvegardes et application | Endpoint et credential SQL dédiés, base précréée différente ; copie SQLite sous nouveau nom | Drill | Identities, manifest, préfixe | Import SQL dans la seule base test autorisée ; relier la copie SPIP au fichier SQLite restauré | `${table_prefix}_meta` présent et `CHECK TABLE` retourne `status OK`; ledger applicatif complet | Ne pas basculer production ; conserver les artefacts de drill |
+
+    ## Validation et retour arrière
+
+    Le manifeste contient également `config/`, `IMG/`, squelettes/plugins de site et les métadonnées de version. Si la mise à jour a migré ou écrit, revenir à l'ancien code seul est interdit : restaurer pour chaque site sa base et ses fichiers correspondant exactement au checkpoint, puis refaire les validations applicatives.
+
+## final-backup-inline-r5
+
+    ## Constats
+
+    Une même mutualisation peut combiner plusieurs moteurs. La décision SQL/SQLite est prise dans le tableau d'inventaire de chaque site, sans extraction de secret. Les actions ci-dessous restent proposées.
+
+    ## Risques
+
+    Les répertoires `local/` et `tmp/` sont habituellement régénérables, mais ne remplacent ni `config/`, `IMG/`, les squelettes/plugins de site, ni le manifeste. En incident, ils peuvent aussi contenir des preuves et ne sont pas effacés.
+
+    ## Procédure proposée
+
+    1. Établir le manifeste commun et les entrées par site/moteur.
+    2. Créer les snapshots de base avec les actions 1–2, puis vérifier hashes et contrôles internes.
+    3. Exécuter l'action 3 dans un environnement incapable d'atteindre la production ; seulement ensuite planifier la mise à jour.
+
+    ## Commandes
+
+    | Action | Objectif | Préconditions | Portée | Preuve | Commande proposée — non exécutée | Succès | Retour arrière |
+    |---|---|---|---|---|---|---|---|
+    | 1. Snapshot MariaDB/MySQL | Export logique | Détection séparée `mariadb`/`mysql` et `mariadb-dump`/`mysqldump`; option file exclusif sans include/init-command ; moteur évalué | Une base de site | Version, exit code, taille, SHA-256 | `"$dump_client" --defaults-file="$client_opts" --no-login-paths --single-transaction --quick --routines --events --triggers --no-create-db "$db_name" >"$dump_path"` | Dump non vide, manifeste et contrôle anti-`USE` | Aucun changement source |
+    | 2. Snapshot SQLite | Backup cohérent | Fichier régulier vérifié ; destination hors webroot | Une base de site | Taille, hash | `sqlite3 "$sqlite_db" ".timeout 5000" ".backup '$sqlite_backup'"` | `integrity_check` exactement `ok`; aucune ligne de `foreign_key_check` | Aucun changement source |
+    | 3. Restauration isolée | Vérifier reprise | Compte SQL drill limité à la seule base précréée, sans privilège global ni accès source ; fichier SQLite de test distinct | Environnement isolé | Manifest, hashes, identités et préfixe | Importer le dump non qualifié dans `restore_db`; ouvrir SPIP isolé sur le nouveau fichier SQLite | Contrôle `spip_meta`, `${table_prefix}_meta`, HTTP, privé, plugins, contenu, uploads, tâches et logs | Préserver le drill ; production inchangée |
+
+    ## Validation et retour arrière
+
+    Une restauration valide est applicative, pas seulement un hash. En cas d'échec après mise à jour, utiliser l'identité précise du release partagé et le manifeste unique pour restaurer, site par site, la base MariaDB/MySQL ou SQLite correspondante et les fichiers persistants associés.
