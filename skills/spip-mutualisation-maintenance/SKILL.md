@@ -11,6 +11,8 @@ Establish the topology before choosing commands. Read-only observations may be r
 
 A single SPIP core and shared plugin tree can serve every site, while each site keeps its own configuration, database, `IMG/`, `local/`, and `tmp/`. Always state whether an observation or proposed change affects one site, several sites, the shared farm, or the host.
 
+Mutualisation facile is not an ordinary `plugins/` plugin: the shared site's `mes_options.php` `require`s it before the plugin pipeline runs, normally from a top-level `mutualisation/` directory (`mes_options.php.txt:14-18`; `paquet.xml` declares `<chemin path="" type="aucun" />`). Resolve the actual `require` target; do not look for it under `plugins/`.
+
 ## Supported scope
 
 - SPIP 4.2–4.4 with Mutualisation facile 2.x
@@ -73,6 +75,7 @@ Do not prepare ready-to-run mutations until all relevant conditions are resolved
 | “Update the shared plugin for one production site only.” | One shared path cannot be a one-site code canary. Use an isolated copy/staging environment. |
 | “The old Contrib page documents it.” | Installed code and current package compatibility take precedence over historical documentation. |
 | “A backup file exists.” | Verify integrity and perform or document an isolated restoration test. Existence alone is not a rollback. |
+| “`?exec=mutualisation` is an administrator-only endpoint.” | Only `upgrade`/`upgradeplugins` carry a secret. `renouvelle_alea`, `dirliste`, and `dirsize` run unauthenticated on every site — check access logs and treat a reverse-proxy block as a proposed mutation. |
 
 ## Common mistakes
 
