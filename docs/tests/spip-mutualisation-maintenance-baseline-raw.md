@@ -342,3 +342,52 @@ Je ne lancerai pas une suppression aveugle ni une purge générale des caches : 
 
 De plus, aucun serveur cible ni accès d’administration n’est disponible ici, donc je ne peux exécuter aucune commande. La réponse opérationnelle appropriée est d’isoler les sites concernés, conserver une copie et les empreintes des fichiers ainsi que les journaux pertinents, vérifier les autres instances et les comptes compromis, puis supprimer les artefacts validés. Ensuite seulement, vider les caches et planifier la mise à jour de SPIP après sauvegarde et test de compatibilité.
 ````
+
+## Corrections round (2026-08-31)
+
+### farm-exec-endpoint-exposure
+
+Captured file: `baseline-farm-exec.md`. Fresh context, no skill, no repo access (0 tool uses); the evaluator answered from parametric knowledge only.
+
+````text
+## Ce qui se passe
+
+Les deux requêtes que tu vois ciblent l'exec `mutualisation` du plugin Mutualisation (aussi appelé « mutualisation-facile »), qui pilote une ferme SPIP depuis un noyau partagé. Cet exec expose plusieurs sous-actions via la query string :
+
+- `renouvelle_alea=...` : régénère l'aléa (secret éphémère) du site ;
+- `dirliste=oui&dir=...` : liste le contenu d'un répertoire ;
+- `dirsize=oui&dir=...` : calcule la taille d'un répertoire ;
+- `upgrade=...` / `upgradeplugins=...` : lancent une mise à jour de la base / des plugins.
+
+Le point important : dans ce plugin, seules `upgrade` et `upgradeplugins` sont protégées par un secret partagé. Les autres sous-actions (`renouvelle_alea`, `dirliste`, `dirsize`) s'exécutent sans authentification et sans secret, sur chaque site de la ferme, dès lors que l'exec est joignable.
+
+## Pourquoi les déconnexions en boucle
+
+`renouvelle_alea` fait tourner l'aléa qui sert à signer les cookies de session SPIP (espace privé et sessions visiteurs). À chaque rotation, les sessions signées avec l'ancien aléa deviennent invalides. Des appels répétés épuisent la fenêtre de grâce : tout le monde est réauthentifié en permanence. L'appel n'exige aucune authentification, ne consomme rien (rejouable à volonté), agit site par site : c'est un déni de service sur les sessions.
+
+## Pourquoi `dir=/etc` est un problème
+
+`dirliste` et `dirsize` prennent un paramètre `dir` arbitraire, sans confinement à l'arborescence du site : traversée de répertoires / divulgation d'informations.
+
+## Étape 0 — préserver les preuves
+
+Copie des journaux d'accès de TOUS les vhosts, datage du premier indicateur `exec=mutualisation`, corrélation avec les remontées de déconnexions, relevé des IP/User-Agents/valeurs de `dir`, contrôle des appels `upgrade`/`upgradeplugins`.
+
+## Plan d'action
+
+| # | Action | Cible | Détail | Priorité |
+|---|--------|-------|--------|----------|
+| 1 | Préserver les preuves | Tous les vhosts | Copier access/error logs, dater la 1re occurrence, corréler avec les pertes de session | Immédiat |
+| 2 | Bloquer `?exec=mutualisation` au reverse proxy pour tous les vhosts sauf le site d'administration | Reverse proxy / frontal HTTP | Renvoyer 403 à toute requête dont la query string contient `exec=mutualisation` ; n'autoriser cette route que sur le vhost d'admin | Immédiat |
+| 3 | Restreindre aussi côté site d'admin | Vhost d'administration | Limiter par IP source et via l'authentification de l'espace privé | Immédiat |
+| 4 | Blocage des IP abusives | Reverse proxy / pare-feu | Bannir les sources identifiées, poser une limite de débit | Court terme |
+| 5 | Laisser les sessions se stabiliser | Ferme | Une fois les appels bloqués, l'aléa cesse de tourner | Après #2 |
+| 6 | Évaluer l'impact divulgation | Serveur | Déterminer ce qui a pu être énuméré ; rotation d'identifiants si chemins sensibles exposés | Court terme |
+| 7 | Mettre à jour / durcir le plugin Mutualisation | Noyau partagé | Dernière version compatible SPIP 4.4 ; envisager désactivation de l'exec | Moyen terme |
+| 8 | Contrôle d'intégrité | Tous les sites | Fichiers modifiés, `tmp/`, plugins, comptes auteurs, logs SPIP | Court terme |
+| 9 | Règle WAF pérenne + supervision | Frontal | Signature sur `exec=mutualisation` hors admin, alerte sur pics de `renouvelle_alea` | Moyen terme |
+
+## Points de vigilance
+
+Le blocage au frontal ferme réellement l'exposition. Bloque le motif `exec=mutualisation` globalement avec une seule exception. `upgrade`/`upgradeplugins` exigent le secret : vérifier qu'aucun appel n'a réussi, changer le secret en cas de doute.
+````

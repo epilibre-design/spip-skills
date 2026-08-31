@@ -8,7 +8,7 @@ Sources: installed code/configuration, exact official [SPIP source](https://git.
 
 Do not begin with `find -delete`, `rm`, cache purge, core/plugin update, or “repair permissions.” These actions alter timestamps/content and can destroy the evidence needed to find persistence or the entry point.
 
-If active harm is continuing, propose containment that preserves evidence: remove the affected virtual host from service, restrict access at the reverse proxy/firewall, or snapshot/isolate the host using the operator's existing mechanism. Conditional containment is a state-changing action and therefore needs its own complete action-plan row; do not leave it as a prose instruction. Do not improvise a destructive containment command.
+If active harm is continuing, propose containment that preserves evidence: remove the affected virtual host from service, restrict access at the reverse proxy/firewall, or snapshot/isolate the host using the operator's existing mechanism. Conditional containment is a state-changing action and therefore needs its own complete action-plan row; do not leave it as a prose instruction. Do not improvise a destructive containment command. Blocking `?exec=mutualisation` at the reverse proxy for every hostname except the administration site removes the unauthenticated endpoints listed under "Known unauthenticated Mutualisation endpoints" farm-wide; it too is a state-changing action and needs its own complete action-plan row.
 
 ## 1. Open an evidence record
 
@@ -94,11 +94,34 @@ Build a clean comparison tree outside production from the exact official release
 
 Apply the same exact-version comparison to shared plugins and site-specific code. A modified file is not automatically malicious; classify expected local changes separately.
 
+## Known unauthenticated Mutualisation endpoints
+
+`demarrer_site()` calls `mutualisation_traiter_exec()` on every farm site
+(`mutualiser.php:218`). Inside `if (_request('exec') === 'mutualisation')`, only the
+`require .../exec/mutualisation.php` dashboard branch is gated by
+`_SITES_ADMIN_MUTUALISATION` (`mutualiser.php:247-250`). Three sibling sub-actions run
+with **no administrator check and no secret**:
+
+| Request on any farm site | Effect | Code |
+|---|---|---|
+| `?exec=mutualisation&renouvelle_alea=yo` | `renouvelle_alea()` rotates that site's alea keys: existing sessions and signed / password-reset links stop validating. Replayable — repeated calls are a session denial of service. | `mutualiser.php:265-272` |
+| `?exec=mutualisation&dirliste=oui&dir=<path>` | Lists an arbitrary directory; `dir` is taken from `$_GET` with no confinement (path traversal). | `mutualiser.php:273-281`, `inc/dirliste.php` |
+| `?exec=mutualisation&dirsize=oui&dir=<path>` | Recursively sizes an arbitrary directory. | `mutualiser.php:282-290`, `inc/dirsize.php` |
+
+Only `upgrade=oui` and `upgradeplugins=oui` carry a secret. Do not treat any other
+`?exec=mutualisation` sub-action as authenticated.
+
+The administration dashboard sets each site row's CSS background to
+`…?exec=mutualisation&renouvelle_alea=yo` (`exec/mutualisation.php:174`), so isolated
+`renouvelle_alea` hits from the administration host at dashboard-load time are expected
+and are not on their own an indicator.
+
 ## 5. Search for entry point and persistence
 
 Correlate, rather than merely listing files:
 
 - earliest suspicious file timestamp and matching HTTP requests;
+- access-log hits, across **every** child vhost, for `exec=mutualisation` combined with `renouvelle_alea`, `dirliste`, `dirsize`, `upgrade`, or `upgradeplugins`; correlate `renouvelle_alea` hits with unexplained mass session loss;
 - vulnerable SPIP/plugin version and exposed endpoint;
 - new or changed SPIP administrators, sessions, configuration, content, and scheduled jobs;
 - web-server rewrite/configuration changes;

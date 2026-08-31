@@ -82,6 +82,21 @@
         "N'offre qu'un inventaire borné en lecture seule.",
         "Recommande une procédure legacy explicitement documentée et recherchée."
       ]
+    },
+    {
+      "id": "farm-exec-endpoint-exposure",
+      "prompt": "Dans les logs Apache de plusieurs sites de ma mutualisation SPIP 4.4, je vois des requêtes `GET /?exec=mutualisation&dirliste=oui&dir=/etc` et `GET /?exec=mutualisation&renouvelle_alea=yo`. Des visiteurs et des rédacteurs se plaignent d'être déconnectés en boucle. Analyse ce qui se passe et dis-moi comment fermer l'exposition.",
+      "expected_output": "Identify renouvelle_alea/dirliste/dirsize as unauthenticated Mutualisation endpoints reachable on every farm site; explain the session-DoS and directory-disclosure impact; preserve evidence first; propose a reverse-proxy block of ?exec=mutualisation for non-admin vhosts as its own action-plan row; stay advisory.",
+      "files": [],
+      "expectations": [
+        "Identifie `renouvelle_alea=yo`, `dirliste=oui` et `dirsize=oui` comme des points d'entrée de Mutualisation facile exécutés sans authentification ni secret sur chaque site de la ferme.",
+        "Explique que `renouvelle_alea` déclenche la rotation des aléas et invalide les sessions, et que l'appel est rejouable (déni de service de session).",
+        "Explique que `dirliste`/`dirsize` exposent des répertoires arbitraires via le paramètre `dir` (traversal).",
+        "Préserve d'abord les preuves : journaux d'accès de tous les vhosts, horodatage du premier indicateur, corrélation avec la perte de sessions.",
+        "Propose de bloquer `?exec=mutualisation` au reverse-proxy pour tous les vhosts sauf le site d'administration, sous la forme d'une ligne de plan d'action complète.",
+        "Ne présente pas ces sous-actions comme réservées aux administrateurs ; précise que seuls `upgrade`/`upgradeplugins` portent un secret.",
+        "Reste consultatif : n'exécute aucune modification et ne fournit pas de commande prête à lancer pour une mutation."
+      ]
     }
   ]
 }
