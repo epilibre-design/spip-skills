@@ -2,14 +2,14 @@
 
 Read [inventory-diagnosis.md](inventory-diagnosis.md) first and [backup-rollback.md](backup-rollback.md) before preparing any mutation.
 
-Sources: [official SPIP update guide](https://www.spip.net/fr_article1318.html), [official SPIP Git](https://git.spip.net/spip/spip), and the current [Mutualisation facile package](https://git.spip.net/spip-contrib-extensions/mutualisation/-/blob/main/paquet.xml).
+Sources: [official SPIP update guide](https://www.spip.net/fr_article1318.html), [official SPIP Git](https://git.spip.net/spip/spip), and the current [Mutualisation facile package](https://git.spip.net/spip-contrib-extensions/mutualisation/-/blob/master/paquet.xml).
 
 ## Hard gate
 
 Do not execute the upgrade. Do not even present it as ready to run until all boxes are evidenced:
 
 - exact current and target SPIP releases verified at task time from the installed tree and the exact upstream release/tag/archive, not a remembered “latest” ([official SPIP Git](https://git.spip.net/spip/spip));
-- Mutualisation facile's installed/current package declares the target compatible; the current 2.x package advertises compatibility `[4.2.0;4.*]`, which still must be rechecked against the resolved installed copy before each plan ([current Mutualisation facile `paquet.xml`](https://git.spip.net/spip-contrib-extensions/mutualisation/-/blob/main/paquet.xml));
+- Mutualisation facile's installed/current package declares the target compatible; the current 2.x package advertises compatibility `[4.2.0;4.*]`, which still must be rechecked against the resolved installed copy before each plan ([current Mutualisation facile `paquet.xml`](https://git.spip.net/spip-contrib-extensions/mutualisation/-/blob/master/paquet.xml));
 - shared plugin compatibility and dependencies have been inventoried;
 - core provenance and local modifications are understood;
 - every affected database and persistent file set has a recent verified backup;
@@ -183,7 +183,7 @@ Label every command block **proposed — not executed by the agent**.
 4. Enter a farm-wide maintenance response using the deployment's existing web-server/load-balancer mechanism. Do not invent a SPIP constant.
 5. Prepare the target in a separate release directory when the deployment supports atomic switching; otherwise document the controlled exact-file replacement.
 6. Switch shared code once.
-7. Upgrade/validate each site database sequentially through the authenticated SPIP mechanism appropriate to that installation. `mutualiser.php` only dispatches the upgrade route when `upgrade=oui`, and `mutualiser_upgrade.php` checks a request secret derived from live metadata before running the SPIP schema upgrade and purging `_DIR_TMP`, so the agent must not automate guessed upgrade URLs or secrets from cached files such as `tmp/meta_cache.php` ([`mutualiser.php`](https://git.spip.net/spip-contrib-extensions/mutualisation/-/blob/main/mutualiser.php), [`mutualiser_upgrade.php`](https://git.spip.net/spip-contrib-extensions/mutualisation/-/blob/main/mutualiser_upgrade.php)).
+7. Upgrade/validate each site database sequentially through the authenticated SPIP mechanism appropriate to that installation. `mutualiser.php` only dispatches the upgrade route when `upgrade=oui`, and `mutualiser_upgrade.php` checks a request secret derived from live metadata before running the SPIP schema upgrade and purging `_DIR_TMP`, so the agent must not automate guessed upgrade URLs or secrets from cached files such as `tmp/meta_cache.php` ([`mutualiser.php`](https://git.spip.net/spip-contrib-extensions/mutualisation/-/blob/master/mutualiser.php), [`mutualiser_upgrade.php`](https://git.spip.net/spip-contrib-extensions/mutualisation/-/blob/master/mutualiser_upgrade.php)).
 8. After each site, run the per-site checks below. Stop the sequence on the first unexplained failure.
 9. Validate the administration site and shared jobs, leave maintenance, then monitor.
 

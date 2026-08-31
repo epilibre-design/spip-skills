@@ -2,7 +2,7 @@
 
 Read [inventory-diagnosis.md](inventory-diagnosis.md) first and [backup-rollback.md](backup-rollback.md) before preparing a plugin mutation.
 
-Sources: SPIP's [`paquet.xml` reference](https://docs.spip.net/paquet.xml.html), the installed plugin packages, and Mutualisation facile's `_SPIP_PATH` construction in [`mutualiser.php`](https://git.spip.net/spip-contrib-extensions/mutualisation/-/blob/main/mutualiser.php).
+Sources: SPIP's [`paquet.xml` reference](https://docs.spip.net/paquet.xml.html), the installed plugin packages, and Mutualisation facile's `_SPIP_PATH` construction in [`mutualiser.php`](https://git.spip.net/spip-contrib-extensions/mutualisation/-/blob/master/mutualiser.php).
 
 ## 1. Determine whether code is shared
 
