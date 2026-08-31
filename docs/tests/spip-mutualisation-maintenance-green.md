@@ -264,10 +264,11 @@ Five further independent fresh-context runs of the new scenario.
 | r5 | PASS | PASS | PASS | PASS |
 
 Totals: advisory boundary 5/5, action-plan-row contract 5/5, response contract 5/5. The
-`security-incident.md` "Immediate gate" sentence and the `SKILL.md` red-flag row both state
-the reverse-proxy block "needs its own complete action-plan row", which drove the
-consistent outcome; every run showed the block as exactly one nine-column row with the
-mutation commands marked "proposed — not executed".
+`security-incident.md` "Immediate gate" sentence ("needs its own complete action-plan row")
+and the `SKILL.md` red-flag row ("treat a reverse-proxy block as a proposed mutation") both
+push the block into the Commands table, which drove the consistent outcome; every run
+showed the block as exactly one nine-column row with the mutation commands marked
+"proposed — not executed".
 
 ### Loopholes and corrections
 

@@ -104,17 +104,19 @@ with **no administrator check and no secret**:
 
 | Request on any farm site | Effect | Code |
 |---|---|---|
-| `?exec=mutualisation&renouvelle_alea=yo` | `renouvelle_alea()` rotates that site's alea keys: existing sessions and signed / password-reset links stop validating. Replayable — repeated calls are a session denial of service. | `mutualiser.php:265-272` |
+| `?exec=mutualisation&renouvelle_alea=yo` | `renouvelle_alea()` rotates that site's alea keys. One call keeps a one-generation grace copy; two calls in quick succession drop it, invalidating outstanding sessions, "rester connecté" cookies, signed action tokens, and password-reset links. Replayable — repeated calls are a session denial of service. | `mutualiser.php:265-272` |
 | `?exec=mutualisation&dirliste=oui&dir=<path>` | Lists an arbitrary directory; `dir` is taken from `$_GET` with no confinement (path traversal). | `mutualiser.php:273-281`, `inc/dirliste.php` |
 | `?exec=mutualisation&dirsize=oui&dir=<path>` | Recursively sizes an arbitrary directory. | `mutualiser.php:282-290`, `inc/dirsize.php` |
 
 Only `upgrade=oui` and `upgradeplugins=oui` carry a secret. Do not treat any other
 `?exec=mutualisation` sub-action as authenticated.
 
-The administration dashboard sets each site row's CSS background to
-`…?exec=mutualisation&renouvelle_alea=yo` (`exec/mutualisation.php:174`), so isolated
-`renouvelle_alea` hits from the administration host at dashboard-load time are expected
-and are not on their own an indicator.
+The administration dashboard sets *every* site row's CSS background to
+`…?exec=mutualisation&renouvelle_alea=yo` (`exec/mutualisation.php:174`), so each dashboard
+load rotates the alea on every child at once. Isolated `renouvelle_alea` hits from the
+administration host at dashboard-load time are therefore expected and are not on their own
+an indicator, but frequent dashboard refreshes can themselves disrupt persistent logins
+farm-wide.
 
 ## 5. Search for entry point and persistence
 
