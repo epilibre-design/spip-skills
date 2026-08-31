@@ -118,6 +118,8 @@ find -P "$mutu_dir" -xdev -mindepth 2 -maxdepth 2 -type l -printf '%p -> %l\n'
 
 For every directory, record the domain/key, whether `config/connect.php` exists, and whether `IMG/`, `local/`, and `tmp/` exist. In `mutualiser.php`, `demarrer_site()` treats the site as not fully installed when `_DIR_SITE` is missing or the connection file cannot be found, so a missing connection file is evidence of an incomplete installation rather than a valid site ([`mutualiser.php`](https://git.spip.net/spip-contrib-extensions/mutualisation/-/blob/master/mutualiser.php)).
 
+The connection file is usually `config/connect.php` but can be relocated or renamed through `_DIR_CONNECT` / `_FILE_CONNECT_INS` (`mutualiser.php:67-76`); treat a missing `config/connect.php` as an incomplete installation **or** a non-default connection layout, and verify before concluding. The plugin's own default `lister_sites` (`mutualisation_lister_sites_dist()`, `exec/mutualisation.php:531-539`) globs `<repertoire>/*/config/connect.php` only, so a site present on disk but absent from the administration dashboard is a diagnostic signal, not automatically an anomaly.
+
 Identify the database engine without displaying the raw connection call. Prefer existing sanitized inventory tooling. Otherwise inspect locally and emit only an allowlisted result (`mysql`, `sqlite3`, or `unknown`). Do not `source` or `include` an untrusted configuration during an incident. SQLite files are normally beneath the site's `config/bases/`; their existence is evidence to reconcile with the sanitized connection type, not permission to print the connection file.
 
 ## 5. Map plugin impact
@@ -165,7 +167,7 @@ During a suspected compromise, stop here and read [security-incident.md](securit
 
 ### Shared foundation
 
-Report shared root, SPIP version/provenance/local changes, Mutualisation facile version/path/config file, effective `repertoire`, administration site restriction, web server, PHP CLI/FPM versions, shared plugin paths, disk/inodes, and unknowns.
+Report shared root, SPIP version/provenance/local changes, Mutualisation facile version/path/config file, effective `repertoire`, administration site restriction, web server, PHP CLI/FPM versions, shared plugin paths, disk/inodes, whether `?exec=mutualisation` is reachable on non-administration vhosts (unauthenticated `renouvelle_alea` / `dirliste` / `dirsize` exposure — see [security-incident.md](security-incident.md)), and unknowns.
 
 ### Per-site table
 
