@@ -19,6 +19,7 @@ In this repository, skills are version-controlled in `skills/` and installed to 
 - `spip-saisies`: the Saisies plugin (field types, custom types in `saisies/`, pipelines, `inc/saisies*` PHP API)
 - `spip-lang`: SPIP language files (`lang/prefix_XX.php`, key naming conventions, `_T()`, `<:module:key:>`)
 - `spip-logs`: SPIP logging practices (`spip_log()`, journal files, debug workflow)
+- `spip-mutualisation-maintenance`: SPIP farm inventory, shared updates, backups/rollback, and incident investigation
 
 ## Install (copy-based)
 
@@ -29,6 +30,7 @@ Linux/macOS:
 ```bash
 mkdir -p ~/.claude/skills
 cp -R skills/spip-* ~/.claude/skills/
+cp -R skills/spip-mutualisation-maintenance ~/.claude/skills/
 ```
 
 Windows PowerShell:
@@ -36,6 +38,7 @@ Windows PowerShell:
 ```powershell
 New-Item -ItemType Directory -Force "$HOME/.claude/skills" | Out-Null
 Copy-Item -Recurse -Force "skills/spip-*" "$HOME/.claude/skills/"
+Copy-Item -Recurse -Force "skills/spip-mutualisation-maintenance" "$HOME/.claude/skills/"
 ```
 
 ## Install (symlink-based)
@@ -91,6 +94,7 @@ You should see these folders:
 - `~/.claude/skills/spip-formulaires`
 - `~/.claude/skills/spip-lang`
 - `~/.claude/skills/spip-logs`
+- `~/.claude/skills/spip-mutualisation-maintenance`
 
 Optional deeper check (Linux/macOS):
 
@@ -100,6 +104,7 @@ test -f ~/.claude/skills/spip-squelettes/SKILL.md && echo "spip-squelettes OK"
 test -f ~/.claude/skills/spip-formulaires/SKILL.md && echo "spip-formulaires OK"
 test -f ~/.claude/skills/spip-lang/SKILL.md && echo "spip-lang OK"
 test -f ~/.claude/skills/spip-logs/SKILL.md && echo "spip-logs OK"
+test -f ~/.claude/skills/spip-mutualisation-maintenance/SKILL.md && echo "spip-mutualisation-maintenance OK"
 ```
 
 Optional deeper check (Windows PowerShell):
@@ -110,6 +115,7 @@ Test-Path "$HOME/.claude/skills/spip-squelettes/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-formulaires/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-lang/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-logs/SKILL.md"
+Test-Path "$HOME/.claude/skills/spip-mutualisation-maintenance/SKILL.md"
 ```
 
 ## Update workflow
