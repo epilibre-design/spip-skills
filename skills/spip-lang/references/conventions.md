@@ -113,6 +113,11 @@ context (see `inc_traduire_dist()` in `ecrire/inc/traduire.php`). So `_T('info_o
 works anywhere. Several modules can also be searched explicitly with
 `_T('module1|module2:cle')`. For plugin keys, always use your own module prefix.
 
+Forgetting your own prefix (e.g. writing `<:telechargement:>` instead of
+`<:monperso:telechargement:>`) does not error — see "Missing translation: silent
+fallback, not an error" in `usage.md` for what actually gets displayed and how to
+debug it.
+
 ---
 
 ## Pre-commit checklist

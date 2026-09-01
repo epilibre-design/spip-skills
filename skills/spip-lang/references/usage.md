@@ -188,6 +188,31 @@ With dynamic environment:
 
 ---
 
+## Missing translation: silent fallback, not an error
+
+If a key isn't found — wrong/missing module prefix, typo, key not yet translated — `_T()`
+does **not** throw or warn by default. It falls back through `langue_site`, then `fr`
+(see `inc_traduire_dist()` in `ecrire/inc/traduire.php`), and if still not found, the
+`force` option (default `true`) makes it return the **raw key itself** as text, with any
+`module:` prefix stripped:
+
+```php
+_T('monperso:telechargement');   // key missing → displays: telechargement
+```
+
+This means a forgotten module prefix (see "Special case: keys without module prefix" in
+`conventions.md`) doesn't crash or log — it silently renders the key name as if it were
+the translation, which is easy to miss visually since it still looks like plain text
+rather than a raw `<:...:>` tag.
+
+**Debugging:** append `?var_mode=traduction` to the URL (espace privé or any page in
+debug mode) to make every translated string reveal which module/language actually
+resolved it — wraps each string in a `<span data-module=... data-code=...>` (see
+`definir_details_traduction()`, same file). This is the fastest way to confirm whether a
+string came from the module you intended.
+
+---
+
 ## UI label filters
 
 Two filters prepare translated strings for inline label display (table headers, form labels):
