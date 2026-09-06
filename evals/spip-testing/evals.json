@@ -18,7 +18,7 @@
     {
       "id": 2,
       "prompt": "My SPIP plugin has a CVT form with a `verifier` function that calls `sql_countsel`. I want to write integration tests that hit a real database. How do I install the SPIP test environment with spip-cli and write the test?",
-      "expected_output": "Explains composer install-spip-test, scripts/install-spip-test.sh with spip-cli commands (core:telecharger, core:preparer, core:installer SQLite3, plugins:activer), tests/bootstrap_integration.php loading vendor/spip/spip, and a concrete integration test example using real sql_countsel.",
+      "expected_output": "Explains composer install-spip-test, scripts/install-spip-test.sh with spip-cli commands (core:telecharger, core:preparer, core:installer SQLite3, plugins:activer), tests/bootstrap_integration.php loading vendor/spip/spip, and a concrete integration test example using real sql_countsel. The install script must create plugins/auto/ before SVP downloads, verify the plugin is really active, and run plugins:maj:bdd so _upgrade() executes.",
       "files": [],
       "assertions": [
         {"id": "mentions-spip-cli-commands", "description": "Mentions spip-cli commands for setting up SPIP (core:telecharger, core:preparer, or core:installer)"},
@@ -26,7 +26,10 @@
         {"id": "mentions-bootstrap-integration", "description": "Mentions tests/bootstrap_integration.php as the integration bootstrap file"},
         {"id": "mentions-vendor-spip-spip", "description": "Mentions that SPIP is installed inside vendor/spip/spip/ (not a global install)"},
         {"id": "mentions-sqlite3", "description": "Mentions SQLite3 as the test database engine"},
-        {"id": "mentions-no-mock-conflict", "description": "Warns that tests/bootstrap.php (unit mocks) must NOT be included in the integration bootstrap"}
+        {"id": "mentions-no-mock-conflict", "description": "Warns that tests/bootstrap.php (unit mocks) must NOT be included in the integration bootstrap"},
+        {"id": "mentions-plugins-auto", "description": "Creates plugins/auto/ (mkdir) before downloading with SVP - core:preparer does not create it and every download fails without it"},
+        {"id": "mentions-maj-bdd", "description": "Runs plugins:maj:bdd after activation, so the plugins _upgrade() functions create their tables and metas"},
+        {"id": "verifies-activation", "description": "Verifies the plugin is actually active (plugins:lister) instead of trusting plugins:activer exit code, which is 0 even when nothing was activated"}
       ]
     },
     {

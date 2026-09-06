@@ -1,0 +1,73 @@
+{
+  "skill_name": "plugin-escal",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Je veux installer et activer le squelette Escal sur un site SPIP 4.4, en ligne de commande avec spip-cli. Donne-moi les commandes exactes, dans l'ordre, et dis-moi ce qu'il faut vérifier après.",
+      "expected_output": "Les vraies commandes spip-cli : plugins:svp:depoter, plugins:svp:telecharger, plugins:activer, plugins:maj:bdd, plugins:lister. La création préalable de plugins/auto/. L'avertissement sur le patch MR !91 sans lequel le téléchargement échoue silencieusement. Les dépendances dures d'Escal.",
+      "files": [],
+      "expectations": [
+        "Emploie plugins:svp:telecharger puis plugins:activer, et n'invente pas de commande plugin:install / plugin:dl / plugin:activate",
+        "Crée plugins/auto/ avant le téléchargement, ou signale que SVP y déballe les paquets",
+        "Signale que plugins:svp:telecharger est inopérant sans le patch MR !91 et annonce de faux succès",
+        "Liste les dépendances dures : saisies, verifier, yaml, agenda, fullcalendarcompat, svpstats, nospam, facteur, tri_par_rubrique, aide",
+        "Vérifie le résultat avec plugins:lister plutôt qu'en se fiant à la sortie du téléchargement",
+        "Ne conclut pas que l'activation seule suffit : mentionne plugins:maj:bdd ou l'exécution de escal_upgrade()"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Sur la page d'accueil de mon site Escal, je veux afficher le bloc « Derniers articles » en deuxième position de la colonne de navigation. Quel réglage exactement, quelle valeur, et où est-ce stocké en base ?",
+      "expected_output": "La clé escal/config/blocnav2 avec la valeur derniers_articles, stockée dans la meta escal (casier escal/config), lue par #CONFIG{escal/config/blocnav2} et rendue via inclusions/inc-derniers_articles.html.",
+      "files": [],
+      "expectations": [
+        "Donne la clé blocnav2 (famille blocnav pour la colonne navigation du sommaire), pas un nom inventé du type bloc_gauche_2",
+        "Donne la valeur derniers_articles : le nom court de la noisette, sans préfixe inc- ni extension .html",
+        "Situe le stockage dans la meta SPIP escal, casier escal/config, et non dans une table dédiée ni une meta config_escal",
+        "Montre la lecture côté squelette avec #CONFIG{escal/config/...} ou côté PHP avec lire_config()",
+        "Indique que la valeur rend le fichier inclusions/inc-derniers_articles.html"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Cite dix noisettes livrées avec Escal avec leur chemin de fichier exact, et explique comment j'en remplace une par ma propre version sans modifier le plugin.",
+      "expected_output": "Des noisettes réelles sous inclusions/inc-*.html, et la surcharge par le chemin SPIP en déposant squelettes/inclusions/inc-<nom>.html.",
+      "files": [],
+      "expectations": [
+        "Situe les noisettes dans inclusions/inc-*.html et n'invente pas de dossier noisettes/ ni de fichiers noisette_*.html",
+        "Cite des noisettes qui existent réellement (edito, acces_direct, derniers_articles, calendrier, evenements, top, actus, sites_favoris, identification, stats, photos, meme_rub...)",
+        "Explique la surcharge par dépôt d'un fichier dans squelettes/inclusions/, en s'appuyant sur la priorité du chemin SPIP",
+        "Déconseille de modifier les fichiers du plugin, écrasés aux mises à jour",
+        "Ne présente pas toutes les noisettes comme disponibles partout : signale que chaque famille de page accepte un sous-ensemble"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Explique-moi comment fonctionnent trois pages spéciales d'Escal : l'agenda, l'annuaire de sites et le trombinoscope d'une rubrique. Comment les met-on en place ?",
+      "expected_output": "L'agenda (agenda.html) s'appuie sur les plugins agenda et fullcalendarcompat, avec les couleurs du groupe de mots Agenda_couleur. L'annuaire repose sur le mécanisme de pétition d'un article tagué annuaire. Le trombinoscope de rubrique passe par un mot du groupe type_rubrique, non créé par l'installeur.",
+      "files": [],
+      "expectations": [
+        "Agenda : dépend des plugins agenda et fullcalendarcompat, et distingue la page agenda du mini-calendrier qui est la noisette calendrier",
+        "Agenda : les couleurs d'événements viennent du groupe de mots Agenda_couleur, dont le descriptif porte le code couleur CSS",
+        "Annuaire : repose sur le mécanisme de pétition/signatures d'un article portant le mot-clé annuaire, et non sur les objets SITES",
+        "Trombinoscope de rubrique : mot du groupe type_rubrique attaché à la rubrique, qui déclenche inclusions/inc-rubrique_trombino.html",
+        "Précise que le groupe type_rubrique n'est pas créé par l'installation et doit être créé à la main",
+        "Distingue le trombinoscope de rubrique de la page trombino-auteurs"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Mon site Escal est en layout MPPfluide. Quelle est la différence avec PMP et PMPmixte, et comment je personnalise le CSS sans toucher au plugin ?",
+      "expected_output": "Les lettres donnent l'ordre des colonnes (P étroite, M contenu), le suffixe donne le mode de largeur (fixe, fluide, mixte) ; les deux sont orthogonaux. La personnalisation passe par squelettes/styles/perso.css et squelettes/persoconfig.css.html, chargés après les feuilles générées.",
+      "files": [],
+      "expectations": [
+        "Explique que les lettres donnent l'ordre des colonnes, P = colonne étroite et M = contenu principal",
+        "Explique que fixe / fluide / mixte sont des modes de largeur, orthogonaux à l'ordre, et non un changement d'ordre des colonnes",
+        "Précise qu'en MPP les deux colonnes latérales sont à droite du contenu, donc qu'il n'y a pas de colonne à gauche",
+        "Oriente la personnalisation vers squelettes/styles/perso.css et squelettes/persoconfig.css.html",
+        "N'invente pas de champ « coller du CSS » dans l'espace privé",
+        "Indique que ces deux fichiers sont chargés après les feuilles générées et les emportent donc"
+      ]
+    }
+  ]
+}

@@ -20,6 +20,7 @@ In this repository, skills are version-controlled in `skills/` and installed to 
 - `spip-lang`: SPIP language files (`lang/prefix_XX.php`, key naming conventions, `_T()`, `<:module:key:>`)
 - `spip-logs`: SPIP logging practices (`spip_log()`, journal files, debug workflow)
 - `spip-mutualisation-maintenance`: SPIP farm inventory, shared updates, backups/rollback, and incident investigation
+- `plugin-escal`: the Escal squelette (noisettes, `escal/config` settings, special pages, layouts, technical mots-clés, spip-cli install)
 
 ## Install (copy-based)
 

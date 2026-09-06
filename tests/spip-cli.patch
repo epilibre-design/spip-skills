@@ -1,43 +1,87 @@
-From ff6310dae9430e345a635ca8036e792f55816852 Mon Sep 17 00:00:00 2001
-From: Pol <carre@reporterre.net>
-Date: Wed, 3 Jun 2026 18:29:41 +0200
-Subject: [PATCH] =?UTF-8?q?fix:=20Contr=C3=B4le=20des=20erreurs=20sur=20le?=
- =?UTF-8?q?=20t=C3=A9l=C3=A9chargement=20des=20plugins?=
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+From: MR !91 — spip-contrib-outils/spip-cli
+Subject: fix(plugins:svp:telecharger): rendre la commande réellement opérationnelle
 
-Ce fix est composé de 2 parties:
-- un workaround qui permet de contourner le problème de typage des
-autorisations
-- un contrôle effectif pour savoir s'il y a eu une erreur et afficher
-une sortie cohérente.
+https://git.spip.net/spip-contrib-outils/spip-cli/-/merge_requests/91
 
-Closes #88
+Remplace le patch de l'issue #88, qui ne corrigeait que 2 des 3 problèmes.
+Sans ce patch, `plugins:svp:telecharger` ne télécharge rien et annonce des succès.
+
+1. Sélection du plugin dans le dépôt
+   La condition SQL comparait UPPER(pl.prefixe) à LOWER("PREFIXE") : jamais égales
+   pour un préfixe non vide. La commande répondait systématiquement
+   « Le plugin xxx n'est pas référencé ». (Absent du patch #88.)
+
+2. Exception d'autorisation
+   autoriser() normalise « _plugins » en « plugins », puis autoriser_exception()
+   normalise une seconde fois en « plugin » au singulier. Les deux formes doivent
+   être déclarées, sans quoi action/teleporter.php refuse le téléchargement.
+
+3. Remontée des erreurs
+   one_action() renvoie la description de l'action AVANT son exécution ; le
+   résultat est dans la dernière entrée de $actionneur->done et les messages dans
+   $actionneur->err. Sans cela les échecs passaient pour des réussites.
+
+4. Appels multi-préfixes
+   $a_installer n'était ni initialisé avant la boucle ni réinitialisé dedans :
+   verifier_dependances() replanifiait les plugins déjà traités et l'actionneur
+   échouait sur « Impossible de déballer ». Seul le dernier préfixe s'installait.
+
+Vérifié sur SPIP 4.4 / spip-cli 2.0.1.
 ---
- src/Command/PluginsSvpTelecharger.php | 9 ++++++++-
- 1 file changed, 8 insertions(+), 1 deletion(-)
-
 diff --git a/src/Command/PluginsSvpTelecharger.php b/src/Command/PluginsSvpTelecharger.php
-index 8e74cee..fb6541a 100644
+index 8e74cee..4bac939 100644
 --- a/src/Command/PluginsSvpTelecharger.php
 +++ b/src/Command/PluginsSvpTelecharger.php
-@@ -53,8 +53,15 @@ class PluginsSvpTelecharger extends PluginsActiver
+@@ -20,12 +20,15 @@ class PluginsSvpTelecharger extends PluginsActiver
+ 
+         foreach ($prefixes as $prefix) {
+             $this->io->comment("Plugin en cours d'installation : " . $prefix);
+-            $infos = $decideur->infos_courtes('UPPER(pl.prefixe) = LOWER("' . strtoupper($prefix) . '")');
++            $infos = $decideur->infos_courtes('UPPER(pl.prefixe) = UPPER("' . $prefix . '")');
+             if (empty($infos['i'])) {
+                 $this->io->error('Le plugin ' . $prefix . " n'est pas référencé");
+                 continue;
+             }
+-            $a_installer[key($infos['i'])] = 'geton';
++            // $a_installer doit repartir de zéro à chaque préfixe : sinon il accumule
++            // les plugins des tours précédents, verifier_dependances() replanifie leur
++            // installation déjà faite, et l'actionneur échoue sur « Impossible de déballer ».
++            $a_installer = [key($infos['i']) => 'geton'];
+             $decideur->erreur_sur_maj_introuvable = false;
+             $res = $decideur->verifier_dependances($a_installer);
+ 
+@@ -52,9 +55,33 @@ class PluginsSvpTelecharger extends PluginsActiver
+             $actionneur->verrouiller();
              $actionneur->sauver_actions();
  
++            // Le type d'autorisation est normalisé deux fois sur ce chemin :
++            // autoriser() normalise « _plugins » en « plugins », puis passe ce type
++            // déjà normalisé à autoriser_exception() qui le normalise une seconde fois
++            // en « plugin » (singulier). La vérification de l'exception porte donc sur
++            // « plugin » alors que le garde-fou préalable porte sur « plugins ».
++            // Les deux formes sont nécessaires pour que l'exception soit réellement prise
++            // en compte par action/teleporter.php.
              autoriser_exception('ajouter', '_plugins', '*');
 +            autoriser_exception('ajouter', '_plugin', '*');
 +
++            // one_action() renvoie la description de l'action *avant* son exécution :
++            // c'est la dernière entrée de $actionneur->done qui porte le résultat, et les
++            // messages d'erreur sont empilés dans $actionneur->err.
++            $nb_erreurs = count($actionneur->err);
              while ($res = $actionneur->one_action()) {
 -                $this->io->comment($res['n'] . ' action réalisée : ' . $res['todo']);
-+                if (true === array_last($actionneur->done)['done']) {
++                $derniere_action = $actionneur->done ? $actionneur->done[array_key_last($actionneur->done)] : [];
++
++                if (!empty($derniere_action['done'])) {
 +                    $this->io->comment($res['n'] . ' action réalisée : ' . $res['todo']);
-+                } else {
-+                    $this->io->error($res['n'] . ' action en échec : ' . $res['todo']);
-+                    break;
++                    continue;
 +                }
++
++                $this->io->error($res['n'] . ' action en échec : ' . $res['todo']);
++                foreach (array_slice($actionneur->err, $nb_erreurs) as $erreur) {
++                    $this->io->error($erreur);
++                }
++                $nb_erreurs = count($actionneur->err);
              }
  
              $actionneur->deverrouiller();
--- 
-GitLab
