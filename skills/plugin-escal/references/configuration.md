@@ -137,9 +137,9 @@ The **descriptif holds the CSS colour**. Add your own by adding a mot with a col
 
 ### Groupes à créer soi-même
 
-**`type_article`** and **`type_rubrique`** are *not* created by the installer. Create the group, add a mot, attach it to a **rubrique**, and Escal will include `inclusions/inc-article_‹mot›.html` / `inc-rubrique_‹mot›.html` if that file exists — falling back to `inc-article.html` / `inc-rubrique_normal.html` otherwise. Escal ships `inc-rubrique_trombino.html` and `inc-rubrique_forumSite.html` for this mechanism.
+**`type_article`** and **`type_rubrique`** are *not* created by the installer. Create the group, add a mot, attach it to a **rubrique**, and Escal will include `inclusions/inc-article_‹mot›.html` / `inc-rubrique_‹mot›.html` if that file exists — falling back to `inc-article.html` / `inc-rubrique_normal.html` otherwise. The only file Escal ships for this mechanism is `inc-rubrique_trombino.html`, matched by a mot titled exactly `trombino`. The `_forumSite` noisettes are **not** part of it — they are included directly by the `forumSite-*` page squelettes.
 
-The `nav_mots` noisette hides the groups `affichage`, `trombino`, `type_article` and `type_rubrique` from visitors, so keep editorial groups out of those four names.
+The `nav_mots` noisette hides the groups `affichage`, `Agenda_couleur`, `trombino`, `type_article` and `type_rubrique` from visitors, so keep editorial groups out of those five names.
 
 ## 5. Surface PHP
 

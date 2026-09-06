@@ -63,7 +63,53 @@ The information is in the skill (*Restyling without forking*: « both hooks load
 generated stylesheet », and the full load order is in `references/configuration.md`); the answer
 simply did not carry it. Left as a miss rather than papered over.
 
-## Residual ambiguity flagged by the run
+## REFACTOR — the residual ambiguity, and what chasing it uncovered
+
+The run rated the trombinoscope answer PLAUSIBLE rather than CERTAINE: the skill gave the
+verbatim-titre rule but not the exact mot the shipped file expects. Chasing that down found **an
+error in the skill**, not just a gap.
+
+**Wrong:** the skill cited `inc-rubrique_forumSite.html` as an example of the `type_rubrique`
+mechanism, and as the evidence that titles are case-sensitive. It is not part of that mechanism at
+all — `forumSite-rubrique.html` includes it directly, and that page is reached through the `forum`
+mot on the secteur. The only file Escal ships for `type_rubrique` is `inc-rubrique_trombino.html`.
+Corrected in SKILL.md, `references/noisettes.md` and `references/configuration.md`.
+
+**Incomplete:** the trombinoscope needs **two** mots-clés objects named `trombino`, in two different
+groups, and the skill described only the first:
+
+1. a mot titled `trombino` in group `type_rubrique`, attached to the rubrique — routes
+   `rubrique.html` to the noisette, and satisfies its `{titre_mot=trombino}` header loop;
+2. a group *itself titled* `trombino`, whose mots are attached to the articles — read by
+   `<BOUCLE(MOTS){type=trombino}{id_article}>` to build the filter `<select>`. Without it the
+   dropdown is empty.
+
+`references/pages-speciales.md` now documents both, plus the per-article field mapping
+(`#TITRE` name, `#DESCRIPTIF` role line, `#TEXTE` free text, first image document resized 150×175,
+paginated 15 by title).
+
+**Also corrected:** `nav_mots` excludes five technical groups, not four — `Agenda_couleur` was
+missing from the list. And the `config:lire --json` caveat found while fixing spip-testing applies
+here too, so it is now in the CLI section.
+
+### Verified on a live site
+
+The rewritten procedure was executed against the SPIP 4.4 / Escal 5.6.0 test instance: both groups
+created, a rubrique « Equipe » tagged, two articles as people with a category each.
+
+```
+grille trombino : OUI      select filtre : OUI
+options         : Direction Enseignants        (Administratif absent — no article carries it)
+fiches          : 2 -> Ada Lovelace, Alan Turing
+id_mot=100 (Direction) : 1 fiche -> Ada Lovelace
+```
+
+The dropdown lists only categories actually present on the rubrique's articles, matching the
+`{id_article}` criterion, and `#DESCRIPTIF` renders under the name as documented. Re-tested with a
+fresh agent afterwards: trombinoscope, the `forumSite` distinction and the schema-installed check
+all come back CERTAINE.
+
+## Original wording of the residual ambiguity
 
 The skill states that a `type_article` / `type_rubrique` mot's **titre is used verbatim** to build
 `inc-article_‹mot›.html`, and cites the shipped `inc-rubrique_forumSite.html` as proof that case is
@@ -75,7 +121,7 @@ inference PLAUSIBLE rather than CERTAINE.
 
 ## Verdict
 
-**PASS — 27/28**, against 2/28 at baseline.
+**PASS — 27/28**, against 2/28 at baseline, plus a REFACTOR round that corrected one factual error and one incomplete procedure found by following up the single PLAUSIBLE rating.
 
 The baseline's failure mode was confident shape-matching: plausible invented names a reader could
 not distinguish from correct ones. Every one of those inventions — `noisettes/`, `config_escal`,

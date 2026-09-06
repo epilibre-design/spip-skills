@@ -63,7 +63,7 @@ Slot keys per family: `blocnav‹n›`/`blocextra‹n›` (sommaire, 1–10) · 
 | `identification` | Identification | Login box / logged-in user panel | `toggleidentification`, `idlight`, `inscription` |
 | `liste_auteurs` | Annuaire auteurs et autrices | Site authors, optional link to the trombinoscope | `togglelisteauteurs`, `lien_trombino_auteurs`, `paginauteurs` |
 | `meme_rub` | Dans la même rubrique | Sibling articles of the current one | `titrememerub`, `nombrememerub`, `choixpaginmemerub`, `togglememerubrique` |
-| `nav_mots` | Mots-clés associés | Mots of the current article, excluding the technical groups (`affichage`, `trombino`, `type_article`, `type_rubrique`) | `titrenavmot` |
+| `nav_mots` | Mots-clés associés | Mots of the current article, excluding the technical groups (`affichage`, `Agenda_couleur`, `trombino`, `type_article`, `type_rubrique`) | `titrenavmot` |
 | `nav_mots2` | Navigation par mots-clés | Browse one chosen group of mots and its articles | `groupemot`, `titrenavmot2`, `nbreartnavmot2` |
 | `perso` | Bloc à personnaliser | Articles of the branch tagged **`special`** — the intended "write your own" block | `titreperso`, `nombreartperso`, `ordreperso`, `tempoperso`, `toggleperso` |
 | `photos` | Photos au hasard | Random images from articles tagged **`photo-une`** | `titrephotos`, `nombrephotos`, `tempophotos`, `lienphotos`, `togglephotos` |
@@ -131,8 +131,9 @@ Reached by page routing or by the `type_article` / `type_rubrique` mots, never b
 | `inc-article_pleine_page.html` | article tagged `pleinepage` (via `article_pleinepage.html`) |
 | `inc-article_‹mot›.html` | mot `‹mot›` of group **`type_article`** on the rubrique |
 | `inc-rubrique_normal.html` | default rubrique body |
-| `inc-rubrique_‹mot›.html` | mot `‹mot›` of group **`type_rubrique`** on the rubrique — ships `inc-rubrique_trombino.html`, `inc-rubrique_forumSite.html` |
+| `inc-rubrique_‹mot›.html` | mot `‹mot›` of group **`type_rubrique`** on the rubrique — the only one shipped is `inc-rubrique_trombino.html` (mot titled exactly `trombino`) |
 | `inc-forum_article.html` | article forum, when open |
+| `inc-article_forumSite.html`, `inc-rubrique_forumSite.html` | included directly by `forumSite-article.html` / `forumSite-rubrique.html` — **not** through the mot groups |
 | `inc-portfolio.html`, `inc-documents_article.html` | article attachments |
 
 ## 6. Variantes internes

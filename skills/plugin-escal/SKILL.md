@@ -143,6 +143,7 @@ handy for scripted setup and for inspecting a site you cannot log into.
 ```bash
 spip config:lire escal --json                     # dump the whole configuration
 spip config:lire escal/config/blocnav2            # one setting
+spip config:lire escal_base_version --json        # {"escal_base_version":null} ⇒ not installed
 
 spip config:ecrire escal/config/blocnav2:derniers_articles     # full path as the option
 spip config:ecrire -p escal config/blocnav2:derniers_articles  # same thing, -p prepends "escal/"
@@ -151,6 +152,10 @@ spip config:ecrire escal/config/nomsite --valeur 'Mon site'    # value containin
 
 The argument is split on the **first** colon only. A value that itself contains a colon (a URL, a
 time) must go through `--valeur`.
+
+Use `--json` whenever you test for absence. Plain `config:lire` always prints the key label, so its
+output is never an empty string and `[ -z "$(spip config:lire escal_base_version)" ]` silently
+passes even when the plugin has never been installed. Compare against `:null}` instead.
 
 Several settings at once — note the nesting, `-p escal` plus a `config` sub-object rebuilds
 `escal/config/…`:
@@ -238,12 +243,17 @@ To create one: espace privé → **Mots-clés** → *Créer un nouveau groupe de
 add a mot, then attach that mot to the rubrique.
 
 **How the filename is derived:** the squelette does `#SET{type, #TITRE}` and includes
-`inclusions/inc-article_#GET{type}.html` — the mot's **titre is used verbatim**, with no slugifying,
-no lowercasing and no accent stripping. A mot titled `Recettes` looks for `inc-article_Recettes.html`;
-the shipped `inc-rubrique_forumSite.html` is matched by a mot titled exactly `forumSite`. Give the mot
-a short ASCII title with no spaces, and name the file with the identical string. If the file is
+`inclusions/inc-article_#GET{type}.html` — no filter is applied, so the mot's **titre is used
+verbatim**, with no slugifying, no lowercasing and no accent stripping. A mot titled `Recettes` looks
+for `inc-article_Recettes.html`. The one file Escal ships for this mechanism is
+`inc-rubrique_trombino.html`, so it needs a mot titled exactly `trombino`, lowercase. Give your own
+mots short ASCII titles with no spaces, and name the file with the identical string. If the file is
 missing, Escal silently falls back to `inc-article.html` / `inc-rubrique_normal.html` — a wrong case
 looks exactly like "the feature doesn't work".
+
+Do not read `inc-article_forumSite.html` / `inc-rubrique_forumSite.html` as examples of this
+mechanism: they are included directly by `forumSite-article.html` and `forumSite-rubrique.html`,
+which are reached through the `forum` mot on the secteur.
 
 ## Restyling without forking
 

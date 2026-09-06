@@ -93,7 +93,26 @@ Escal's own technical groups are normally hidden from visitors: the `nav_mots` n
 Two distinct trombinoscopes:
 
 - **`trombino-auteurs.html`** (`?page=trombino-auteurs`) — grid of the site's *auteurs* with their logos. Linked from the `liste_auteurs` noisette when `lien_trombino_auteurs` is on.
-- **Trombinoscope de rubrique** — tag a rubrique with a mot named `trombino` in the group **`type_rubrique`**; `rubrique.html` then renders `inclusions/inc-rubrique_trombino.html`, a card grid of that rubrique's articles (one card per person). The group `type_rubrique` is not created by the installer — create it yourself.
+- **Trombinoscope de rubrique** — a card grid of a rubrique's articles, one card per person, with a dropdown to filter by category.
+
+### Setting up a rubrique trombinoscope
+
+It needs **two mots-clés objects with the same name**, in two different groups. Missing either one is the usual reason it "doesn't work".
+
+1. **Route to the noisette** — create a group **`type_rubrique`** (not created by the installer), add a mot titled exactly **`trombino`**, lowercase, and attach it to the rubrique. `rubrique.html` reads that mot's *titre* verbatim to build the include path, so any other spelling silently falls back to `inc-rubrique_normal.html`. The same mot also satisfies the noisette's own `{titre_mot=trombino}` header loop, which prints the rubrique's descriptif and texte above the grid.
+
+2. **Categories for the filter** — create a second group **titled `trombino`** and put your categories in it (Direction, Enseignants, Administratif…), attached to the *articles*. The noisette collects them with `<BOUCLE(MOTS){type=trombino}{id_article}>` and renders a `<select>` that reloads the page on `id_mot`. Without this group the dropdown is empty; the grid itself still works.
+
+One article per person, paginated 15 by title:
+
+| Field | Rendered as |
+|---|---|
+| `#TITRE` | the name |
+| `#DESCRIPTIF` | the line under the name (role, address…) |
+| `#TEXTE` | free text block |
+| first attached image document | the photo, resized to 150×175 |
+
+Note `nav_mots` hides the group `trombino` from visitors along with the other technical groups, so these categories will not appear in the "mots-clés associés" block.
 
 ## Forum du site
 
