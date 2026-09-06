@@ -261,6 +261,31 @@ This runs `scripts/install-spip-test.sh`, which:
 
 The SPIP environment persists in `vendor/spip/spip/`. Subsequent runs skip steps that are already done.
 
+> **⚠ `plugins:svp:telecharger` does not work without patch MR !91.**
+>
+> On stock spip-cli (including `dev-master`), the command downloads **nothing** while reporting
+> success:
+>
+> - the depot lookup compares `UPPER(pl.prefixe)` to `LOWER("PREFIXE")` — never equal, so every
+>   prefix yields « Le plugin xxx n'est pas référencé »;
+> - the authorization exception is registered under a key `action/teleporter.php` does not read;
+> - `one_action()` returns the action description *before* running it, so failures print as
+>   successes.
+>
+> The fix is [MR !91](https://git.spip.net/spip-contrib-outils/spip-cli/-/merge_requests/91), shipped
+> here as `tests/spip-cli.patch` and applied by `scripts/install-spip-test.sh` (step 2 of the real
+> script). It supersedes the issue #88 patch, which covered only the last two points.
+>
+> Check whether a local copy is patched:
+>
+> ```sh
+> grep -q 'UPPER(pl.prefixe) = UPPER' vendor/spip/spip-cli/src/Command/PluginsSvpTelecharger.php \
+>   && echo "patched" || echo "NOT patched — downloads will fail silently"
+> ```
+>
+> Never conclude a plugin is installed from `plugins:svp:telecharger` output — confirm with
+> `plugins:lister`.
+
 ### `scripts/install-spip-test.sh` template
 
 ```sh
@@ -299,6 +324,11 @@ fi
 cd "$SPIP_ROOT"
 "$SPIP_BIN" core:preparer
 
+# core:preparer does NOT create plugins/auto/, where SVP unpacks downloaded packages.
+# Without it every plugins:svp:telecharger fails with
+# « Le répertoire de paquets plugins/auto/ n'est pas accessible en écriture ».
+mkdir -p "$SPIP_ROOT/plugins/auto"
+
 # Install (SQLite3, no network required for DB)
 if [ ! -f "$SPIP_ROOT/config/connect.php" ]; then
     "$SPIP_BIN" core:installer \
@@ -320,11 +350,37 @@ for plugin_dep in $PLUGIN_DEPS; do
     activate_or_install_plugin "$plugin_dep" || { echo "Failed: $plugin_dep" >&2; exit 1; }
 done
 
-"$SPIP_BIN" plugins:activer "$PLUGIN_PREFIX" -y
+# Activate the plugin itself through the same checked helper: plugins:activer exits 0
+# even when it activates nothing (unmet dependency, prefix not found).
+activate_or_install_plugin "$PLUGIN_PREFIX" || { echo "Failed: $PLUGIN_PREFIX" >&2; exit 1; }
+
+# plugins:activer does NOT run the plugins' _upgrade() functions. Without this step the
+# plugin is active but its schema is missing: no tables, no metas, no installed content.
+"$SPIP_BIN" plugins:maj:bdd
+
 echo "Integration environment ready."
 ```
 
-**Adapt:** set `PLUGIN_PREFIX` to your plugin's prefix and `PLUGIN_DEPS` to space-separated dependency prefixes (e.g. `"saisies verifier"`).
+**Adapt:** set `PLUGIN_PREFIX` to your plugin's prefix and `PLUGIN_DEPS` to space-separated dependency prefixes (e.g. `"saisies verifier"`). List **every** `<necessite>` from your `paquet.xml`, transitively: SPIP refuses to activate a plugin whose dependencies are not already active, and `plugins:activer` reports that refusal with exit code 0.
+
+**Verify the environment rather than trusting the final message.** After the script, the plugin must
+be active *and* its schema installed:
+
+```sh
+vendor/bin/spip plugins:lister | grep -E "^[[:space:]]*monplugin[[:space:]]"
+vendor/bin/spip config:lire monplugin_base_version --json   # {"...":null} ⇒ _upgrade() never ran
+```
+
+Use `--json` for that second check. Plain `config:lire` always prints the key label, so
+`[ -z "$(spip config:lire monplugin_base_version)" ]` is **never** true and silently passes even
+when the schema is missing. A guard that actually works:
+
+```sh
+if "$SPIP_BIN" config:lire "${PLUGIN_PREFIX}_base_version" --json | grep -q ':null}'; then
+    echo "${PLUGIN_PREFIX}_upgrade() has not run — schema missing" >&2
+    exit 1
+fi
+```
 
 ### Integration bootstrap — `tests/bootstrap_integration.php`
 
