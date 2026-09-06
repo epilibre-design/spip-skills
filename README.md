@@ -13,6 +13,9 @@ In this repository, skills are version-controlled in `skills/` and installed to 
 
 ## Available skills
 
+Skill names are prefixed by scope: `spip-*` for SPIP core, `plugin-*` for one specific plugin.
+`plugin-escal` is the first of that family; other reference plugins will follow.
+
 - `spip-plugins`: SPIP plugin development (`paquet.xml`, pipelines, SQL API, plugin architecture)
 - `spip-squelettes`: SPIP template work (BOUCLE, `#BALISE`, criteres, filtres, `<INCLURE>`)
 - `spip-formulaires`: SPIP CVT form structure and conventions (HTML wrappers, `charger/verifier/traiter`, errors)
