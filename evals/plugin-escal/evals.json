@@ -68,6 +68,19 @@
         "N'invente pas de champ « coller du CSS » dans l'espace privé",
         "Indique que ces deux fichiers sont chargés après les feuilles générées et les emportent donc"
       ]
+    },
+    {
+      "id": 6,
+      "prompt": "J'ai écrit ma propre noisette squelettes/inclusions/inc-monbloc.html. Comment je la fais apparaître en 4e position de la colonne de navigation du sommaire d'Escal ?",
+      "expected_output": "On ne peut pas : blocnav4 est un <select> dont les options sont figées dans formulaires/configurer_escal_choix_blocs.php. Il faut passer par une valeur listée — perso, article_libre1…5 — et surcharger le fichier de cette noisette, ou forker sommaire.html.",
+      "files": [],
+      "expectations": [
+        "Dit clairement que le webmestre choisit dans une liste déroulante et ne peut pas saisir un nom de noisette libre",
+        "Situe la liste des valeurs dans les tableaux 'data' de formulaires/configurer_escal_choix_blocs.php",
+        "Ne présente pas « déposer inc-monbloc.html puis saisir monbloc dans blocnav4 » comme la solution",
+        "Propose les vrais contournements : reprendre une valeur listée (perso, article_libre1…5) en surchargeant squelettes/inclusions/inc-perso.html, ou forker sommaire.html dans squelettes/",
+        "S'il mentionne ecrire_config('escal/config/blocnav4','monbloc'), précise que la valeur n'est pas dans le <select> et saute au prochain enregistrement de l'écran de configuration"
+      ]
     }
   ]
 }
