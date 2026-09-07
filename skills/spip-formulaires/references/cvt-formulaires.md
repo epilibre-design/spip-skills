@@ -226,7 +226,8 @@ Page render (every hit, after POST processing if any):
 ```
 
 The four related pipelines (`formulaire_charger`, `formulaire_verifier`, `formulaire_traiter`,
-`formulaire_receptionner`) are documented in full in `references/pipelines.md`.
+`formulaire_receptionner`) are documented in full in the **`spip-plugins`** skill,
+`references/pipelines.md`.
 
 ---
 
