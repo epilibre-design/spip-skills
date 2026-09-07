@@ -22,6 +22,7 @@ Skill names are prefixed by scope: `spip-*` for SPIP core, `plugin-*` for one sp
 - `spip-saisies`: the Saisies plugin (field types, custom types in `saisies/`, pipelines, `inc/saisies*` PHP API)
 - `spip-lang`: SPIP language files (`lang/prefix_XX.php`, key naming conventions, `_T()`, `<:module:key:>`)
 - `spip-logs`: SPIP logging practices (`spip_log()`, journal files, debug workflow)
+- `spip-testing`: PHPUnit testing of plugins and squelettes (setup, unit tests with mocks, integration tests against a real SPIP)
 - `spip-mutualisation-maintenance`: SPIP farm inventory, shared updates, backups/rollback, and incident investigation
 - `plugin-escal`: the Escal squelette (noisettes, `escal/config` settings, special pages, layouts, technical mots-clés, spip-cli install)
 
@@ -60,6 +61,26 @@ for d in skills/spip-*; do
 done
 ```
 
+## Install a plugin skill (`plugin-*`)
+
+The commands above install the `spip-*` skills, which are the SPIP core baseline and apply to any
+site. Skills named `plugin-*` document one specific plugin and are useless unless that plugin is
+installed on the site you work on, so they are installed **on demand**, one at a time.
+
+Linux/macOS:
+
+```bash
+cp -R skills/plugin-escal ~/.claude/skills/
+```
+
+Windows PowerShell:
+
+```powershell
+Copy-Item -Recurse -Force "skills/plugin-escal" "$HOME/.claude/skills/"
+```
+
+The symlink loop works the same way with an explicit folder name instead of the `skills/spip-*` glob.
+
 ## Installation on claude.ai
 
 Custom skill installation is available in Customize > Skills.
@@ -96,9 +117,13 @@ You should see these folders:
 - `~/.claude/skills/spip-plugins`
 - `~/.claude/skills/spip-squelettes`
 - `~/.claude/skills/spip-formulaires`
+- `~/.claude/skills/spip-saisies`
 - `~/.claude/skills/spip-lang`
 - `~/.claude/skills/spip-logs`
+- `~/.claude/skills/spip-testing`
 - `~/.claude/skills/spip-mutualisation-maintenance`
+
+Plus one folder per `plugin-*` skill you chose to install, for example `~/.claude/skills/plugin-escal`.
 
 Optional deeper check (Linux/macOS):
 
@@ -106,8 +131,10 @@ Optional deeper check (Linux/macOS):
 test -f ~/.claude/skills/spip-plugins/SKILL.md && echo "spip-plugins OK"
 test -f ~/.claude/skills/spip-squelettes/SKILL.md && echo "spip-squelettes OK"
 test -f ~/.claude/skills/spip-formulaires/SKILL.md && echo "spip-formulaires OK"
+test -f ~/.claude/skills/spip-saisies/SKILL.md && echo "spip-saisies OK"
 test -f ~/.claude/skills/spip-lang/SKILL.md && echo "spip-lang OK"
 test -f ~/.claude/skills/spip-logs/SKILL.md && echo "spip-logs OK"
+test -f ~/.claude/skills/spip-testing/SKILL.md && echo "spip-testing OK"
 test -f ~/.claude/skills/spip-mutualisation-maintenance/SKILL.md && echo "spip-mutualisation-maintenance OK"
 ```
 
@@ -117,8 +144,10 @@ Optional deeper check (Windows PowerShell):
 Test-Path "$HOME/.claude/skills/spip-plugins/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-squelettes/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-formulaires/SKILL.md"
+Test-Path "$HOME/.claude/skills/spip-saisies/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-lang/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-logs/SKILL.md"
+Test-Path "$HOME/.claude/skills/spip-testing/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-mutualisation-maintenance/SKILL.md"
 ```
 
