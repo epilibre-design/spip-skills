@@ -3,7 +3,31 @@
 A **noisette** is a block squelette in `inclusions/inc-‹nom›.html`. 107 ship with Escal 5.6.0.
 A slot holds the **short name only** — `derniers_articles`, not `inc-derniers_articles.html`.
 
-To override one, drop a file at `squelettes/inclusions/inc-‹nom›.html`. To add one, create the file and type its short name into a slot.
+## 0. Slots are closed lists, not free text
+
+Every `bloc*` key is a Saisies **`selection`** — a `<select>` whose options are hard-coded in the
+`'data'` arrays of `formulaires/configurer_escal_choix_blocs.php`. The webmestre **picks a noisette
+from a dropdown**; no screen lets an arbitrary name be typed. Dropping
+`squelettes/inclusions/inc-monbloc.html` into the path does **not** make `monbloc` selectable
+anywhere — the list does not scan the filesystem.
+
+So the ways to get your own content into a page are:
+
+| Besoin | Moyen |
+|---|---|
+| Change what a listed block renders | Override its file: `squelettes/inclusions/inc-‹nom›.html` — same slot value, your HTML |
+| A free block of your own, no code | `perso` (« Bloc à personnaliser », articles tagged `special`) or `article_libre1`…`5` (articles tagged `article-libre1`…`5`) — listed values whose content is editorial |
+| A custom central body | mot of group `type_article` / `type_rubrique` → `inc-article_‹mot›.html` (§5) |
+| Anything the slots cannot express | fork the page squelette (`sommaire.html`, `article.html`…) into `squelettes/` |
+
+What *is* free text is each block's **title**: `titreperso`, `titreactus`, `titremenuV1`… on the
+« Paramétrage des blocs » screen (`?cfg=parametrage_blocs`), listed per noisette in §2.
+
+**Scripted writes are the one loophole — and not a supported one.** The `<INCLURE>` interpolates the
+stored string verbatim, so `ecrire_config('escal/config/blocnav2', 'monbloc')` really does render
+`inclusions/inc-monbloc.html` when that file is in the path. But the value is absent from the
+`<select>`, so the next save of that config screen replaces it with a listed one. Never present this
+as « how you add a block ».
 
 ---
 
@@ -18,6 +42,8 @@ Each family exposes a different subset. A value outside its family's list render
 | `article_libre1`…`5` | ✅ | ✅ | ✅ | ✅ | — |
 | `articles_de_rubrique` | ✅ | — | — | — | — |
 | `calendrier` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `choixmenuV1` ¹ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `choixmenuV2` ¹ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `decouvrir_articles` | — | — | ✅ | — | — |
 | `derniers_articles` | ✅ | — | ✅ | — | — |
 | `derniers_comments` | ✅ | — | — | ✅ | ✅ |
@@ -42,6 +68,10 @@ Each family exposes a different subset. A value outside its family's list render
 | `video_accueil` | ✅ | — | — | — | — |
 | `rien` | ✅ | ✅ | ✅ | ✅ | ✅ |
 
+¹ **Colonne navigation only.** `choixmenuV1`/`choixmenuV2` are offered in every `blocnav*` family and in **no** `blocextra*` one. Every other value above is offered in both columns of its families.
+
+Option counts per dropdown, `rien` included — sommaire **29** nav / **27** extra · article **22** / **20** · rubrique **20** / **18** · autres pages **21** / **19** · forum de site **16** (nav only).
+
 Slot keys per family: `blocnav‹n›`/`blocextra‹n›` (sommaire, 1–10) · `blocnavart`/`blocextraart` (1–6) · `blocnavrub`/`blocextrarub` (1–6) · `blocnavpages`/`blocextrapages` (1–10) · `blocnavforumsite` (1–10).
 
 ## 2. What each lateral noisette does
@@ -53,6 +83,8 @@ Slot keys per family: `blocnav‹n›`/`blocextra‹n›` (sommaire, 1–10) · 
 | `article_libre1`…`5` | Article libre 1–5 | Five free slots, each showing the article tagged `article-libre1`…`5` | `togglearticlelibre1`…`5` |
 | `articles_de_rubrique` | Articles de rubrique | Articles of the rubrique tagged **`articles-de-rubrique`** | `titreartderub`, `nombreartderub`, `paginartderub`, `toggleartderub` |
 | `calendrier` | Mini calendrier | Month grid of events; links to the agenda page | `titrecalendrier`, `lienagenda`, `liennouvelevent`, `togglecalendrier` |
+| `choixmenuV1` | Menu vertical dépliant | The site tree as a foldable vertical menu — includes `inc-menu_vertical` or `inc-menu2eniveau_vertical` depending on `rubniveaudeux` | `titremenuV1`, `articlesmenuV1`, `rubniveaudeux` |
+| `choixmenuV2` | Menu vertical déroulant à droite | Same tree, flyout to the right — `inc-menu_vertical_2` / `inc-menu2eniveau_vertical_2` | `articlesmenuV2`, `rubniveaudeux` (no title key) |
 | `decouvrir_articles` | À découvrir | Random articles from the branch, minus those tagged `pas-a-decouvrir` | `titredecouvrirarticles`, `pagindecouvrir`, `toggledecouvrirarticles` |
 | `derniers_articles` | Derniers articles | Newest articles, excluding rubriques tagged `pas-a-la-une`/`invisible` | `titrederniersart`, `nombrederniersart`, `datederniersart`, `togglederniersarticles` |
 | `derniers_comments` | Derniers commentaires | Latest forum messages | `titredernierscomms`, `nbredernierscomms`, `toggledernierscomments` |
@@ -160,9 +192,10 @@ you place `decouvrir_articles` and set `siteourub`.
 | `evenements` | `donneescalendrier` | `inc-evenements_events` / `inc-evenements_articles` |
 | `calendrier` | `donneescalendrier` | `inc-calendrier_event` / `inc-calendrier_art` |
 | `sites_favoris` | current context (rubrique or not) | `inc-sites_favoris_rub` / `_site` |
+| `choixmenuV1` / `choixmenuV2` | `rubniveaudeux` = `oui` \| `non` | `inc-menu2eniveau_vertical` / `inc-menu_vertical` (resp. `…_2`) |
 
 Others are pure plumbing with no setting of their own: `inc-triurlrubrique`, `inc-video_player`,
-`inc-donnees_exif`, `inc-choixmenuV1` / `V2`, `inc-annonce_defilant_article`, `inc-evenements_inscription`,
+`inc-donnees_exif`, `inc-annonce_defilant_article`, `inc-evenements_inscription`,
 `inc-events_agenda`, `inc-events_calendrier`.
 
 ## 7. Noisettes de structure

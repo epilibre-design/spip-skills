@@ -41,6 +41,7 @@ These are the things agents reliably get wrong about Escal. Every row was an act
 | Escal has a "paste your CSS here" field | It does not. Surcharge via **`squelettes/styles/perso.css`** and **`squelettes/persoconfig.css.html`**. |
 | "fluide/mixte change the column order" | Column order is the **letters** (`PMP`, `MPP`, `PPM`, `MP`, `PM`). `fixe`/`fluide`/`mixte` are **width modes**, orthogonal to order. |
 | "`blocnav` = colonne de gauche" | **Not always.** `navigation`/`extra` are *slots*, not sides — which side they land on depends on the layout, and RTL swaps them. See the placement table below. |
+| "Drop `inc-monbloc.html` in `squelettes/`, then type `monbloc` in a slot" | **No.** Every `bloc*` slot is a `<select>` with a hard-coded option list (`formulaires/configurer_escal_choix_blocs.php`). The webmestre *picks* a block; nothing scans the filesystem. To ship your own content use `perso` / `article_libre1…5`, or override a listed noisette's file. |
 | Tab value = noisette filename | The `onglet‹n›` values are their own vocabulary: `derniersarticles` → `inc-une_derniers.html`, `rubrique2` → `inc-rubrique_accueil2.html`. See references/noisettes.md. |
 
 **When unsure of an exact key or filename, read the plugin source rather than guessing.** The authoritative list of block values is the `'data'` arrays in `formulaires/configurer_escal_choix_blocs.php`.
@@ -190,7 +191,17 @@ ecrire_config('escal/config/blocnav2', 'derniers_articles');
 // → renders inclusions/inc-derniers_articles.html
 ```
 
-Each family accepts a **different subset** of noisettes (27 on the sommaire, 20 on article, 14 on the site forum). Setting a value outside its family's list yields an empty slot, not an error.
+**Each slot is a closed dropdown.** The screen renders a Saisies `selection` per slot; its options are
+hard-coded in the `'data'` arrays of `formulaires/configurer_escal_choix_blocs.php`. The webmestre
+chooses among them — there is no free-text field, and adding a file to `squelettes/inclusions/` adds
+nothing to the list. Option counts per dropdown (`rien` included) differ by family *and* by column:
+sommaire 29 nav / 27 extra, article 22 / 20, rubrique 20 / 18, autres pages 21 / 19, forum de site 16.
+The only values that differ between the two columns are `choixmenuV1` / `choixmenuV2`, offered in
+`blocnav*` only.
+
+`ecrire_config()` bypasses the form, so a value outside the list is stored as-is: it renders
+`inclusions/inc-‹valeur›.html` if that file exists, an empty slot otherwise — and the next save of the
+config screen drops it back to a listed value. Do not sell that as the way to add a block.
 
 **Full catalogue, per-family availability, and the central « À la une » tabs: `references/noisettes.md`.**
 
@@ -265,7 +276,8 @@ SPIP resolves `squelettes/` before plugins, and both hooks load *after* every ge
 | CSS that reads `#CONFIG` | `squelettes/persoconfig.css.html` (ship-empty file exists for this) |
 | Colour one section | `squelettes/styles/secteur‹ID_SECTEUR›.css` |
 | Replace a block | `squelettes/inclusions/inc-‹nom›.html` |
-| Add a new block | `squelettes/inclusions/inc-‹monbloc›.html`, then set a slot to `monbloc` |
+| Add your own content to a lateral slot | Nothing new to name: use the listed `perso` (articles tagged `special`) or `article_libre1`…`5`, and override `squelettes/inclusions/inc-perso.html` if the markup must change |
+| Give a rubrique its own central gabarit | `squelettes/inclusions/inc-rubrique_‹mot›.html` + a mot of group `type_rubrique` |
 
 Never edit files inside the plugin directory — upgrades overwrite them.
 
