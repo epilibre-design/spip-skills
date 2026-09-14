@@ -89,6 +89,23 @@ surrounding HTML/JSON. No PHP error is raised — the squelette still compiles.
 Compiling cleanly is not enough to catch this — always render the actual page/endpoint after
 touching a `#SET{}` value expression, not just check for compile errors.
 
+### Gotcha: a language string as #SET value needs the outer brackets
+
+The opposite case: when the value is a language string `<:module:key:>`, it is the **whole
+`#SET`** that must be wrapped in `[( )]`. Bare, the assignment works but the closing brace
+of the `#SET` is printed in the page. Again no compile error.
+
+```html
+<!-- WRONG: a stray } is printed where the #SET stands -->
+#SET{label, <:monplugin:coming_soon:>}
+
+<!-- CORRECT -->
+[(#SET{label, <:monplugin:coming_soon:>})]
+```
+
+Related trap: a `#SAISIE{…}` spanning several lines, or holding a language string, must be
+written `[(#SAISIE{…})]` too; without the brackets the compiler reads `label=` as a filter.
+
 ---
 
 ## #SESSION and #SESSION_SET — Session data
