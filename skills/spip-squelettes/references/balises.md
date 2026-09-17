@@ -263,6 +263,13 @@ Example use case: in the notification plugin, a squelette such as `inscription.h
 [(#REM) This section is the main article body ]
 ```
 
+**Gotcha: balises written inside a `#REM` are compiled.** The compiler parses the comment
+before discarding it, so a balise that requires arguments, cited bare, breaks compilation:
+`[(#REM) a language string in a #SET needs brackets ]` raises "Argument manquant dans la
+balise SET", and the debugger reports it on a line unrelated to the comment. Name the thing in
+plain words ("in an assignment") instead of writing the balise. A balise cited with its
+arguments (`#ENV{theme}`) compiles harmlessly.
+
 ---
 
 ### Other Loop-Specific Balises (quick reference)
