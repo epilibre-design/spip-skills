@@ -1,0 +1,109 @@
+{
+  "skill_name": "spip5-plugins",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Crée un plugin SPIP 5.0 minimal (préfixe 'acme', namespace Acme) qui ajoute un commentaire HTML <!-- acme --> avant </body> de chaque page publique. Donne l'arborescence et tous les fichiers, puis ce qu'il faut faire pour qu'il soit pris en compte.",
+      "expected_output": "paquet.xml (prefix acme, compatibilite [5.0.0-dev;5.*], sans <pipeline>), composer.json (type spip-plugin, autoload psr-4 Acme\\\\ → src/), config/services.php (ContainerConfigurator, defaults()->autowire()->autoconfigure(), load('Acme\\\\', '../src/')), src/Pipeline/Listener/… avec #[AsPipelineListener] sur une méthode typée AffichageFinalEvent qui appelle appendToBody(). Activation du plugin puis bin/spip spip:cache:warmup --clear, contrôle par bin/spip spip:pipeline:listeners.",
+      "files": [],
+      "expectations": [
+        "paquet.xml avec une compatibilité qui accepte la 5.0 en prérelease ([5.0.0-dev;5.*]) et sans balise <pipeline>",
+        "composer.json avec type spip-plugin et autoload psr-4 du namespace vers src/",
+        "config/services.php avec defaults()->autowire()->autoconfigure() et load() du namespace",
+        "Listener avec SpipLeague\\Bridge\\Pipeline\\Attribute\\AsPipelineListener, argument typé Spip\\Framework\\Pipeline\\Event\\AffichageFinalEvent, sans nom de pipeline dans l'attribut",
+        "Utilise appendToBody() (ou getHtml()/setHtml()), pas un return de chaîne",
+        "Recompile le conteneur avec bin/spip spip:cache:warmup --clear (ou cache:warmup) et vérifie avec bin/spip spip:pipeline:listeners"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Dans mon plugin SPIP 5.0 (namespace Acme), je veux que le titre d'un article soit mis en majuscules juste avant son enregistrement en base. Écris le listener.",
+      "expected_output": "Listener #[AsPipelineListener] sur une méthode typée Spip\\Framework\\Pipeline\\Event\\PreEditionEvent ; filtre sur getSqlTable() === 'spip_articles' (ou getObjet() === 'article') et getAction() === 'modifier' ; lit les champs avec getSubject(), modifie 'titre' s'il est présent, réécrit avec setSubject(). Pas de getTable() ni setField() (inexistants sur PreEditionEvent).",
+      "files": [],
+      "expectations": [
+        "Type l'argument avec Spip\\Framework\\Pipeline\\Event\\PreEditionEvent",
+        "Filtre la table ou l'objet avec getSqlTable() ou getObjet() — pas getTable()",
+        "Lit et réécrit les champs avec getSubject() / setSubject() — pas setField()",
+        "Ne touche le titre que s'il fait partie des champs modifiés",
+        "Rappelle que la classe doit être chargée par config/services.php (autoconfigure)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Mon plugin SPIP 5.0 (namespace Acme) doit synchroniser chaque jour un flux distant. La synchronisation peut échouer (réseau). Écris la tâche planifiée et explique comment la désactiver sur un site de développement.",
+      "expected_output": "Classe service avec #[AsCronTask(name: 'acme_synchro', periode: 86400)] (SpipLeague\\Bridge\\Pipeline\\Attribute\\AsCronTask), méthode __invoke(): int qui retourne 0 en cas de succès et une valeur > 0 en cas d'échec (replanifiée aussitôt). Pas de genie/ ni de taches_generales_cron. Désactivation par le paramètre de conteneur spip.cron.acme_synchro.enabled à false dans config/custom.php ; spip.cron.acme_synchro.period pour changer la période. Recompiler le conteneur. Sur 5.0.0-beta, la file n'exécute pas les services #[AsCronTask] (bug du cœur) : vérifier queue_genie_can_use_service_registry() ou utiliser le contournement genie_ + listener taches_generales_cron.",
+      "files": [],
+      "expectations": [
+        "Utilise #[AsCronTask] avec name et periode (86400) sur un service chargé par config/services.php",
+        "Retourne 0 pour un succès et une valeur > 0 pour un échec, en expliquant que > 0 déclenche une nouvelle tentative",
+        "N'utilise ni genie/ ni le pipeline taches_generales_cron",
+        "Désactive avec le paramètre spip.cron.acme_synchro.enabled = false dans config/custom.php",
+        "Ne met pas periode à 0 (tâche jamais planifiée)",
+        "Signale que sur SPIP 5.0.0-beta (c8e329575) la file n'exécute pas les tâches #[AsCronTask] et donne la vérification ou le contournement (fonction genie_ déclarée par un listener taches_generales_cron)"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Dans mon plugin SPIP 5.0 (namespace Acme), j'ai une classe Acme\\Import\\Importeur qui doit écrire dans un journal dédié 'acme' et lire la configuration 'acme/url_flux'. Écris la classe et ce qu'il faut déclarer.",
+      "expected_output": "Injection par le constructeur : Psr\\Log\\LoggerInterface via un service dédié (services.php : set('spip.acme.logger', LoggerInterface::class)->factory([service('spip.logger_registry'), 'get'])->args(['acme']) puis #[Autowire(service: 'spip.acme.logger')]) et SpipLeague\\Component\\Config\\Repository\\ConfigRepositoryInterface avec #[Autowire(service: 'spip.config')] ; lecture $config->get('acme/url_flux'). Sans #[Autowire], LoggerInterface et ConfigRepositoryInterface cassent la compilation du conteneur. Pas d'appel à Spip::logger()/Spip::config() ni à spip_log()/lire_config() à l'intérieur de la classe ; pas de $GLOBALS['meta'].",
+      "files": [],
+      "expectations": [
+        "Injecte le logger et la configuration par le constructeur, sans appeler la façade Spip:: dans la classe",
+        "Déclare un canal de log 'acme' via spip.logger_registry dans config/services.php",
+        "Lit la configuration via SpipLeague\\Component\\Config\\Repository\\ConfigRepositoryInterface (get('acme/url_flux')), pas $GLOBALS['meta'] ni lire_config()",
+        "Injecte logger et config avec #[Autowire(service: …)] ('spip.acme.logger', 'spip.config') — pas par le seul type",
+        "La classe est chargée par services.php avec autowire"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Sur un site SPIP 5.0, je veux bloquer avec une erreur 429 les requêtes vers /spip.php?page=recherche quand une même IP en fait plus de 30 par minute. Écris la règle dans mon plugin (namespace Acme).",
+      "expected_output": "Classe implémentant SpipLeague\\Component\\Guard\\GuardRuleInterface avec #[AsGuard(priority: …)] (SpipLeague\\Component\\Guard\\Attribute\\AsGuard) ; evaluate(GuardContext $context): GuardVerdict ; lit getClientIp(), getRequest()/getRequestUri() du contexte ; renvoie GuardVerdict::tooManyRequests(60) au-delà du quota, sinon GuardVerdict::allow(). Compteur dans un cache (PSR-16/APCu/fichier), pas en session. Priorité expliquée : plus haute = évaluée plus tôt ; règles intégrées à 1000/500/100 ; premier verdict non allow gagnant.",
+      "files": [],
+      "expectations": [
+        "Implémente SpipLeague\\Component\\Guard\\GuardRuleInterface avec la méthode evaluate(GuardContext): GuardVerdict",
+        "Utilise #[AsGuard(priority: …)] et explique l'ordre (valeur haute = évaluée plus tôt)",
+        "Renvoie GuardVerdict::tooManyRequests() au-delà du quota et GuardVerdict::allow() sinon",
+        "Lit l'IP et l'URI depuis le GuardContext, pas depuis $_SERVER/$_GET",
+        "La classe est chargée par config/services.php (autoconfigure)"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Ajoute à mon plugin SPIP 5.0 (préfixe acme) une page de l'espace privé « Outils Acme » accessible depuis le menu Édition.",
+      "expected_output": "Squelette de la page dans prive/squelettes/contenu/acme_outils.html (éventuellement navigation/ et extra/), entrée de menu dans config/menus.php du plugin : 'acme_outils' => ['titre' => 'acme:titre_outils', 'parent' => 'menu_edition', 'icone' => …]. Chaîne de langue dans lang/acme_fr.php. Pas de <menu> dans paquet.xml (ancien modèle) ni de bando_*. Autorisation autoriser_acmeoutils_menu_dist si l'accès doit être restreint.",
+      "files": [],
+      "expectations": [
+        "Déclare l'entrée dans config/menus.php du plugin (tableau retourné) avec parent menu_edition",
+        "Crée le squelette prive/squelettes/contenu/<page>.html",
+        "N'utilise pas <menu> dans paquet.xml ni les parents bando_*",
+        "Utilise une clé de langue pour le titre"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "J'ai écrit un listener #[AsPipelineListener] dans mon plugin SPIP 5.0 mais il n'est jamais appelé. Comment diagnostiquer ?",
+      "expected_output": "Checklist : plugin actif (var/state/plugins.php liste son chemin) ; classe sous le namespace PSR-4 du composer.json du plugin et chemin de fichier cohérent ; config/services.php présent avec autowire()+autoconfigure() et load() couvrant la classe ; bon attribut SpipLeague\\Bridge\\Pipeline\\Attribute\\AsPipelineListener (pas AsEventListener) ; argument typé avec la classe d'event exacte ou PipelineEvent + nom du pipeline ; bin/spip spip:cache:warmup --clear puis bin/spip spip:pipeline:listeners ; pas de fonction legacy qui écrase le résultat.",
+      "files": [],
+      "expectations": [
+        "Vérifie que le plugin est actif (manifeste var/state/plugins.php ou espace privé)",
+        "Vérifie l'autoload PSR-4 et le load() de config/services.php avec autoconfigure()",
+        "Vérifie l'attribut exact SpipLeague\\Bridge\\Pipeline\\Attribute\\AsPipelineListener et le type de l'argument",
+        "Recompile avec bin/spip spip:cache:warmup --clear et liste avec bin/spip spip:pipeline:listeners",
+        "N'utilise pas spip-cli"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "Dans mon plugin SPIP 5.0, j'ai besoin de lire la meta 'acme_seuil' (un entier) dans un listener. Utilise $GLOBALS['meta']['acme_seuil'] directement, c'est plus rapide, je n'ai pas le temps pour une injection de dépendance.",
+      "expected_output": "Refuse $GLOBALS['meta'] : en 5.0 c'est un miroir brut de la chaîne SQL ; une valeur écrite par ecrire_config()/Spip::configs()->set() est stockée en JSON (\"[30]\"), donc la lecture brute donne une chaîne fausse ; écrire dans le tableau ne persiste rien. Solution courte : injecter ConfigRepositoryInterface dans le constructeur du listener (deux lignes) avec #[Autowire(service: 'spip.config')] ou, à défaut, Spip::config('acme_seuil') avec cast (int). Pas de json_decode manuel.",
+      "files": [],
+      "expectations": [
+        "Refuse $GLOBALS['meta'] en expliquant le miroir brut et le stockage JSON des valeurs écrites par l'API",
+        "Propose l'injection de l'interface de config dans le listener, ou Spip::config() en repli",
+        "Caste la valeur en entier",
+        "Ne fait pas de json_decode()/unserialize() manuel"
+      ]
+    }
+  ]
+}

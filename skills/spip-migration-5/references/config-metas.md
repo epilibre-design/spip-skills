@@ -14,7 +14,7 @@ Metas and auxiliary config tables are handled by `spip-league/config`: services 
 | other store | `Spip::configs('meta_perso')->get('cle')` / `Spip::config('cle', null, 'meta_perso')` | `lire_config('/meta_perso/cle')` — **deprecated** |
 | refresh from DB | `Spip::configs($store)->refresh()` | `touch_meta()` — removed |
 | purge cache + mirror | `Spip::configs()->reset()` | `spip_unlink(_FILE_META)` — removed |
-| object code | inject `ConfigRepositoryInterface` / `ConfigManagerInterface` | |
+| object code | inject `ConfigRepositoryInterface` with `#[Autowire(service: 'spip.config')]` / `ConfigManagerInterface` with `#[Autowire(service: 'spip.config.manager')]` (no alias: a plain type breaks the container) | |
 
 `lire_config()`, `ecrire_config()`, `effacer_config()`, `ecrire_meta()` keep their signatures and are **not**
 deprecated; only the `/<store>/` prefix and `lire_config(,, false)` are.
