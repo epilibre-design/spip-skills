@@ -84,16 +84,20 @@ in `docs/notes/2026-10-17-spip-5-deprecations-inventaire.md`).
 ## Testing (writing-skills)
 
 An edit to a skill needs a failing test first. One eval case per skill, in
-`evals/spip5-encadres/evals.json`: a task on a **5.0-only** project (the prompt says so, and the fixture carries
-only some of the markers above, never `config/services.php`, so detection is tested too) where only the 4.x skill
-is loaded.
+`evals/spip5-encadres/evals.json`: a task on a **5.0-only** project where only the 4.x skill is loaded.
+
+The prompt **never names the version**: it must be deduced from the fixture files. Each fixture carries only some
+of the markers above (never `config/services.php`), and the markers vary between cases (`bin/spip` in one,
+`ecrire/src/SpipVersion.php` in another, a plugin `paquet.xml` with `compatibilite="[5.0.0-dev;5.*]"` in a third).
+A case passes only if the answer cites the marker it relied on. "5.0-only" is likewise carried by the fixture
+(`compatibilite` lower bound at 5.0), not by the prompt.
 
 GREEN requires the **5.0 API**. A deprecated 4.x form that still runs (`spip_log()`, `{fusion}`, `_request()`,
 pipeline function) fails the case, even with a warning. The only accepted exception is a separate dual-compat
-variant of the case, where the prompt states the plugin must also run on 4.4: there the GREEN answer is the form
+variant of the case, whose fixture declares `compatibilite="[4.4.0;5.*]"`: there the GREEN answer is the form
 valid on both versions, per `spip-migration-5` `double-compat.md`.
 
-| Skill | Case | RED (expected without callout) | GREEN |
+| Skill | Case (version given by the fixture only) | RED (expected without callout) | GREEN |
 |---|---|---|---|
 | `spip-logs` | log an error in a 5.0 plugin | `spip_log(…, _LOG_ERREUR)` | `Spip::logger('x')->error()` (dual-compat variant: `spip_log()`) |
 | `spip-squelettes` | group articles by year on a 5.0 site | `{fusion}` | `{groupby}` (dual-compat variant: `{fusion}`) |
@@ -104,7 +108,7 @@ valid on both versions, per `spip-migration-5` `double-compat.md`.
 | `plugin-escal` | install Escal on a 5.0 site | spip-cli commands | version check first |
 | `spip-mutualisation-maintenance` | upgrade a 5.0 farm | 4.x procedure applied | stops and states the limit |
 
-A second run with a **4.4** project checks that the callout does not leak 5.0 code into 4.x work
+A second run with a **4.4** project (4.4.23 fixture, version again not named in the prompt) checks that the callout does not leak 5.0 code into 4.x work
 (no `Spip::` on 4.4). Records in `docs/tests/spip5-encadres-baseline.md` and
 `docs/tests/spip5-encadres-green.md`.
 
