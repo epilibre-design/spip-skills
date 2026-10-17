@@ -1,0 +1,113 @@
+{
+  "skill_name": "spip-migration-5",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Mon plugin SPIP 4.4 (prefix 'acme') déclare dans paquet.xml <pipeline nom=\"affichage_final\" inclure=\"acme_pipelines.php\" /> et contient function acme_affichage_final($html) { return str_replace('</body>', '<script src=\"/js/acme.js\"></script></body>', $html); }. Migre-le vers le modèle natif de SPIP 5.0 : donne tous les fichiers à créer ou modifier.",
+      "expected_output": "Classe listener sous un namespace PSR-4 (ex. src/Pipeline/Listener/) avec une méthode annotée #[AsPipelineListener] sans argument, typée AffichageFinalEvent (Spip\\Framework\\Pipeline\\Event), qui appelle $event->appendToBody(). config/services.php (ContainerConfigurator, defaults()->autowire()->autoconfigure(), load() du namespace). composer.json du plugin avec autoload psr-4. Retrait de la balise <pipeline> et de la fonction legacy (ou fonction gardée seulement si du code tiers l'appelle). Invalidation du cache boot (bin/spip cache:warmup --clear).",
+      "files": [],
+      "expectations": [
+        "Utilise l'attribut SpipLeague\\Bridge\\Pipeline\\Attribute\\AsPipelineListener (pas un EventSubscriberInterface Symfony, pas #[AsEventListener])",
+        "Type l'argument avec Spip\\Framework\\Pipeline\\Event\\AffichageFinalEvent et n'indique pas le nom du pipeline dans l'attribut (déduit du type)",
+        "Fournit un config/services.php avec autowire() et autoconfigure() et un load() du namespace du plugin",
+        "Déclare l'autoload PSR-4 dans le composer.json du plugin",
+        "Indique que la balise <pipeline> de paquet.xml n'est plus nécessaire pour un listener",
+        "Mentionne la recompilation du conteneur (cache boot, bin/spip cache:warmup --clear, ou réactivation du plugin)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Ce code PHP d'un plugin SPIP 4.4 doit tourner sur SPIP 5.0 uniquement. Réécris-le :\n\nif (_IS_CLI) { $mode = 'cli'; }\nif (defined('_ESPACE_PRIVE')) { $url = _DIR_RESTREINT_ABS . '?exec=acme'; }\n$racine = _ROOT_RACINE;\nspip_log('Import échoué', 'acme.' . _LOG_ERREUR);\n$taille = $GLOBALS['meta']['acme_taille'];\n$v = \\SpipLeague\\Component\\Kernel\\param('spip.dirs.tmp');",
+      "expected_output": "Spip::platform()->isCli() ; Spip::isBackOffice() ; generer_url_ecrire('acme') pour l'URL ?exec= (pas de concaténation du préfixe spip.routes.back_office, chemin relatif 'ecrire/') ; Spip::directories()->getProjectDir() ; Spip::logger('acme')->error('Import échoué') ; Spip::config('acme_taille') ; Spip::param('spip.dirs.tmp'). Pas de app()->getRootDir() (déprécié), pas de param()/service() globaux (dépréciés).",
+      "files": [],
+      "expectations": [
+        "_IS_CLI remplacé par Spip::platform()->isCli() (ou PHP_SAPI === 'cli')",
+        "defined('_ESPACE_PRIVE') remplacé par Spip::isBackOffice()",
+        "_DIR_RESTREINT_ABS . '?exec=acme' remplacé par generer_url_ecrire('acme') — pas par une concaténation de Spip::param('spip.routes.back_office')",
+        "_ROOT_RACINE remplacé par Spip::directories()->getProjectDir() — pas par app()->getRootDir() qui est déprécié",
+        "spip_log remplacé par Spip::logger('acme')->error(...)",
+        "$GLOBALS['meta'] remplacé par Spip::config('acme_taille')",
+        "La fonction param() de SpipLeague\\Component\\Kernel est remplacée par Spip::param() (param() est dépréciée)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Quels changements faut-il faire dans ce squelette SPIP pour qu'il fonctionne sur SPIP 5.0 ?\n\n<style>a[href] { background-image: url(#CHEMIN_IMAGE{lien.svg}); }</style>\n<BOUCLE_annees(ARTICLES){fusion YEAR(date)}{par date}>#ANNEE</BOUCLE_annees>\n<INCLURE{fond=inclure/entete}{env}></INCLURE>\n[(#LOGO_ARTICLE|left)]\n<BOUCLE_l(POUR){tableau #LISTE{a,b}}>#VALEUR</BOUCLE_l>\n<:Acme:Titre_Page:>",
+      "expected_output": "CSS : échapper la parenthèse url\\( ou mettre des guillemets url(\"#CHEMIN_IMAGE{lien.svg}\") car a[href] … ) est désormais lu comme partie optionnelle. {fusion} → {groupby}. </INCLURE> supprimé → <INCLURE{fond=inclure/entete}{env} />. [(#LOGO_ARTICLE{left})]. Boucle POUR → DATA {source tableau, #LISTE{a,b}}. Items de langue sensibles à la casse : la clé doit correspondre exactement à la déclaration (préférer les minuscules).",
+      "files": [],
+      "expectations": [
+        "Identifie le risque CSS : les crochets peuvent ouvrir une partie optionnelle ; propose url\\( ou des guillemets",
+        "Remplace {fusion ...} par {groupby ...}",
+        "Remplace la balise fermante </INCLURE> par la forme auto-fermante />",
+        "Remplace [(#LOGO_ARTICLE|left)] par [(#LOGO_ARTICLE{left})]",
+        "Remplace la boucle POUR par une boucle DATA avec {source tableau, ...}",
+        "Signale que les items de langue deviennent sensibles à la casse en SPIP 5.0"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Après la migration de mon site en SPIP 5.0, ce test d'un plugin est devenu toujours faux, et un unserialize() lève une erreur :\n\nif ($GLOBALS['meta']['taille_preview'] == '150') { ... }\n$conf = unserialize($GLOBALS['meta']['acme_reglages']);\n\nLa config est pourtant bien enregistrée. Explique pourquoi et corrige.",
+      "expected_output": "En SPIP 5.0, les écritures via ecrire_config()/Spip::configs()->set() sérialisent les valeurs non-chaînes en JSON (150 → \"[150]\", tableau → \"[…]\") via spip.serializer. $GLOBALS['meta'] n'est qu'un miroir brut de la chaîne SQL, non désérialisé. Une clé n'adopte le JSON qu'à sa prochaine écriture. Correction : Spip::config('taille_preview') et Spip::config('acme_reglages'), qui désérialisent (JSON ou ancien serialize()).",
+      "files": [],
+      "expectations": [
+        "Explique que la valeur est désormais stockée en JSON (ex. \"[150]\") lors des écritures par l'API config",
+        "Explique que $GLOBALS['meta'] est un miroir brut (chaîne SQL) qui n'est pas désérialisé",
+        "Corrige par Spip::config('…') (ou lire_config) qui gère la désérialisation, y compris l'ancien format serialize()",
+        "Ne propose pas de json_decode()/unserialize() manuel sur $GLOBALS['meta'] comme solution"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Mon plugin SPIP 4.4 déclare une tâche périodique ainsi :\n\nfunction acme_taches_generales_cron($taches) { $taches['acme_purge'] = 3600; return $taches; }\n// genie/acme_purge.php\nfunction genie_acme_purge_dist($t) { acme_purger(); return 1; }\n\nMigre-la vers SPIP 5.0.",
+      "expected_output": "Classe service annotée #[AsCronTask(name: 'acme_purge', periode: 3600)] (SpipLeague\\Bridge\\Pipeline\\Attribute\\AsCronTask) avec __invoke(): int, chargée par config/services.php. Code retour inversé : en 5.0, 0 = succès et > 0 = échec (replanification immédiate) ; garder return 1 ferait considérer la tâche en échec à chaque passage. Supprimer le pipeline taches_generales_cron et le fichier genie.",
+      "files": [],
+      "expectations": [
+        "Utilise #[AsCronTask(name: 'acme_purge', periode: 3600)] sur une classe ou une méthode de service",
+        "La classe est chargée comme service via config/services.php (autoconfigure)",
+        "Signale explicitement que la convention de retour change : 0 = succès, > 0 = échec en SPIP 5.0",
+        "Ne conserve pas return 1 dans la nouvelle tâche",
+        "Retire la déclaration via taches_generales_cron et le fichier genie/"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Je dois maintenir un plugin SPIP compatible à la fois avec SPIP 4.4 et SPIP 5.0 pendant la transition. Il utilise defined('_ESPACE_PRIVE'), _IS_CLI, generer_url_entite(), des fonctions de pipeline classiques et lire_config(). Quelle stratégie adopter et que remplacer ?",
+      "expected_output": "Garder les fonctions de pipeline legacy + <pipeline> dans paquet.xml (toujours appelées en 5.0, cohabitation possible). Utiliser les API présentes dans les deux versions : test_espace_prive() au lieu de _ESPACE_PRIVE, PHP_SAPI === 'cli' au lieu de _IS_CLI, generer_objet_url() au lieu de generer_url_entite() en réordonnant les arguments si une connexion est passée en 5e position (elle passe en 7e), lire_config() (non déprécié). Ne pas utiliser la façade Spip:: sans garde (absente en 4.4). compatibilite=\"[4.4.0;5.*]\" dans paquet.xml. Tester sur les deux versions.",
+      "files": [],
+      "expectations": [
+        "Indique que les fonctions de pipeline legacy et <pipeline> continuent de fonctionner en SPIP 5.0",
+        "Remplace defined('_ESPACE_PRIVE') par test_espace_prive() (disponible en 4.4 et 5.0)",
+        "Remplace _IS_CLI par PHP_SAPI === 'cli'",
+        "Remplace generer_url_entite() par generer_objet_url() sans le présenter comme un simple renommage (connexion 5e → 7e argument, chaînes typées)",
+        "Signale que la façade Spip:: n'existe pas en 4.4 (garde class_exists ou à éviter dans le code commun)",
+        "Indique que lire_config() n'est pas déprécié en 5.0 et peut rester",
+        "Propose un intervalle de compatibilité couvrant 4.4 et 5.x dans paquet.xml"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Comment repérer de façon fiable tout ce qui est déprécié ou supprimé dans le code d'un plugin avant de le passer en SPIP 5.0 ? Je veux une démarche outillée, pas seulement une liste de mémoire.",
+      "expected_output": "Rechercher dans la source SPIP 5.0 les deux marqueurs : trigger_deprecation('spip', '5.0', …) et l'attribut PHP 8.4 #[\\Deprecated(since: '5.0')] (ex. spip_log, _request, méthodes de chemins du Kernel) ; grep dans le plugin des symboles supprimés (catalogue) ; activer les dépréciations en dev et lire les logs ; var_mode=debug_js pour le JS ; bin/spip spip:pipeline:listeners et spip:pipeline:events pour vérifier que les listeners sont enregistrés ; PHP 8.4 minimum ; rector spip-league/rector.",
+      "files": [],
+      "expectations": [
+        "Mentionne les deux mécanismes : trigger_deprecation(...) et l'attribut #[\\Deprecated]",
+        "Propose un grep du plugin à partir d'un catalogue de symboles supprimés/dépréciés",
+        "Mentionne bin/spip spip:pipeline:listeners (ou pipeline:events) pour vérifier les listeners",
+        "Mentionne var_mode=debug_js pour les dépréciations JavaScript",
+        "Rappelle PHP 8.4 minimum pour SPIP 5.0"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "Sur un site SPIP 5.0, j'ai ajouté un listener dans mon plugin mais il ne semble pas appelé. Quelles commandes en ligne de commande lancer pour recompiler et vérifier qu'il est bien enregistré ?",
+      "expected_output": "SPIP 5.0 utilise bin/spip (spip-league/console, symfony/console) à la racine du projet, pas spip-cli. bin/spip spip:cache:warmup --clear (ou cache:clear puis cache:warmup) pour recompiler le conteneur, puis bin/spip spip:pipeline:listeners pour lister les listeners enregistrés (et spip:pipeline:events pour les events typés). Vérifier aussi que la classe est bien chargée par config/services.php et l'autoload PSR-4.",
+      "files": [],
+      "expectations": [
+        "Utilise bin/spip et non la commande spip de spip-cli",
+        "Recompile le conteneur avec spip:cache:warmup --clear (ou cache:clear + cache:warmup)",
+        "Vérifie l'enregistrement avec spip:pipeline:listeners",
+        "Rappelle que la classe doit être chargée par config/services.php (autoconfigure) et autoloadée en PSR-4"
+      ]
+    }
+  ]
+}
