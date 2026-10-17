@@ -23,6 +23,7 @@ Skill names are prefixed by scope: `spip-*` for SPIP core, `plugin-*` for one sp
 - `spip-lang`: SPIP language files (`lang/prefix_XX.php`, key naming conventions, `_T()`, `<:module:key:>`)
 - `spip-logs`: SPIP logging practices (`spip_log()`, journal files, debug workflow)
 - `spip-testing`: PHPUnit testing of plugins and squelettes (setup, unit tests with mocks, integration tests against a real SPIP)
+- `spip-migration-5`: migrating SPIP 4.x plugins and squelettes to SPIP 5.0 (listeners, `#[AsCronTask]`, façade `Spip::`, config/metas, 4.4+5.0 dual compatibility, `bin/spip`)
 - `spip-mutualisation-maintenance`: SPIP farm inventory, shared updates, backups/rollback, and incident investigation
 - `plugin-escal`: the Escal squelette (noisettes, `escal/config` settings, special pages, layouts, technical mots-clés, spip-cli install)
 
