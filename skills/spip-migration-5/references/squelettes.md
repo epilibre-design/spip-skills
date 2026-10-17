@@ -74,8 +74,8 @@ match the declaration exactly; use lowercase keys and module names: `<:acme:titr
 
 ```bash
 grep -rnE "\{(fusion|fusion_supprimer|collecte)\b|</INCLURE>|\.php\)?\}?>|\(POUR\)|\|foreach\b|#LOGO_[A-Z_]+\|(left|right|center|fichier|#URL)|#EXPOSER|#EMBED_DOCUMENT|#HTML5|\|icone\{|\|regledetrois|#LARGEUR_ECRAN|image_typo" --include=*.html .
-grep -rnE "<:[^:>]*[A-Z]" --include=*.html .           # uppercase language keys
-grep -rnE "\[[^]]*\][^{]*\(#" --include=*.html .        # bracket + (# : review for the CSS trap
+grep -rnE "<:([^:>]*:)?[^:>]*[A-Z]" --include=*.html .  # uppercase module or key
+grep -rnE "\[[^]]*\].*\(#" --include=*.html .          # bracket + (# : review for the CSS trap
 ```
 
 Then load each page with `?var_mode=recalcul` and read compilation errors.

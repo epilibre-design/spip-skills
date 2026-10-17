@@ -163,6 +163,6 @@ grep -rnE "\b(spip_log|spip_logger|_request|set_request|spip_query|spip_sha256|a
 grep -rnE "generer_(url_entite|url_entite_absolue|url_ecrire_objet|url_ecrire_entite_edit|introduction_entite|info_entite|lien_entite)\s*\(" .
 grep -rnE "Kernel\\\\(param|service)\(|app\(\)->(getRootDir|getCoreDir|getTmpDir|getEtcDir|getDocDir|getVarDir|getPluginsDir|getExtensionsDir|getTemplateDir|getPrivateTemplateDir|getCustomDir|relative)\(" .
 grep -rnE "lire_config\(['\"]/|ecrire_config\(['\"]/|effacer_config\(['\"]/|spip_sanitize_from_request\([^)]*,\s*(\[|'\*')" .
-grep -rnE "\{(fusion|fusion_supprimer|collecte)\b|</INCLURE>|<INCLURE\((.*)\.php\)|fond=[^}]*\.php|\(POUR\)|\|foreach\b|#LOGO_[A-Z_]+\|(left|right|center|fichier|#URL)|#EXPOSER|#EMBED_DOCUMENT|#HTML5|\|icone\{|#LARGEUR_ECRAN|image_typo|<:[^:>]*[A-Z]" --include=*.html .
+grep -rnE "\{(fusion|fusion_supprimer|collecte)\b|</INCLURE>|<INCLURE\((.*)\.php\)|fond=[^}]*\.php|\(POUR\)|\|foreach\b|#LOGO_[A-Z_]+\|(left|right|center|fichier|#URL)|#EXPOSER|#EMBED_DOCUMENT|#HTML5|\|icone\{|#LARGEUR_ECRAN|image_typo|<:([^:>]*:)?[^:>]*[A-Z]" --include=*.html .
 grep -rnE "<(script|style|menu|onglet)\b|parent=\"(menu_squelette|bando_)" paquet.xml
 ```

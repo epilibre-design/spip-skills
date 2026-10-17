@@ -9,7 +9,7 @@ Real example to imitate: `plugins-dist/spip/bigup/` (5.0): `config/services.php`
 
 ```
 acme/
-├── paquet.xml              compatibilite="[5.0.0;5.*]"  (or [4.4.0;5.*], see double-compat.md)
+├── paquet.xml              compatibilite="[5.0.0-dev;5.*]"  (or [4.4.0;5.*], see double-compat.md)
 ├── composer.json           autoload psr-4 (+ require spip/framework when installed through Composer)
 ├── config/
 │   ├── services.php        registers src/ as services (autowire + autoconfigure)
@@ -26,10 +26,13 @@ acme/
 {
   "name": "acme/acme",
   "type": "spip-plugin",
-  "require": { "spip/framework": "^5.0" },
+  "require": { "spip/framework": "^5.x-dev" },
   "autoload": { "psr-4": { "Acme\\": "src/" } }
 }
 ```
+
+Constraints match the 5.0 prerelease (as in `plugins-dist/spip/*` of 5.0.0-beta): `[5.0.0;5.*]` and `^5.0` exclude
+`5.0.0-beta` / `5.x-dev`, so the plugin would not activate or install. Tighten them once 5.0.0 is released.
 
 Plugin activated through **SVP** (not in the root `composer.json`): only its PSR-4 autoload is registered; its
 `require` are **not** installed — embed a `vendor/` or install the plugin through the root `composer.json`.
