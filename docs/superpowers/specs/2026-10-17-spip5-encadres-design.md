@@ -31,8 +31,10 @@ Same shape in every skill, placed right after the core principle / overview in `
 ```markdown
 ## SPIP 5.0
 
-This skill describes SPIP 4.x. On a 5.0 site (`composer.json` requires `spip/spip` 5.*,
-`bin/spip` present, `config/services.php` in plugins), these rules change:
+This skill describes SPIP 4.x. These rules change on SPIP 5.0 — a site is 5.0 if **any** of:
+`ecrire/src/SpipVersion.php` declares `VERSION = '5.…'`, `bin/spip` exists, `vendor/spip/framework/` exists,
+plugins live in `plugins-dist/spip/`; a plugin targets 5.0 if its `paquet.xml` `compatibilite` starts at 5.0
+or its `composer.json` requires `spip/framework`.
 
 - <break 1 → replacement>
 - <break 2 → replacement>
@@ -43,7 +45,19 @@ Details: `spip-migration-5` (<reference file>).
 Rules:
 
 - 2 to 5 bullets, each one a concrete symbol or command and its 5.0 replacement;
-- how to detect a 5.0 site is always the first line (observable facts, not "if you use SPIP 5");
+- how to detect a 5.0 site is always the first line (observable facts, not "if you use SPIP 5"); any single marker
+  is enough. Markers checked on 5.0.0-beta (`c8e329575`) and 4.4.23:
+
+  | Marker | 5.0.0-beta | 4.4.23 |
+  |---|---|---|
+  | `ecrire/src/SpipVersion.php` | yes, `VERSION = '5.0.0-beta'` | absent |
+  | `bin/spip` | yes | absent |
+  | `vendor/spip/framework/` | yes (root `require`) | absent |
+  | `plugins-dist/spip/<plugin>/` | yes | `plugins-dist/<plugin>/` |
+  | root `composer.json` `name` | `spip/spip` | `spip/spip` too — **not a marker** |
+  | `config/services.php` in a plugin | only plugins with services — **not required** | absent |
+
+  `$GLOBALS['spip_version_branche']` also works at runtime (full version in 5.0, `version_compare()` only);
 - no explanation of the 5.0 model; that lives in the 5.0 skills;
 - the skill `description` gains "SPIP 4.x" where it is ambiguous, so the right skill is picked.
 
@@ -70,15 +84,22 @@ in `docs/notes/2026-10-17-spip-5-deprecations-inventaire.md`).
 ## Testing (writing-skills)
 
 An edit to a skill needs a failing test first. One eval case per skill, in
-`evals/spip5-encadres/evals.json`: a task on a **5.0** project where only the 4.x skill is loaded.
+`evals/spip5-encadres/evals.json`: a task on a **5.0-only** project (the prompt says so, and the fixture carries
+only some of the markers above, never `config/services.php`, so detection is tested too) where only the 4.x skill
+is loaded.
+
+GREEN requires the **5.0 API**. A deprecated 4.x form that still runs (`spip_log()`, `{fusion}`, `_request()`,
+pipeline function) fails the case, even with a warning. The only accepted exception is a separate dual-compat
+variant of the case, where the prompt states the plugin must also run on 4.4: there the GREEN answer is the form
+valid on both versions, per `spip-migration-5` `double-compat.md`.
 
 | Skill | Case | RED (expected without callout) | GREEN |
 |---|---|---|---|
-| `spip-logs` | log an error in a 5.0 plugin | `spip_log(…, _LOG_ERREUR)` | `Spip::logger()->error()` or a deprecation warning |
-| `spip-squelettes` | group articles by year on a 5.0 site | `{fusion}` | `{groupby}` (or `{fusion}` with the dual-compat reason) |
+| `spip-logs` | log an error in a 5.0 plugin | `spip_log(…, _LOG_ERREUR)` | `Spip::logger('x')->error()` (dual-compat variant: `spip_log()`) |
+| `spip-squelettes` | group articles by year on a 5.0 site | `{fusion}` | `{groupby}` (dual-compat variant: `{fusion}`) |
 | `spip-lang` | translate a string in English from PHP | `['spip_lang' => 'en']` | `['lang' => 'en']` as 3rd argument |
-| `spip-formulaires` | read a posted field in `verifier` | `_request()` | `Spip::input()` |
-| `spip-plugins` | add an `affichage_final` hook on a 5.0 plugin | `_pipelines.php` only | listener, or a stated reason to keep the function |
+| `spip-formulaires` | read a posted field in `verifier` | `_request()` | `Spip::input()` (dual-compat variant: `_request()`) |
+| `spip-plugins` | add an `affichage_final` hook on a 5.0 plugin | `_pipelines.php` only | listener + `config/services.php` (dual-compat variant: pipeline function) |
 | `spip-testing` | clear caches before integration tests on 5.0 | `spip cache:vider` | `bin/spip spip:cache:clear` |
 | `plugin-escal` | install Escal on a 5.0 site | spip-cli commands | version check first |
 | `spip-mutualisation-maintenance` | upgrade a 5.0 farm | 4.x procedure applied | stops and states the limit |
