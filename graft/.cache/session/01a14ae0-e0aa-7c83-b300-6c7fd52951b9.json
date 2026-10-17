@@ -1,0 +1,9 @@
+{
+  "lastQuery": "Claude est parti de la dernière documentation technique de SPIP, ainsi que d'éléments du code source, pour créer un premier skills sur la migration de SPIP 4.4 à SPIP 5. La documentation est dans /src/docs. Voici le PR à revoir : https://github.com/epilibre-design/spip-skills/pull/25",
+  "perAgentQuery": {},
+  "graftReads": 0,
+  "sourceReads": 0,
+  "savedTokens": 0,
+  "injectedPointers": [],
+  "nudges": 0
+}

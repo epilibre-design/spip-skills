@@ -18,12 +18,12 @@
     {
       "id": 2,
       "prompt": "Ce code PHP d'un plugin SPIP 4.4 doit tourner sur SPIP 5.0 uniquement. Réécris-le :\n\nif (_IS_CLI) { $mode = 'cli'; }\nif (defined('_ESPACE_PRIVE')) { $url = _DIR_RESTREINT_ABS . '?exec=acme'; }\n$racine = _ROOT_RACINE;\nspip_log('Import échoué', 'acme.' . _LOG_ERREUR);\n$taille = $GLOBALS['meta']['acme_taille'];\n$v = \\SpipLeague\\Component\\Kernel\\param('spip.dirs.tmp');",
-      "expected_output": "Spip::platform()->isCli() ; Spip::isBackOffice() ; Spip::param('spip.routes.back_office') pour l'URL de l'espace privé ; Spip::directories()->getProjectDir() ; Spip::logger('acme')->error('Import échoué') ; Spip::config('acme_taille') ; Spip::param('spip.dirs.tmp'). Pas de app()->getRootDir() (déprécié), pas de param()/service() globaux (dépréciés).",
+      "expected_output": "Spip::platform()->isCli() ; Spip::isBackOffice() ; generer_url_ecrire('acme') pour l'URL ?exec= (pas de concaténation du préfixe spip.routes.back_office, chemin relatif 'ecrire/') ; Spip::directories()->getProjectDir() ; Spip::logger('acme')->error('Import échoué') ; Spip::config('acme_taille') ; Spip::param('spip.dirs.tmp'). Pas de app()->getRootDir() (déprécié), pas de param()/service() globaux (dépréciés).",
       "files": [],
       "expectations": [
         "_IS_CLI remplacé par Spip::platform()->isCli() (ou PHP_SAPI === 'cli')",
         "defined('_ESPACE_PRIVE') remplacé par Spip::isBackOffice()",
-        "_DIR_RESTREINT_ABS remplacé par Spip::param('spip.routes.back_office') pour construire une URL",
+        "_DIR_RESTREINT_ABS . '?exec=acme' remplacé par generer_url_ecrire('acme') — pas par une concaténation de Spip::param('spip.routes.back_office')",
         "_ROOT_RACINE remplacé par Spip::directories()->getProjectDir() — pas par app()->getRootDir() qui est déprécié",
         "spip_log remplacé par Spip::logger('acme')->error(...)",
         "$GLOBALS['meta'] remplacé par Spip::config('acme_taille')",
@@ -72,13 +72,13 @@
     {
       "id": 6,
       "prompt": "Je dois maintenir un plugin SPIP compatible à la fois avec SPIP 4.4 et SPIP 5.0 pendant la transition. Il utilise defined('_ESPACE_PRIVE'), _IS_CLI, generer_url_entite(), des fonctions de pipeline classiques et lire_config(). Quelle stratégie adopter et que remplacer ?",
-      "expected_output": "Garder les fonctions de pipeline legacy + <pipeline> dans paquet.xml (toujours appelées en 5.0, cohabitation possible). Utiliser les API présentes dans les deux versions : test_espace_prive() au lieu de _ESPACE_PRIVE, PHP_SAPI === 'cli' au lieu de _IS_CLI, generer_objet_url() au lieu de generer_url_entite(), lire_config() (non déprécié). Ne pas utiliser la façade Spip:: sans garde (absente en 4.4). compatibilite=\"[4.4.0;5.*]\" dans paquet.xml. Tester sur les deux versions.",
+      "expected_output": "Garder les fonctions de pipeline legacy + <pipeline> dans paquet.xml (toujours appelées en 5.0, cohabitation possible). Utiliser les API présentes dans les deux versions : test_espace_prive() au lieu de _ESPACE_PRIVE, PHP_SAPI === 'cli' au lieu de _IS_CLI, generer_objet_url() au lieu de generer_url_entite() en réordonnant les arguments si une connexion est passée en 5e position (elle passe en 7e), lire_config() (non déprécié). Ne pas utiliser la façade Spip:: sans garde (absente en 4.4). compatibilite=\"[4.4.0;5.*]\" dans paquet.xml. Tester sur les deux versions.",
       "files": [],
       "expectations": [
         "Indique que les fonctions de pipeline legacy et <pipeline> continuent de fonctionner en SPIP 5.0",
         "Remplace defined('_ESPACE_PRIVE') par test_espace_prive() (disponible en 4.4 et 5.0)",
         "Remplace _IS_CLI par PHP_SAPI === 'cli'",
-        "Remplace generer_url_entite() par generer_objet_url()",
+        "Remplace generer_url_entite() par generer_objet_url() sans le présenter comme un simple renommage (connexion 5e → 7e argument, chaînes typées)",
         "Signale que la façade Spip:: n'existe pas en 4.4 (garde class_exists ou à éviter dans le code commun)",
         "Indique que lire_config() n'est pas déprécié en 5.0 et peut rester",
         "Propose un intervalle de compatibilité couvrant 4.4 et 5.x dans paquet.xml"

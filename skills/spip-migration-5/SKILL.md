@@ -1,6 +1,7 @@
 ---
 name: spip-migration-5
-description: Use when moving SPIP 4.x plugin or squelette code to SPIP 5.0, keeping a plugin compatible with both 4.4 and 5.0,
+description: >-
+  Use when moving SPIP 4.x plugin or squelette code to SPIP 5.0, keeping a plugin compatible with both 4.4 and 5.0,
   auditing code for SPIP 5 deprecations, or when code or errors mention SPIP 5, #[AsPipelineListener], #[AsCronTask],
   Spip::, config/services.php, bin/spip, or a deprecation "since 5.0". Not for plain SPIP 4.x development — use spip-plugins.
 ---
@@ -31,7 +32,7 @@ moving: when a name in this skill looks off, check the source (paths in *Source 
 |---|---|---|
 | `function acme_affichage_final($html)` | listener `#[AsPipelineListener] onAffichageFinal(AffichageFinalEvent $e)` + `config/services.php` | without `services.php` + PSR-4 the class is never registered |
 | `param()`, `service()`, `spip_logger()`, `spip_log()`, `_request()` | `Spip::param()`, `Spip::service()`, `Spip::logger()`, `Spip::input()` | old helpers are deprecated in 5.0 |
-| `_IS_CLI`, `_ESPACE_PRIVE`, `_DIR_RESTREINT_ABS`, `_ROOT_RACINE` | `Spip::platform()->isCli()`, `Spip::isBackOffice()`, `Spip::param('spip.routes.back_office')`, `Spip::directories()->getProjectDir()` | **removed**: fatal "undefined constant" |
+| `_IS_CLI`, `_ESPACE_PRIVE`, `_DIR_RESTREINT_ABS`, `_ROOT_RACINE` | `Spip::platform()->isCli()`, `Spip::isBackOffice()`, `generer_url_ecrire('acme')` for a `?exec=` URL, `Spip::directories()->getProjectDir()` | **removed**: fatal "undefined constant" |
 | `app()->getRootDir()`, `app()->getCoreDir()`, `app()->relative()` | `Spip::directories()->getProjectDir()` / `getCoreDir()` / `relative()` | deprecated Kernel methods |
 | genie `return 1;` (success) | `#[AsCronTask]` service, **`return 0;`** = success | in 5.0 `> 0` = **failure**, re-planned immediately |
 | `$GLOBALS['meta']['x']` read / `unserialize()` | `Spip::config('x')` | writes now store JSON (`150` → `"[150]"`); the mirror is the raw SQL string |
