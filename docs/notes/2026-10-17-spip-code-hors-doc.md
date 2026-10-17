@@ -157,6 +157,23 @@ Documentation comparée : `spip/docs` `main` (`ac8c932`).
   `FormulaireVerifierEvent::getErrors()/setErrors()`, `hasError()`, `getError()`, `removeError()`, `clearErrors()` ;
   `PipelineEvent::mergeArguments()` ; `StyliserEvent::getContexte()`, `getExtension()/setExtension()`, `getSource()`, `isFond()`.
 
+### Fonctions `generer_*_entite` : « mêmes arguments » est faux
+
+`guides/migration/php-api.md` (section « Fonctions `generer_{x}_entite` ») affirme que les remplaçantes ont les mêmes
+arguments. Les wrappers dépréciés de 4.4.23 (`ecrire/inc/utils.php`, `inc/urls.php`) montrent le contraire :
+
+- `generer_url_entite($id, $entite, $args, $ancre, $public, $type)` : si `$public` est une chaîne (connexion distante),
+  elle devient le 7e argument de `generer_objet_url()` et `$public` passe à `true` ;
+- `generer_url_entite_absolue(…, $connect)` : `$connect` passe du 5e au 7e argument ;
+- `generer_url_ecrire_objet($objet, $id, …)` → `generer_objet_url_ecrire($id, $objet, …)` : les deux premiers arguments
+  sont inversés, et l'exemple de la doc (`generer_url_ecrire_objet(3, 'article')`) part d'un appel déjà faux ;
+- les remplaçantes typent `$args`, `$ancre`, `$type`, `$connect` en `string` : un `null` que le wrapper convertissait
+  en `''` lève une `TypeError`.
+
+Par ailleurs, la table des constantes recommande `param('spip.routes.back_office')` pour `_DIR_RESTREINT_ABS` sans
+distinguer l'usage : pour une URL `?exec=`, `generer_url_ecrire()` est la bonne réponse (la valeur est le chemin
+relatif `ecrire/`).
+
 ### Versions
 
 - En 5.0, `$spip_version_branche` vaut `SpipVersion::VERSION` (version complète, ex. `5.0.0-beta`), pas la branche
