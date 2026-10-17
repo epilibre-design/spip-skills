@@ -45,9 +45,10 @@ development: when a symbol looks off, check the source and `bin/spip`.
 - Exact FQCNs, never guessed: `SpipLeague\Bridge\Pipeline\Attribute\AsPipelineListener`,
   `SpipLeague\Bridge\Pipeline\Attribute\AsCronTask`, `SpipLeague\Component\Guard\Attribute\AsGuard`. Symfony's
   `#[AsEventListener]` is not a pipeline listener.
-- Inside a class, inject; the `Spip::` façade is for procedural code (filters, `genie_*`, `*_fonctions.php`).
-- No `$GLOBALS['meta']`: it is a raw string mirror (`'[30]'` after an API write). No `_request()`, `spip_log()`,
-  `lire_config()` in 5.0-only code.
+- Inside a class, inject (logger, config, inputs) — no `spip_log()`, `_request()`, `lire_config()`. The `Spip::`
+  façade is for procedural code (filters, `genie_*`, `*_fonctions.php`), where `spip_log()` / `_request()` are
+  deprecated but `lire_config()` is **not** (only its `/<store>/` prefix and `lire_config(,, false)` are).
+- No `$GLOBALS['meta']`: it is a raw string mirror (`'[30]'` after an API write).
 - One registration per pipeline: never a listener **and** a legacy function for the same behaviour.
 - CLI is `bin/spip` (Symfony Console). spip-cli (`spip …`) is a 4.x tool.
 - Site-wide settings go in the site's `config/custom.php`, plugin parameters in its `config/services.php`; never in

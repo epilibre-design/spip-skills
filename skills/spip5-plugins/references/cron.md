@@ -51,7 +51,7 @@ Verified: with `APP_ENV=dev` the task disappears from `spip.genie_registry`; in 
 The queue does **not** execute `#[AsCronTask]` services, core tasks included: `queue_start_job()` returns `false`
 for every job with `inclure = 'service:'`. Two causes in the core (`ecrire/inc/queue.php` tests
 `function_exists('app')`, false since `app()` is namespaced; task services are private so `$container->has()` is
-false). Listed for an upstream fix in this repository's `docs/notes/spip-bugs.md`.
+false). Not fixed upstream as of 2026-10-17.
 
 Check before relying on a task:
 
