@@ -79,9 +79,9 @@ Verified in SPIP 5.0.0-beta. "doc" = stated by dev.spip.net, not re-verified in 
 | `compacte($css, 'css')` | `minifier($css, 'css')` | removed (doc) |
 | `regledetrois($a, $b, $c)` | `\|div` / `\|mult` | removed (doc) |
 | `formulaire_recherche()` | `#FORMULAIRE_RECHERCHE_ECRIRE` | removed (doc) |
-| `generer_url_entite()` | `generer_objet_url()` — same arguments for the whole family | removed (doc) |
-| `generer_url_entite_absolue()` | `generer_objet_url_absolue()` | removed (doc) |
-| `generer_url_ecrire_objet()` | `generer_objet_url_ecrire()` | removed (doc) |
+| `generer_url_entite($id, $objet, $args, $ancre, $public, $type)` | `generer_objet_url((int) $id, $objet, $args, $ancre, $public, $type)`; if `$public` is a **string** (remote connection): `generer_objet_url($id, $objet, $args, $ancre, true, $type, $public)` | removed (doc) — not a plain rename, see the note below this table |
+| `generer_url_entite_absolue($id, $objet, $args, $ancre, $connect)` | `generer_objet_url_absolue($id, $objet, $args, $ancre, true, '', $connect ?? '')` (5th → 7th) | removed (doc) |
+| `generer_url_ecrire_objet($objet, $id, …)` | `generer_objet_url_ecrire($id, $objet, …)` — **first two arguments swapped** | removed (doc) |
 | `generer_url_ecrire_entite_edit()` | `generer_objet_url_ecrire_edit()` | removed (doc) |
 | `generer_introduction_entite()`, `generer_info_entite()`, `generer_lien_entite()` | `generer_objet_introduction()`, `generer_objet_info()`, `generer_objet_lien()` | removed (doc) |
 | custom `generer_{x}_{objet}()` (ex. `generer_introduction_article`) | rename `generer_{objet}_{x}()` (ex. `generer_article_introduction`) | removed (doc) |
@@ -107,6 +107,13 @@ Verified in SPIP 5.0.0-beta. "doc" = stated by dev.spip.net, not re-verified in 
 | `calculer_parties($b, $idb, $partie, $mode)` | pass `$pas` as 5th argument | required |
 | root-namespace compiler classes `Boucle`, `Champ`, `Critere`, `Texte`, `Contexte`, `Polyglotte` | `use Spip\Compilateur\Noeud\…;` | aliases removed |
 | `|table_valeur` / `(DATA){source tableau}` on serialized strings | pass an array, unserialize explicitly if trusted | no auto-unserialize |
+
+**URL helpers — not a plain rename** (checked in the 4.4.23 wrappers, `ecrire/inc/utils.php`, `inc/urls.php`):
+the old functions were deprecated wrappers that reordered and cleaned arguments. Reproduce what the wrapper did:
+`$connect` moves from 5th to 7th position, `generer_url_ecrire_objet()` takes `($objet, $id)` but
+`generer_objet_url_ecrire()` takes `($id, $objet)`, and the new functions type `$args`, `$ancre`, `$type`, `$connect`
+as `string` — a `null` that the wrapper turned into `''` now throws a `TypeError`. The upstream documentation
+says "same arguments" and its `generer_url_ecrire_objet(3, 'article')` example is wrong.
 
 ### `spip_log()` levels → PSR-3 (from `ecrire/bootstrap/inc/logging.php`)
 

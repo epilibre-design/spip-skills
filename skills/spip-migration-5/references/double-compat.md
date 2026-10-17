@@ -21,7 +21,7 @@ The upstream documentation does not cover this case; rules below come from compa
 |---|---|
 | `defined('_ESPACE_PRIVE')` | `test_espace_prive()` |
 | `_IS_CLI` | `PHP_SAPI === 'cli'` |
-| `generer_url_entite()` & family `generer_*_entite()` | `generer_objet_url()` & family `generer_objet_*()` |
+| `generer_url_entite()` & family `generer_*_entite()` | `generer_objet_url()` & family `generer_objet_*()` — **reorder arguments** as in `catalogue.md` (connection 5th → 7th, `generer_url_ecrire_objet()` swaps `$objet`/`$id`) |
 | `compacte()` | `minifier()` |
 | `debut_cadre*()`, `debut_boite_*()`, `cadre_depliable()` | `boite_ouvrir()` / `boite_fermer()` |
 | `$GLOBALS['formats_logos']` | `_image_extensions_logos()` / pipeline `image_extensions_logos` |
