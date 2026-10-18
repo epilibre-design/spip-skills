@@ -1,0 +1,11 @@
+<paquet
+	prefix="acme"
+	categorie="outil"
+	version="1.2.0"
+	etat="stable"
+	compatibilite="[4.4.0;5.*]"
+>
+	<nom>Acme</nom>
+	<auteur>Acme</auteur>
+	<licence>GPL 3</licence>
+</paquet>
