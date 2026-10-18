@@ -92,8 +92,9 @@ of the markers above (never `config/services.php`), and the markers vary between
 A case passes only if the answer cites the marker it relied on. "5.0-only" is likewise carried by the fixture
 (`compatibilite` lower bound at 5.0), not by the prompt.
 
-GREEN requires the **5.0 API**. A deprecated 4.x form that still runs (`spip_log()`, `{fusion}`, `_request()`,
-pipeline function) fails the case, even with a warning. The only accepted exception is a separate dual-compat
+GREEN requires the **5.0 API**. A deprecated 4.x form that still runs (`spip_log()`, `{fusion}`, `_request()`)
+fails the case, even with a warning. A 4.x form that 5.0 does not deprecate passes: `<pipeline>` + function and
+`<genie>` from `paquet.xml` are still collected, without deprecation. The only accepted exception is a separate dual-compat
 variant of the case, whose fixture declares `compatibilite="[4.4.0;5.*]"`: there the GREEN answer is the form
 valid on both versions, per `spip-migration-5` `double-compat.md`.
 
