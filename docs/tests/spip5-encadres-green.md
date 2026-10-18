@@ -68,6 +68,11 @@ on `critere_fusion_dist()`, `critere_fusion_supprimer_dist()`, `critere_collecte
 case-sensitive language items (spip/spip#2536). In 4.4.22: `{groupby}` / `{collate}` absent; `#LOGO_X{right}`,
 `#LOGO_X**`, `<INCLURE … />`, `#LAYOUT_PRIVE`, `#PARAM` present.
 
+Grid tightened after review: in cases 8–9, `|right` and `</INCLURE>` are removed in 5.0 (the squelette breaks), so
+the delivered file must fix them; flagging them is no longer enough. `#PARAM` dropped from the "5.0 only" list of
+case 10: `balise_PARAM_dist()` exists in 4.4. The recorded answers were re-scored, no re-run needed: the GREEN answers
+of cases 8–9 already fix both syntaxes, the RED ones fail these criteria either way.
+
 | Case | RED | GREEN | Notes |
 |---|---|---|---|
 | 8 — 5.0 site | FAIL (1/4) | **PASS (4/4)** | cites `vendor/spip/framework/`, `{groupby id_rubrique}`, fixes `{right}` and both `<INCLURE … />` |
