@@ -155,3 +155,35 @@ The spec expected spip-cli commands applied to the 5.0 site. Almost no answer do
 `[4.1.0;4.*]`" line is enough for the agent to stop. What remains: spip-cli is still offered for later work on a 5.0
 site, a 4.4 reinstall over the migrated base is offered as a way back, and the agent does not know what `bin/spip`
 provides.
+
+## spip-mutualisation-maintenance (2026-10-18)
+
+Upstream: the 5.0 documentation (`spip/docs` `ac8c932`, 2026-09-01, `fr/5.0/architecture/cycle-applicatif-http.md`)
+marks the mutualised entry point `sites/default/public/index.php` "expérimental — todo". Mutualisation facile
+(`spip-contrib-extensions/mutualisation` `4d9f724`, 2026-06-10) is 2.0.1, `compatibilite="[4.2.0;4.*]"`, no 5.x
+branch.
+
+Checked on 5.0 (`spip/ecrire` `26bfe470`, `spip/framework` `d0e8c97e`): the kernel (`LegacyDirectoryConstants`)
+defines `_DIR_IMG`, `_DIR_TMP`, `_DIR_VAR`, `_DIR_ETC`, `_DIR_CONNECT` before `inc_version.php` includes
+`_FILE_OPTIONS`, and 5.0's `spip_initialisation_core()` no longer builds them from its arguments. A CLI run with
+`SPIP_ETC_DIR` pointing to a `mes_options.php` that calls the real `demarrer_site()` gives `_DIR_SITE` and
+`_SPIP_PATH` for the site, but `_DIR_IMG = 'IMG/'`, `_DIR_TMP = 'tmp/'`, `_DIR_VAR = 'local/'` and `_FILE_CONNECT` in
+the shared config directory. In 4.4.22, `inc_version.php` includes the options (l. 499) before
+`spip_initialisation_core()` (l. 518), which defines those constants from the site's paths. So on 5.0 every site of a
+Mutualisation facile farm uses the shared connection and directories.
+
+Fixtures: a shared root with the real `mutualisation/` 2.0.1 files, `config/mes_options.php` from its sample, two
+sites under `sites/`, Champs Extras 4.3.3 in `plugins/auto/`; `mutu-50` adds `ecrire/src/SpipVersion.php`
+(5.0.0-beta), `vendor/spip/framework/composer.json` and `bin/spip`, `mutu-44` has the 4.4.22 `ecrire/inc_version.php`.
+
+| Case | Fixture marker | Answers | Result |
+|---|---|---|---|
+| 23 — shared plugin upgrade, 5.0 farm | `ecrire/src/SpipVersion.php` 5.0.0-beta | both runs stop: out of the 4.2–4.4 scope, Mutualisation facile and Champs Extras declare 4.x only; both still lay out the 4.x action plan, every row "blocked", to be unblocked "once production is confirmed 4.2–4.4" or by "a dedicated 5.0 procedure"; neither knows that mutualisation is unfinished in 5.0 or that sites are no longer isolated | **PARTIAL 2** |
+| 24 — 5.0 farm, all sites show the same content | same | both runs link the symptom to 5.0 + Mutualisation facile, as an unverified hypothesis ("not checked in the 5.0 code"); both freeze writes, preserve the current state, then plan the return to 4.x with the pre-upgrade databases | PASS 2/2 |
+| 25 — shared plugin upgrade, 4.4 farm (control) | `ecrire/inc_version.php` 4.4.22 | full 4.x procedure | PASS |
+| 26 — move a 4.4 farm to 5.0 | same | both runs block on `[4.2.0;4.*]` and the scope; both draft the migration anyway (backups, isolated rehearsal, production switch "blocked until a compatible Mutualisation exists"), as if it were only a matter of waiting for a release; neither knows that 5.0 mutualisation is experimental | **PARTIAL 2** |
+
+The spec expected the 4.x procedure applied to a 5.0 farm. The skill's 4.2–4.4 scope line prevents that. What
+remains: the agent does not know that 5.0 mutualisation is unfinished upstream nor that Mutualisation facile no
+longer isolates sites, so it frames 5.0 as "wait for a compatible release, then migrate", and only guesses the cause of
+case 24.

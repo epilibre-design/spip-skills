@@ -171,3 +171,23 @@ here instead of claiming they are the only ones. Cases 20 and 21 were rerun.
 | 20 — install on a 5.0 site | PASS 2/2 | PASS 2/2 (one run tests the whole meta) | PASS (3/3) | **PASS (4/4)** | cites `bin/spip`, refuses with Escal 5.6.2's `[4.1.0;4.*]`, no forcing, three options; no spip-cli on 5.0; `bin/spip config:lire escal_base_version` for the single-key test |
 | 21 — upgraded site | PARTIAL 2 (regraded) | PASS 2/2 (one run tests the whole meta) | PASS 1, PARTIAL 1 (regraded: "or reinstall the site on 4.4") | **PASS 3/3 (4/4)** | cites `vendor/spip/framework/`, reads the copied `paquet.xml`, cause stated, no reactivation command presented as working; back to 4.4 only from the pre-migration backup, files and database, never a reinstall over the migrated base, no verified way back without it; `bin/spip spip:cache:clear` on 5.0 |
 | 22 — 4.4 site (no leak) | PASS | **PASS (2/2)** | — | — | 4.4.22 cited, full spip-cli recipe; notes the `SpipLeague\Kernel` it sees in 4.4's `inc_version.php` without changing course |
+
+## spip-mutualisation-maintenance (2026-10-18)
+
+The callout covers two points:
+- mutualisation is work in progress in 5.0 (mutualised entry point "expérimental — todo" in the 5.0 docs, no farm
+  procedure): read-only inventory only on a 5.0 farm, no move of a production farm to 5.0, at most a trial on an
+  isolated copy;
+- Mutualisation facile 2.0.1 (`[4.2.0;4.*]`) no longer isolates sites on 5.0 (checked on the instance, see the
+  baseline): sites showing the same content means freeze, preserve, restore the pre-upgrade 4.4 backup.
+
+| Case | RED | GREEN | Notes |
+|---|---|---|---|
+| 23 — shared plugin upgrade, 5.0 farm | PARTIAL 2 | **PASS 2/2** | cites `SpipVersion.php` 5.0.0-beta, states both points, read-only commands only, empty action plan; no 4.x plan "to unblock later" |
+| 24 — 5.0 farm, all sites show the same content | PASS 2/2 (cause as a hypothesis) | **PASS (1/1)** | cause stated from the callout (constants defined before `mes_options.php`), freeze, preserve the 5.0 state, verify then restore the 4.4 backup, files and every site's database |
+| 25 — 4.4 farm (control) | PASS | **PASS (1/1)** | 4.4.22 cited, no 5.0 marker, full 4.x action plan; nothing from the callout |
+| 26 — move a 4.4 farm to 5.0 | PARTIAL 2 | **PASS 2/2** | refuses for production with both reasons, stays on 4.4, offers only an isolated trial; no migration plan |
+
+Run 1 of case 26 notes the `SpipLeague\Component\Kernel` code in the fixture's `inc_version.php` as an anomaly. The
+fixture is byte-identical to the official `spip/ecrire` 4.4.22 file (sha1 `fc26f8c8`); 4.4.24 has the same code. The
+answer still treats the farm as 4.4 and refuses the move, so the grade stands.

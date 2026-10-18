@@ -3236,3 +3236,884 @@ spip cache:vider
   spip cache:vider
   ```
 - Pour personnaliser Escal, ne modifiez rien dans `plugins/auto/escal/`, car une mise à jour écrase ces fichiers. Placez vos surcharges dans `squelettes/`, par exemple `squelettes/styles/perso.css` ou `squelettes/inclusions/inc-‹nom›.html`.
+
+## spip-mutualisation-maintenance, cas 23 — ferme 5.0, mise à jour des plugins partagés — tirage 1
+
+# Mise à jour des plugins partagés de la ferme : préparation
+
+**Conclusion : je ne prépare pas de commandes de mise à jour prêtes à lancer.** La copie de la racine partagée montre un cœur **SPIP 5.0.0-beta**. Cette procédure de maintenance couvre SPIP 4.2–4.4 avec Mutualisation facile 2.x. Le plugin de mutualisation installé et le seul plugin partagé visible ne déclarent pas SPIP 5 dans leur compatibilité. Il faut d'abord établir ce qui tourne réellement en production. Ci-dessous : ce que j'ai observé, les blocages, et l'inventaire en lecture seule à lancer de votre côté.
+
+## Constats
+
+Établis à partir de la copie (`…/p23/farm/`), en lecture seule :
+
+| Constat | Preuve |
+|---|---|
+| Cœur SPIP **5.0.0-beta** (`ID = 50000`, `CODE = 2026_09_22`, `BASE = 2026_08_03_00`, PHP 8.4.0–8.5.99) | `ecrire/src/SpipVersion.php` |
+| Installation de type Composer / SPIP 5 : `bin/spip` (console `SpipLeague`), `vendor/spip/framework` (qui dépend entre autres de `spip-league/plugin-manager ^1.x-dev`, en `minimum-stability: dev`) | `bin/spip`, `vendor/spip/framework/composer.json` |
+| Mutualisation facile **2.0.1**, `compatibilite="[4.2.0;4.*]"`, `<chemin path="" type="aucun" />` | `mutualisation/paquet.xml` |
+| Le `mes_options.php` partagé fait un `require` de `_DIR_RACINE.'mutualisation/mutualiser.php'` (répertoire de premier niveau, pas sous `plugins/`) | `config/mes_options.php` |
+| `demarrer_site()` effectif : `'repertoire' => 'sites'`, `creer_site => true`, `creer_base => true`, `code => 'ecureuil'`, `url_img_courtes => true`, `cookie_prefix => true`, `table_prefix => false` | `config/mes_options.php` |
+| `_SPIP_PATH` = `_DIR_SITE : _DIR_RACINE : squelettes-dist/ : prive/ : _DIR_RESTREINT`. Le `plugins/` de la racine est donc partagé par tous les sites | `mutualisation/mutualiser.php:184-191` |
+| Sites présents dans la copie : `sites/asso-exemple.org`, `sites/mairie-exemple.fr` | `sites/` |
+| Un seul plugin partagé visible : **Champs Extras (`cextras`) 4.3.3**, `compatibilite="[4.1.0;4.*]"`, dépendances obligatoires `saisies [4.2.0;]` et `yaml [3.0.0;]`, dépendances facultatives `verifier`, `crayons` | `plugins/auto/cextras/v4.3.3/paquet.xml` |
+| Le chemin `plugins/auto/<prefix>/v<version>` évoque SVP. C'est une hypothèse, pas une preuve de provenance | arborescence |
+
+**Inconnues** (aucune preuve dans la copie) :
+
+- La version réellement servie en production, et si la copie est complète : elle ne contient ni `ecrire/inc_version.php`, ni `spip.php`, ni `composer.json`/`composer.lock` à la racine, ni `plugins-dist/`.
+- Le moteur de base de chaque site : les deux `connect.php` sont des fichiers masqués, sans appel de connexion.
+- Les plugins actifs sur chaque site, et l'emplacement de `saisies` et `yaml`, absents de `plugins/auto/` dans la copie.
+- La provenance des plugins (SVP, Composer, Git) et d'éventuelles modifications locales.
+- La pile web/PHP (Apache ou Nginx/PHP-FPM, version de PHP).
+- L'existence d'une sauvegarde récente, vérifiée et restaurable.
+- Le site d'administration : `_SITES_ADMIN_MUTUALISATION` vaut `admin-ferme.example`, mais aucun `sites/admin-ferme.example` n'existe dans la copie.
+
+## Risques
+
+1. **Bloquant : hors périmètre et incompatibilité déclarée.** Un cœur 5.0.0-beta fait tourner Mutualisation facile 2.0.1 (`[4.2.0;4.*]`) et cextras 4.3.3 (`[4.1.0;4.*]`). Soit la copie ne reflète pas la production, soit la ferme tourne déjà avec des composants qui ne déclarent pas SPIP 5. Dans les deux cas, je ne peux pas appliquer une procédure 4.x de mise à jour des plugins. SPIP 5 change aussi le modèle de plugins (gestionnaire de plugins Composer, `spip-league/plugin-manager`). Il faut une procédure dédiée, documentée pour la révision exacte du cœur et des paquets.
+2. **Rayon d'impact : toute la ferme.** `plugins/` est dans le `_SPIP_PATH` de chaque site. Remplacer `plugins/auto/cextras` touche tous les sites qui l'activent, et peut aussi toucher les autres par le chargement partagé. On ne peut pas tester sur un seul site de production : il faut une copie isolée de la ferme.
+3. **Dépendances introuvables.** `saisies` et `yaml` sont obligatoires pour cextras mais absents de l'arbre partagé copié. Si cextras est actif quelque part, ils sont ailleurs (chemin à résoudre). Une mise à jour isolée de cextras peut casser ses dépendances, ou être cassée par elles.
+4. **Provenance mêlée possible.** Le cœur est géré par Composer (`vendor/`, `bin/spip`) et le plugin a une disposition de type SVP. Il ne faut pas mélanger les deux méthodes pendant une mise à jour.
+5. **Anomalies de sécurité, à traiter à part de la mise à jour :**
+   - Le `config/mes_options.php` partagé contient des identifiants SQL en clair. Je ne les reproduis pas ici. Leur valeur semble être celle de l'exemple fourni avec le plugin : à vérifier.
+   - `creer_site => true` et `creer_base => true` avec le code d'activation par défaut `ecureuil` (public) : n'importe qui peut potentiellement créer un site et une base sur un domaine qui pointe vers la ferme.
+   - Les actions `renouvelle_alea`, `dirliste` et `dirsize` de `?exec=mutualisation` répondent sans authentification sur chaque site.
+6. **Effet de bord du tableau de bord.** `upgradeplugins` (et le bouton « Upgrader tout ») vide largement les caches de chaque site, sans point de contrôle par site.
+
+## Procédure proposée
+
+Uniquement des observations en lecture seule et de la planification. Aucune mutation n'est prête.
+
+1. **Confirmer la version réellement servie** (lecture seule, sur le serveur) :
+   ```bash
+   farm_root=/chemin/verifie/de/la/racine/partagee   # à fournir par vous
+   farm_root="$(realpath -e -- "$farm_root")" && test "$farm_root" != /
+   rg -n "VERSION =|const int ID" "$farm_root/ecrire/src/SpipVersion.php" 2>/dev/null
+   rg -n "spip_version_branche|_SPIP_VERSION_ID" "$farm_root/ecrire/inc_version.php" 2>/dev/null
+   test -f "$farm_root/composer.lock" && composer --working-dir="$farm_root" show --locked 'spip/*'
+   ```
+2. **Lister les plugins partagés et leur provenance** :
+   ```bash
+   find -P "$farm_root/plugins" "$farm_root/plugins-dist" -maxdepth 4 -name paquet.xml -print 2>/dev/null
+   for p in $(find -P "$farm_root/plugins" -maxdepth 4 -name paquet.xml -printf '%h\n' 2>/dev/null); do
+     echo "== $p"
+     rg -n '^(<paquet|[[:space:]]*(prefix|version|compatibilite|schema)=|[[:space:]]*<(necessite|utilise))' "$p/paquet.xml"
+     git -C "$p" describe --tags --always --dirty 2>/dev/null
+     git -C "$p" status --short 2>/dev/null
+   done
+   ```
+3. **Chercher les autres chemins de plugins** (`_DIR_PLUGINS_SUPPL`, plugins par site) :
+   ```bash
+   rg -n "_DIR_PLUGINS_SUPPL|_DIR_PLUGINS_AUTO" "$farm_root/config" "$farm_root/sites"/*/config/mes_options.php 2>/dev/null
+   find -P "$farm_root/sites" -mindepth 2 -maxdepth 2 -type d \( -name plugins -o -name squelettes \) -print
+   ```
+4. **Identifier le moteur de base de chaque site** sans afficher les identifiants :
+   ```bash
+   for c in "$farm_root"/sites/*/config/connect.php; do
+     printf '%s: ' "$c"; grep -oE "'(mysql|sqlite3|sqlite2|pg)'" "$c" | sort -u | tr '\n' ' '; echo
+   done
+   ```
+5. **Identifier les plugins actifs par site**, sur la liste des plugins actifs dans le `spip_meta` de chaque site. Lecture SQL seulement, avec un fichier d'options protégé que vous fournissez (jamais de `-p<mot de passe>`). Ne me transmettez que les préfixes et versions.
+6. **Me renvoyer la sortie de ces observations.** Selon le résultat :
+   - **Production en SPIP 4.2–4.4** (la copie n'était pas représentative) : je construis la matrice d'impact (plugin, version actuelle → cible, chemin, provenance, sites actifs, compatibilité, dépendances, schéma), puis le plan de sauvegarde, de recette sur copie isolée et de mise à jour site par site.
+   - **Production en SPIP 5.0** : la mise à jour des plugins partagés n'entre pas dans cette procédure. La première question n'est d'ailleurs pas la mise à jour de cextras, mais la compatibilité de Mutualisation facile 2.0.1 et des plugins `[…;4.*]` avec 5.0. Il faut une procédure dédiée, à rechercher et valider pour les révisions exactes de `spip/spip`, `spip/ecrire` et des paquets Composer, sur une copie isolée.
+7. Quelle que soit l'issue, les actions de sécurité correspondent aux lignes 1 et 2 du plan d'actions. Elles se préparent à part et ne se mélangent pas à la mise à jour.
+
+## Commandes
+
+Plan d'actions : **inventaire complet des mutations envisagées.** Aucune n'est prête à lancer. Toutes sont **proposées, non exécutées**, et bloquées tant que leurs préconditions ne sont pas remplies.
+
+| # | Action | Objectif | Préconditions | Portée exacte | Impact | Sauvegarde / preuve | Commande proposée | Contrôle de succès | Retour arrière |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | Restreindre la création automatique de sites | Empêcher la création de site ou de base par un tiers avec le code public `ecureuil` | Confirmer la configuration effective en production ; décision de l'exploitant (`creer_site`/`creer_base` à `false` ou code fort et secret) ; recette sur copie isolée | Le seul fichier `<farm_root>/config/mes_options.php` (ferme entière) | Tous les sites ; plus de création automatique de nouveaux sites | Copie horodatée du fichier hors racine web, mode `0600`, empreinte SHA-256 | **Non préparée, bloquée.** Modification à rédiger après confirmation (édition manuelle relue, pas de `sed` aveugle) | `php -l` sur le fichier ; un domaine inconnu n'obtient plus de formulaire de création ; tous les sites existants répondent | Restaurer la copie horodatée vérifiée par son empreinte, puis refaire le contrôle |
+| 2 | Rotation des identifiants SQL du `mes_options.php` partagé | Ne plus dépendre d'identifiants en clair qui semblent être ceux de l'exemple | Confirmer s'ils sont réels et ce qu'ils permettent ; plan de rotation côté SGBD ; sauvegarde vérifiée (ligne 3) | Compte SQL et `<farm_root>/config/mes_options.php` | Création de bases ; éventuellement connexions si le compte est partagé | Copie du fichier (mode `0600`) ; liste des privilèges du compte, sans mot de passe | **Non préparée, bloquée.** Procédure à rédiger avec l'administrateur SGBD | Connexions des sites intactes ; ancien secret refusé | Rétablir l'ancien compte et la copie du fichier pendant la fenêtre convenue |
+| 3 | Sauvegarde cohérente avant toute mise à jour (code partagé, configuration globale, `config/` et `IMG/` de chaque site, base de chaque site) | Disposer d'une unité de restauration vérifiée | Version, moteur de chaque site, sites actifs et chemins connus (procédure, étapes 1–5) ; destination hors racine web, avec copie hors de l'hôte | Chemins explicitement listés dans le manifeste ; une base par site | Lecture des données ; charge d'E/S | Manifeste (UTC, hôte, sites, versions, préfixes, tailles, SHA-256, versions des outils) | **Non préparée, bloquée** jusqu'au moteur identifié : modèles MariaDB/MySQL (`--defaults-file` + `--no-login-paths`) ou SQLite (`.backup`) à instancier avec les chemins vérifiés | Code de sortie 0, fichiers non vides, `sha256sum -c` OK, **restauration test isolée réussie** | Sans objet (aucun changement de production) ; supprimer un artefact raté seulement après accord |
+| 4 | Mise à jour du ou des plugins partagés (cextras et dépendances) | Passer à la version cible | Production confirmée en 4.2–4.4 (sinon procédure SPIP 5 dédiée) ; matrice d'impact ; compatibilité de la cible vérifiée sur son vrai `paquet.xml` ; provenance stable ; ligne 3 validée ; recette sur copie isolée | `<farm_root>/plugins/auto/<prefix>/` (ferme entière) | Tous les sites qui activent le plugin, et chargement partagé pour les autres | Ancien répertoire conservé tel quel (archive + SHA-256), manifeste de la ligne 3 | **Non préparée, bloquée** | Version cible visible ; plugin actif sur les sites concernés ; journaux propres | Remettre l'ancien répertoire exact. Si le schéma a migré : restaurer aussi la base correspondante (ligne 3) |
+| 5 | Mise à niveau des plugins site par site (`?exec=mutualisation&upgradeplugins=oui&secret=…`) | Appliquer les migrations de schéma site par site | Ligne 4 faite ; preuves et journaux du site capturés ; maintenance active ; **pas** « Upgrader tout » | Un site à la fois | Schéma du site ; vidage large des caches de ce site | Journaux et état de `spip_meta` avant l'appel | **Non préparée, bloquée** | Schéma à jour, site public et privé OK, journaux propres ; arrêt à la première erreur | Restaurer la base de ce site depuis le même point de contrôle que le code (ligne 3), puis ligne 4 |
+
+## Validation
+
+Aucune validation de mise à jour pour l'instant : aucune mutation n'est prête. Lectures à faire sur **chaque** site (`asso-exemple.org`, `mairie-exemple.fr` et le site d'administration, une fois localisé), pas seulement sur l'administration :
+
+- Réponse HTTP publique et accès à l'espace privé.
+- Version SPIP affichée, liste des plugins actifs et versions.
+- Journaux PHP et SPIP du site (`tmp/log/` du site), sans les purger.
+
+Une fois les lignes débloquées, les contrôles propres aux mutations sont ceux des lignes 3, 4 et 5, dans cet ordre. Pour la ligne 1, seulement après la décision de l'exploitant.
+
+## Retour arrière
+
+- **Situation actuelle : rien n'est changé**, donc rien n'est à restaurer.
+- **Déclencheurs futurs** : une erreur d'activation, de schéma ou de journal sur un site ; une régression sur un site où le plugin est inactif ; une version observée différente de la cible.
+- **Unité de restauration** : le manifeste de la ligne 3. Il couvre le code partagé exact (plugins et dépendances, en ensemble cohérent), la configuration globale, ainsi que la base, `config/` et `IMG/` de chaque site, tous issus du **même** point de contrôle. Ne jamais restaurer la base d'un site depuis un autre point de contrôle que le code qu'elle attend.
+- **Ordre** : arrêter la ligne 5 en cours ; appliquer le retour arrière de la ligne 5 pour chaque site déjà migré, puis celui de la ligne 4. Les retours arrière des lignes 1 et 2 sont indépendants de la mise à jour.
+
+**Ce qu'il me faut pour avancer :** la sortie des étapes 1 à 5 de la procédure (version réellement servie, plugins et provenance, moteur de chaque site, plugins actifs par site), et l'emplacement du site d'administration.
+
+## spip-mutualisation-maintenance, cas 23 — tirage 2
+
+# Mise à jour des plugins partagés de la ferme : préparation
+
+**Je ne peux pas encore vous donner une procédure de mise à jour prête à lancer.** La copie de la racine partagée montre un cœur **SPIP 5.0.0-beta**. Or Mutualisation facile 2.0.1 et le seul plugin partagé présent (Champs Extras 4.3.3) ne déclarent une compatibilité qu'avec SPIP 4.x. Cette procédure (Mutualisation facile 2.x sur SPIP 4.2–4.4) ne couvre pas cette situation. Je vous propose ci-dessous uniquement des **contrôles en lecture seule**. Pour chaque modification qu'il faudra faire plus tard, je donne la ligne du plan d'action, marquée « bloquée ».
+
+Ce que j'ai lu : uniquement la copie de la racine partagée fournie. Je n'ai rien exécuté sur le serveur et rien modifié. Je n'ai pas affiché les fichiers `connect.php`.
+
+## Constats
+
+Faits vérifiés dans la copie (fichiers datés du 2026-10-18 14:52) :
+
+| Élément | Constat | Preuve |
+|---|---|---|
+| Version du cœur | `5.0.0-beta`, `ID = 50000`, `CODE = 2026_09_22`, `BASE = 2026_08_03_00`, PHP 8.4.0–8.5.99 | `ecrire/src/SpipVersion.php` |
+| Provenance du cœur | Il y a des signes d'une installation par Composer (`vendor/spip/framework/composer.json`, `bin/spip` qui demande `vendor/autoload_runtime.php`). En revanche, la copie ne contient **ni `composer.json`, ni `composer.lock` à la racine, ni `ecrire/inc_version.php`** | arborescence de la copie |
+| Chargement de la mutualisation | `config/mes_options.php` exige `_DIR_RACINE.'mutualisation/mutualiser.php'` | `config/mes_options.php`, ligne 60 |
+| Version de Mutualisation facile | `2.0.1`, `compatibilite="[4.2.0;4.*]"`, `<chemin path="" type="aucun" />` | `mutualisation/paquet.xml` |
+| `repertoire` effectif | `'sites'` | appel à `demarrer_site()`, `config/mes_options.php`, ligne 175 |
+| Autres options | `table_prefix => false` (une base par site, préfixe `spip`), `cookie_prefix => true`, `url_img_courtes => true`, `creer_site => true`, `creer_base => true` | idem, lignes 166–185 |
+| Calcul de `$site` | `HTTP_HOST` sans `www.` (avec redirection), `:` remplacé par `_` sauf pour le port 80 | lignes 65–87 |
+| Site d'administration | `_SITES_ADMIN_MUTUALISATION = 'admin-ferme.example'` | ligne 53 |
+| Sites présents dans `sites/` | `asso-exemple.org` et `mairie-exemple.fr`. Chacun a `config/connect.php`, `IMG/`, `local/` et `tmp/` | arborescence |
+| Plugins partagés | un seul : `plugins/auto/cextras/v4.3.3/` (Champs Extras `4.3.3`, `compatibilite="[4.1.0;4.*]"`). Il exige `saisies [4.2.0;]` et `yaml [3.0.0;]`, et utilise `verifier` et `crayons` | `plugins/auto/cextras/v4.3.3/paquet.xml` |
+| `plugins-dist/` | absent de la copie | arborescence |
+
+Points inconnus (à établir sur le serveur réel) :
+
+- Le serveur en production tourne-t-il vraiment en 5.0.0-beta ? La copie est-elle complète ? Il lui manque `composer.lock`, `inc_version.php` et `plugins-dist/`.
+- Où se trouvent `saisies` et `yaml`, dont Champs Extras a besoin ? Ils ne sont pas dans `plugins/` de la copie.
+- Quel moteur de base de données utilise chaque site ? `_INSTALL_SERVER_DB` vaut `mysql` à la création, mais chaque `connect.php` reste à vérifier sans l'afficher.
+- Quels plugins sont actifs sur chaque site ?
+- Quelle est la pile web/PHP (Apache ou Nginx/PHP-FPM, versions) ? Le dossier `sites/admin-ferme.example` existe-t-il ailleurs ?
+- Quelle version cible visez-vous pour chaque plugin, et quelles sont ses déclarations de compatibilité ?
+- Existe-t-il une sauvegarde récente, **vérifiée et testée en restauration** ?
+
+Anomalies :
+
+1. **Cœur en dehors des compatibilités déclarées.** SPIP 5.0.0-beta tourne avec Mutualisation facile `[4.2.0;4.*]` et Champs Extras `[4.1.0;4.*]`. Si c'est bien l'état de la production, la ferme fonctionne déjà hors de toute compatibilité déclarée.
+2. **Bases peut-être déjà migrées.** Avec `BASE = 2026_08_03_00`, les bases des sites ont peut-être déjà été migrées vers le schéma 5.0. Revenir en 4.x supposerait alors des bases d'**avant** cette migration, pas seulement de remettre l'ancien code.
+3. **Plugin installé à la manière de SVP.** `plugins/auto/cextras/v4.3.3/` a la structure d'un téléchargement SVP. À côté, le cœur semble géré par Composer. Ces provenances mélangées sont à éclaircir avant toute mise à jour.
+4. **Dépendances de Champs Extras introuvables.** `saisies` et `yaml` ne figurent pas dans la copie.
+5. **Site d'administration absent de `sites/`.** `admin-ferme.example` n'y est pas.
+6. **Identifiants SQL en clair.** `config/mes_options.php` contient en clair l'identifiant et le mot de passe SQL de création (`_INSTALL_USER_DB` / `_INSTALL_PASS_DB`). Ce sont **les mêmes valeurs que dans le fichier d'exemple public** `mutualisation/mes_options.php.txt`. Je ne reproduis pas la valeur ici.
+7. **Création automatique de site active.** Avec `creer_site => true` et `creer_base => true`, tout nom d'hôte qui arrive sur la ferme peut lancer la création d'un site. La protection repose sur le code d'activation, qui est ici celui par défaut (`ecureuil`).
+8. **Points d'entrée sans authentification.** `?exec=mutualisation&renouvelle_alea=yo`, `&dirliste=oui` et `&dirsize=oui` répondent sans authentification sur **tous** les sites (`mutualiser.php`, lignes 704–729). Seuls `upgrade` et `upgradeplugins` sont protégés par un secret.
+
+## Risques
+
+- **Périmètre touché : toute la ferme.** `plugins/auto/` est partagé. Changer `cextras` (ou ses dépendances) touche tous les sites qui l'activent, et chaque chargement passe par le même chemin. Une mise à jour « pilote » sur un seul site de production n'est pas possible : il faut une copie isolée de la ferme.
+- **Incompatibilité bloquante.** Aucun paquet installé ne déclare SPIP 5.0. Mettre à jour Champs Extras vers une version 4.x ne règle rien. Une version qui déclare 5.0 suppose aussi des `saisies` et `yaml` compatibles 5.0, et Mutualisation facile elle-même reste déclarée 4.x. Je n'ai pas vérifié les dernières versions disponibles en amont (pas d'accès réseau ici). Il faut le faire au moment de l'opération, à partir des `paquet.xml` des archives ou tags cibles.
+- **Provenance mal établie.** Cœur sous Composer d'après les indices, plugin de type SVP, `composer.lock` absent de la copie : on ne peut pas encore dire quelle méthode doit servir pour la mise à jour, ni ce qu'il faudra garder pour revenir en arrière.
+- **Retour arrière.** Si le schéma SQL d'un site a migré (vers 5.0 pour le cœur, ou pour la nouvelle version d'un plugin), remettre l'ancien code partagé sans la base correspondante casse le site.
+- **Bouton « Upgrader tout ».** Il lance `upgradeplugins` sur tous les sites d'un coup et vide largement les caches avant toute validation. Il ne faut pas s'en servir.
+- **Identifiants.** Le mot de passe SQL en clair, identique à celui de l'exemple public, est un risque de sécurité indépendant de la mise à jour. Il ne doit apparaître ni dans les sauvegardes lisibles, ni dans les journaux, ni dans les tickets.
+
+**Points bloquants (conditions d'arrêt atteintes) :** version cible et compatibilité non vérifiées, cœur hors périmètre (5.0.0-beta), provenance du cœur et des plugins incertaine, liste des sites et plugins actifs par site non établie, aucune sauvegarde vérifiée et restaurable.
+
+## Procédure proposée
+
+Toutes les étapes ci-dessous sont des **observations en lecture seule** à lancer par vous. Renvoyez-moi uniquement les sorties filtrées, jamais le contenu de `connect.php` ni de `mes_options.php`.
+
+1. **Confirmer la racine et la version en production.**
+
+   ```bash
+   spip_root=/chemin/verifie/de/la/ferme      # à renseigner
+   spip_root="$(realpath -e -- "$spip_root")" && test "$spip_root" != /
+   rg -n "const (string VERSION|int (ID|CODE|BASE))" "$spip_root/ecrire/src/SpipVersion.php"
+   test -f "$spip_root/ecrire/inc_version.php" && echo inc_version:present || echo inc_version:absent
+   ls -d -- "$spip_root"/plugins-dist 2>/dev/null
+   ```
+
+2. **Établir la provenance.**
+
+   ```bash
+   git -C "$spip_root" rev-parse --show-toplevel 2>/dev/null
+   git -C "$spip_root" status --short 2>/dev/null
+   test -f "$spip_root/composer.json" && test -f "$spip_root/composer.lock" && echo composer:oui
+   composer --working-dir="$spip_root" show --locked 2>/dev/null | rg -i '^spip'
+   ```
+
+3. **Établir la liste exacte des plugins partagés et leurs dépendances.**
+
+   ```bash
+   find -P "$spip_root/plugins" "$spip_root/plugins-dist" -xdev -mindepth 1 -maxdepth 4 \
+     -type f -name paquet.xml -print 2>/dev/null
+   # pour chaque paquet.xml listé :
+   rg -n '^(<paquet|[[:space:]]*(prefix|version|compatibilite|schema)=|[[:space:]]*<(necessite|utilise))' \
+     "<chemin/paquet.xml>"
+   rg -n '_DIR_PLUGINS_SUPPL|_SPIP_PATH|dossier_squelettes' "$spip_root/config" "$spip_root/sites" --glob '*.php'
+   ```
+
+4. **Identifier le moteur de base de chaque site sans rien afficher d'autre que le résultat.**
+
+   ```bash
+   for c in "$spip_root"/sites/*/config/connect.php; do
+     s="${c#"$spip_root"/sites/}"; s="${s%%/*}"
+     if rg -q "'sqlite3'" -- "$c"; then e=sqlite3; elif rg -q "'mysql'" -- "$c"; then e=mysql; else e=inconnu; fi
+     printf '%s\t%s\n' "$s" "$e"
+   done
+   find -P "$spip_root/sites" -xdev -mindepth 1 -maxdepth 1 -printf '%y %f\n' | sort
+   find -P "$spip_root/sites" -xdev -mindepth 2 -maxdepth 2 -type l -printf '%p -> %l\n'
+   ```
+
+5. **Plugins actifs par site.** Pour chaque site, relevez depuis l'espace privé (page Plugins) ou la méta `plugin`, en indiquant date et heure : la liste des préfixes et versions actifs, et `version_installee` pour chaque plugin à schéma. Ne vous fiez pas à un cache `tmp/` non daté.
+
+6. **Pile web/PHP et exposition.** Exécutez les commandes filtrées de l'inventaire (`nginx -T` passé par `awk` sur `server_name` / `root` / `fastcgi_pass`, ou `apache2ctl -S`), puis `php -v`. Vérifiez ensuite dans les journaux d'accès les appels `exec=mutualisation` contenant `dirliste`, `dirsize` ou `renouvelle_alea`.
+
+7. **Compatibilité des cibles.** Pour chaque plugin à mettre à jour (et pour Mutualisation facile), récupérez l'archive ou le tag cible **sur une copie isolée**. Relevez `version`, `compatibilite` et `necessite` dans son `paquet.xml`, puis remplissez la matrice d'impact :
+
+   | Plugin | Actuel → cible | Chemin chargé | Provenance | Sites actifs | Compat. SPIP 5.0.0-beta | Dépendances | Modifs locales | Schéma |
+   |---|---|---|---|---|---|---|---|---|
+
+8. **Décider.**
+   - Si la production est bien en 5.0.0-beta, il faut une procédure dédiée, préparée à part pour cet environnement (cœur 5.0, mutualisation, dépendances). Il ne s'agit plus d'une simple mise à jour de plugins.
+   - Si la production est en réalité en 4.2–4.4 et que la copie est inexacte, recommencez l'inventaire sur une copie fidèle. Je pourrai alors détailler les lignes 1 à 7 du plan d'action.
+
+Ensuite seulement, une fois les blocages levés et sur décision explicite : lignes 1 à 3 du plan d'action, dans l'ordre (sauvegarde et test de restauration) ; ligne 4 (essai sur une copie isolée) ; puis lignes 5 à 7 en production, dans l'ordre. La ligne 8 relève d'un chantier séparé.
+
+## Commandes
+
+Plan d'action complet. **Toutes les lignes sont bloquées.** Aucune commande de modification n'est fournie tant que les conditions préalables ne sont pas remplies. Statut : **proposée — non exécutée — bloquée**.
+
+| # | Action | Objectif | Conditions préalables | Périmètre exact | Impact | Sauvegarde/preuve | Commande proposée | Contrôle de réussite | Retour arrière |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | Créer le répertoire de sauvegarde | Avoir une destination sûre | `backup_root` résolu, hors de `spip_root`, différent de `/`, parent existant | `<backup_root>` uniquement (hors racine web) | Hôte : disque | — | **bloquée** : chemin non fourni ; modèle `mkdir`/`chmod 700` après les assertions de chemin | `realpath -e` correct, mode `700` | Supprimer le répertoire vide créé (sur votre décision) |
+| 2 | Sauvegarder chaque site et le code partagé | Créer l'unité de restauration | Ligne 1 faite ; moteur de chaque site connu (étape 4) ; fichier d'options SQL dédié (mode `0600`, préparé par vous) ; provenance connue (étape 2) | Base de `asso-exemple.org` et de `mairie-exemple.fr` ; leurs `config/` et `IMG/` ; `config/mes_options.php` ; `mutualisation/` ; `plugins/` ; `composer.json`/`composer.lock` si présents | Lecture des bases, écriture dans `<backup_root>` | Manifeste (UTC, versions, préfixe `spip`, tailles) et `SHA256SUMS` | **bloquée** : moteurs et provenance inconnus ; modèle `mariadb-dump`/`mysqldump --defaults-file … --single-transaction` (sans `--databases`) ou `sqlite3 .backup`, puis `tar` d'une liste explicite | Code de sortie 0, fichiers non vides, `sha256sum -c` OK, `gzip -t`/`tar -tf` OK | Sans effet sur la production ; la sauvegarde se conserve |
+| 3 | Tester la restauration dans un environnement isolé | Prouver que la sauvegarde se restaure | Ligne 2 faite ; serveur de test isolé (sans accès à la production) ; compte d'import limité à une seule base | Base de test pré-créée, distincte de la source, sur l'environnement isolé | Environnement isolé uniquement | Contrôle de `spip_meta` (`CHECK TABLE` / `PRAGMA integrity_check`), site restauré qui fonctionne | **bloquée** : environnement isolé non désigné | Tables `spip_meta` présentes et OK ; site restauré consultable | Supprimer la base de test après consignation des résultats (sur votre décision) |
+| 4 | Essayer les plugins cibles sur une copie isolée de la ferme | Valider compatibilité et schéma hors production | Matrice de l'étape 7 complète ; cibles compatibles avec **la version réelle du cœur** ; copie représentative des bases | Copie de la ferme (même cœur, mêmes chemins de plugins, mêmes combinaisons actives) | Copie isolée uniquement | Journaux de la copie, `version_installee` avant et après | **bloquée** : aucune cible compatible 5.0 établie | Activation, schéma, formulaires et tâches OK sur chaque combinaison | Jeter la copie |
+| 5 | Mettre la ferme en maintenance | Geler les écritures pendant la bascule | Lignes 2 à 4 validées | Toute la ferme (code partagé) | Tous les sites indisponibles en écriture | Heure UTC consignée | **bloquée** : méthode de maintenance non déterminée (pile web inconnue) | Sites en maintenance, aucune écriture | Lever la maintenance |
+| 6 | Remplacer le code des plugins partagés en une fois | Installer les versions cibles | Ligne 5 active ; même provenance qu'actuellement (SVP/archive ou Composer, sans mélange) ; ancienne version conservée | `plugins/auto/<prefix>/…` exacts issus de la matrice (et dépendances coordonnées) | **Toute la ferme** | Copie de l'ancien répertoire ou ancien `composer.lock`, sommes de contrôle | **bloquée** : provenance et cible inconnues | `paquet.xml` en place = version cible ; aucune erreur PHP au chargement | Remettre exactement l'ancien répertoire ou l'ancien lock (ligne 2) |
+| 7 | Lancer `upgradeplugins` site par site | Migrer le schéma de chaque site actif | Ligne 6 faite ; journaux et état de chaque site capturés **avant** ; secret obtenu depuis le tableau de bord | Un site à la fois : `asso-exemple.org`, puis `mairie-exemple.fr` (si actifs) | Schéma du site ; purge large des caches du site | Journaux du site, `version_installee` avant et après | **bloquée** ; ne jamais utiliser « Upgrader tout » | Version observée = cible, schéma à jour, journaux propres ; arrêt à la première erreur | Restaurer **la base de ce site** (ligne 2) **et** l'ancien code (ligne 6, retour arrière) |
+| 8 | Changer l'identifiant SQL exposé dans `mes_options.php` | Supprimer l'identifiant identique à l'exemple public | Inventaire des droits du compte ; préparation séparée | Compte SQL de création et `config/mes_options.php` (ferme et hôte) | Création de nouveaux sites ; éventuels sites qui utilisent ce compte | État actuel des droits (sans le secret) | **bloquée** : hors de cette préparation, à préparer à part | Ancien identifiant refusé ; sites existants OK | Selon la procédure dédiée |
+
+## Validation
+
+Lecture seule, sur **chaque** site (`asso-exemple.org`, `mairie-exemple.fr`, et le site d'administration `admin-ferme.example` une fois localisé), pas uniquement sur le site d'administration :
+
+- avant toute modification : capturer pour chaque site la réponse HTTP publique, la connexion à l'espace privé, la liste des plugins actifs avec leurs versions et `version_installee`, et les dernières lignes des journaux PHP/SPIP ;
+- après les lignes 6 et 7 : les contrôles de réussite des lignes 6 et 7, site par site, à reporter dans ce tableau :
+
+  | Site | Plugin actif | Version observée | Dépendances actives | Schéma à jour | Contrôles fonctionnels | Journaux propres | Résultat |
+  |---|---|---|---|---|---|---|---|
+
+- sur les sites où le plugin est **inactif** : vérifier qu'aucune régression ne vient d'une dépendance partagée ;
+- garder la maintenance (ligne 5) jusqu'à ce que ce tableau soit entièrement rempli.
+
+## Retour arrière
+
+- **Unité de restauration :** le code partagé de la ferme (exact, selon sa provenance), `config/mes_options.php`, `mutualisation/`, `plugins/`, plus, **pour chaque site**, la base et les fichiers `config/` et `IMG/` pris **au même point de sauvegarde** (ligne 2), avec son manifeste et ses `SHA256SUMS`. On n'utilise jamais « la dernière sauvegarde » sans la nommer. `local/` et `tmp/` sont régénérés.
+- **Ce qui déclenche un retour arrière :** une erreur à l'activation ou à la migration de schéma, une erreur PHP fatale au chargement, ou un contrôle de la section Validation en échec sur n'importe quel site.
+- **Ordre :**
+  - avant la ligne 7, pas de migration de schéma : appliquer le retour arrière de la ligne 6 ;
+  - après la ligne 7 sur un ou plusieurs sites : appliquer le retour arrière de la ligne 7 pour chacun de ces sites, puis celui de la ligne 6 ;
+  - si une dépendance partagée a changé : restaurer tout l'ensemble de plugins coordonné indiqué dans le manifeste, sans mélanger les versions.
+- **Spécificité de cette ferme :** si les bases ont déjà migré vers le schéma 5.0 (`BASE = 2026_08_03_00`), revenir à un code 4.x impose des bases d'avant cette migration. Aucune sauvegarde de ce type n'est identifiée pour l'instant.
+
+---
+
+Contrôle de couverture : chaque modification évoquée dans ce document (répertoire de sauvegarde, sauvegardes, test de restauration, essai isolé, maintenance, remplacement du code, `upgradeplugins` par site, changement de l'identifiant SQL) a sa ligne complète, de 1 à 8, dans le plan d'action. Toutes sont bloquées tant que les points ci-dessus ne sont pas levés.
+
+**Pour avancer, renvoyez-moi les sorties filtrées des étapes 1 à 6 et la liste des versions cibles souhaitées.**
+
+## spip-mutualisation-maintenance, cas 24 — ferme 5.0, tous les sites identiques — tirage 1
+
+# Ferme SPIP : tous les sites affichent le même contenu depuis la mise à jour
+
+## Constats
+
+Ce que j'ai vérifié dans la copie de la racine partagée (`farm/`). Je n'ai pas accès au serveur réel.
+
+**Ce qui est établi**
+
+1. **Le cœur partagé est maintenant un SPIP 5.0.0-beta.** `ecrire/src/SpipVersion.php` déclare `VERSION = '5.0.0-beta'`, `BASE = 2026_08_03_00` et `PHP_MIN = '8.4.0'`. La racine contient aussi `vendor/spip/framework` (`spip-league/kernel`, `http-kernel`, `plugin-manager`…) et un `bin/spip` qui démarre un `SpipLeague\Component\Kernel\Kernel`. C'est la nouvelle architecture de SPIP 5.0. La « mise à jour du serveur » a donc très probablement fait passer le cœur de SPIP 4.x à 5.0 beta.
+2. **Mutualisation facile n'est pas compatible avec cette version.** `mutualisation/paquet.xml` déclare `version="2.0.1"` et `compatibilite="[4.2.0;4.*]"`. SPIP 5.0 est hors de cette plage.
+3. **La configuration de la ferme n'a pas bougé.** `config/mes_options.php` fait `require _DIR_RACINE.'mutualisation/mutualiser.php'`, calcule `$site` à partir de `HTTP_HOST` (en retirant `www.`), puis appelle `demarrer_site($site, [... 'repertoire' => 'sites', 'cookie_prefix' => true, 'table_prefix' => false, 'url_img_courtes' => true, 'creer_site' => true, 'creer_base' => true ...])`. Elle ne diffère de `mes_options.php.txt` que par `_SITES_ADMIN_MUTUALISATION = 'admin-ferme.example'`.
+4. **La séparation des sites repose sur les mécanismes de démarrage de SPIP 4.** `demarrer_site()` (`mutualiser.php`) définit `_DIR_SITE` et `_SPIP_PATH`, puis appelle `spip_initialisation_core()` avec les répertoires `config/`, `IMG/`, `tmp/` et `local/` de `sites/<domaine>/`. Tout cela suppose que `config/mes_options.php` soit chargé, avec les constantes `_DIR_*` / `_NOM_*` et `_ECRIRE_INC_VERSION` déjà définies, **avant** l'initialisation par défaut de SPIP. Sinon, chaque requête retombe sur `config/`, `IMG/`, `local/` et `tmp/` à la racine, donc sur une seule connexion et un seul jeu de documents pour tous les domaines. C'est exactement le symptôme décrit.
+5. **Les répertoires des sites existent toujours.** `sites/asso-exemple.org/` et `sites/mairie-exemple.fr/` ont chacun `config/connect.php`, `IMG/`, `local/` et `tmp/`. Les données des sites ne semblent donc pas perdues : c'est l'aiguillage vers elles qui ne fonctionne plus.
+6. **Le plugin partagé `plugins/auto/cextras/v4.3.3` est lui aussi incompatible** : il déclare `compatibilite="[4.1.0;4.*]"`.
+
+**Ce qui reste inconnu**
+
+- Comment SPIP 5.0 a été installé (Composer, Git, archive), et la version précise qui tournait avant : la copie ne contient ni `composer.json`/`composer.lock` à la racine, ni `.git`, ni `ecrire/inc_version.php`.
+- Si SPIP 5.0 charge encore `config/mes_options.php`, et à quel moment du démarrage du Kernel. **C'est une hypothèse à confirmer** (observations 3 et 4), pas un fait établi.
+- Vers quelle base de données tous les sites sont envoyés aujourd'hui (celle de `config/connect.php` à la racine ? une autre ?).
+- Si une mise à jour de la base vers le schéma 5.0 (`ecrire/?exec=upgrade` ou équivalent) a déjà été lancée sur cette base, ou sur celle d'un site.
+- Le moteur de base de chaque site : la détection par liste blanche sur `sites/*/config/connect.php` ne trouve ni `mysql` ni `sqlite3`. Je n'ai pas affiché ces fichiers.
+- Le serveur web, les versions de PHP (CLI et FPM), et l'existence d'une sauvegarde **vérifiée et restaurable** d'avant la mise à jour.
+
+## Risques
+
+- **Portée : toute la ferme.** Le code est partagé, donc tous les domaines servis par cette racine sont touchés, y compris le site d'administration `admin-ferme.example`.
+- **Écritures croisées en cours.** Tant que la situation dure, toute action d'un rédacteur ou d'un visiteur atterrit dans la base et les répertoires communs, pas dans ceux de son site : connexion, article, document téléversé, forum, calcul du cache. Plus on attend, plus il faudra démêler de données.
+- **Migration de base irréversible.** Si quelqu'un passe dans `ecrire/`, SPIP 5.0 peut proposer ou lancer la mise à jour de la base vers `BASE = 2026_08_03_00`. On ne peut pas annuler cette migration en restaurant seulement les fichiers : il faut restaurer la base. **Que personne ne lance de mise à jour de la base** ni `?exec=mutualisation&upgrade=oui` d'ici là.
+- **Création de sites non voulue.** Avec `creer_site` et `creer_base` à `true` et le code d'activation par défaut (`ecureuil`), un aiguillage défaillant peut aboutir à des créations ou installations inattendues. À vérifier dans les journaux.
+- **Hors périmètre.** SPIP 5.0 (beta) avec Mutualisation facile 2.x sort du périmètre pris en charge (SPIP 4.2–4.4) : je ne propose pas de « réparer » la ferme en 5.0. Faire tourner une ferme mutualisée sous 5.0 demanderait une version de Mutualisation compatible et une procédure étudiée à part. Il ne faut pas modifier `mutualiser.php` à la main sur la production.
+- **Secret en clair.** `config/mes_options.php` contient un mot de passe SQL en clair (`_INSTALL_PASS_DB`). Je ne le reproduis pas ici. Ne transmettez ni ce fichier ni les `connect.php` sans les expurger.
+- **Blocages.** Je ne fournis pas de commande de retour arrière prête à lancer tant que trois choses ne sont pas établies : la méthode d'installation, une sauvegarde d'avant la mise à jour vérifiée, et l'état du schéma des bases.
+
+## Procédure proposée
+
+Étapes en lecture seule, à lancer par vous, avec `spip_root` = le chemin réel de la racine partagée :
+
+1. **Vérifier la version servie et la date du changement :**
+   ```bash
+   spip_root="$(realpath -e -- /chemin/de/la/racine)"; test "$spip_root" != /
+   rg -n "const string VERSION|const int BASE" "$spip_root/ecrire/src/SpipVersion.php"
+   ls -la --time-style=full-iso "$spip_root/ecrire/src/SpipVersion.php" "$spip_root/vendor" "$spip_root/composer.lock" 2>/dev/null
+   php -v | head -1
+   ```
+2. **Identifier la méthode d'installation et l'état d'avant :**
+   ```bash
+   git -C "$spip_root" rev-parse --show-toplevel 2>/dev/null && git -C "$spip_root" log -3 --format='%h %ci %s' && git -C "$spip_root" status --short | head -50
+   test -f "$spip_root/composer.lock" && jq -r '.packages[] | select(.name|test("^spip/")) | "\(.name) \(.version) \(.source.reference // "")"' "$spip_root/composer.lock"
+   ```
+   Retrouver aussi ce qu'a fait « la mise à jour du serveur » : script de déploiement, `composer update`, gestionnaire de paquets. Et quelle version tournait avant.
+3. **Confirmer le mécanisme de la panne** (code du cœur, pas de secrets) : `rg -n "mes_options" "$spip_root/ecrire" "$spip_root/vendor/spip" | head -40`. Cela montre si et quand SPIP 5.0 charge `config/mes_options.php`.
+4. **Repérer où vont les écritures depuis la mise à jour** (sans lire de contenu) :
+   ```bash
+   ls -la --time-style=full-iso "$spip_root"/config/connect.php "$spip_root"/IMG "$spip_root"/local "$spip_root"/tmp 2>/dev/null
+   find -P "$spip_root/IMG" "$spip_root/config" "$spip_root/sites" -xdev -type f -newermt 'AAAA-MM-JJ HH:MM' -printf '%TY-%Tm-%TdT%TH:%TM %p\n' 2>/dev/null | sort | head -200
+   ```
+   Remplacez `AAAA-MM-JJ HH:MM` par la date de la mise à jour.
+5. **Chercher dans les journaux d'accès** des passages par `exec=upgrade`, `exec=install`, `exec=mutualisation` ou `upgrade=oui` depuis cette date, sur tous les domaines.
+6. **Vérifier le schéma de chaque base concernée** (racine et chaque site), sans mot de passe dans la commande :
+   ```bash
+   mysql --defaults-extra-file=/chemin/protégé/client.cnf -N -e "SELECT nom, valeur FROM spip_meta WHERE nom IN ('version_installee','nom_site','adresse_site')" NOM_BASE
+   ```
+   Le préfixe de table attendu est `spip` (`table_prefix` à `false`). Pour SQLite, faites la même requête sur le fichier de `config/bases/`. Une valeur `version_installee` alignée sur 5.0 (`2026080300`) signale une base déjà migrée.
+7. **Vérifier qu'une sauvegarde d'avant la mise à jour existe** et la tester : code + `config/` + `sites/*/` + une copie de chaque base, avec une empreinte et une restauration d'essai à l'écart.
+8. **Ensuite seulement**, appliquer les lignes 1 à 7 du plan d'action, dans l'ordre :
+   - lignes 1 et 2 dès que possible ;
+   - ligne 3 une fois les étapes 2, 6 et 7 éclaircies ;
+   - ligne 4 seulement si l'étape 6 a montré une base migrée ;
+   - ligne 5 seulement si l'étape 4 a montré des écritures égarées ;
+   - lignes 6 et 7 en dernier.
+
+## Commandes
+
+Plan d'action : toutes les commandes sont **proposées — non exécutées**. Les valeurs entre `<…>` sont à remplacer par des valeurs vérifiées.
+
+| # | Action | Objectif | Préconditions | Périmètre exact | Impact | Sauvegarde / preuve | Commande proposée | Contrôle de réussite | Retour arrière |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | Mettre la ferme en maintenance | Stopper les écritures croisées entre sites | Serveur web identifié (Apache ou Nginx) ; liste des vhosts de la ferme connue | Tous les vhosts dont la racine est `spip_root` | Sites indisponibles pour le public (503), sauf IP d'administration | Copie de la conf vhost avant modification : `cp -a <fichier_vhost> <fichier_vhost>.avant-maintenance` | Nginx : ajouter dans chaque `server` de la ferme `if ($remote_addr != <IP_admin>) { return 503; }`, puis `nginx -t && systemctl reload nginx`. Apache : règle `RewriteCond %{REMOTE_ADDR} !^<IP_admin>$` + `RewriteRule ^ - [R=503,L]`, puis `apache2ctl configtest && systemctl reload apache2` | `curl -sI https://<chaque_domaine>/` renvoie 503 depuis l'extérieur | Remettre `<fichier_vhost>.avant-maintenance`, tester la conf, recharger |
+| 2 | Figer l'état actuel comme preuve | Garder de quoi comparer et récupérer les écritures égarées | Ligne 1 faite ; espace disque vérifié (`df -hP`) ; `<dossier_preuves>` hors de `spip_root` | Code partagé, `config/`, `IMG/`, `local/` et `tmp/` à la racine, `sites/`, chaque base | Lecture seule pour SPIP ; consomme de l'espace disque | Empreintes SHA-256 des archives | `tar -C "$spip_root" -cpzf <dossier_preuves>/ferme-etat-5.0-$(date +%F).tgz .` ; pour chaque base : `mysqldump --defaults-extra-file=<client.cnf> --single-transaction --routines <NOM_BASE> > <dossier_preuves>/<NOM_BASE>-etat-5.0.sql` (SQLite : `sqlite3 <fichier.sqlite> ".backup '<dossier_preuves>/<site>.sqlite'"`) ; puis `sha256sum <dossier_preuves>/* > <dossier_preuves>/SHA256SUMS` | `tar -tzf` lisible ; `sha256sum -c` OK ; dumps non vides | Aucun : ne fait que créer des fichiers dans `<dossier_preuves>` |
+| 3 | Revenir au code SPIP 4.x d'avant la mise à jour | Rétablir un cœur compatible avec Mutualisation 2.0.1 [4.2.0;4.*] et cextras [4.1.0;4.*] | Ligne 2 faite ; méthode d'installation établie (étape 2) ; version 4.x d'origine connue ; sauvegarde d'avant vérifiée et restaurable (étape 7) ; schéma des bases vérifié (étape 6) | Code partagé seulement (`ecrire/`, `prive/`, `squelettes-dist/`, `plugins-dist/`, `vendor/`, `bin/`, fichiers racine). **Ne pas toucher** `sites/`, `config/`, `mutualisation/`, `plugins/` | Toute la ferme | Archive de la ligne 2 | Selon la méthode, une seule : Git : `git -C "$spip_root" checkout <tag_ou_commit_4.x_d_avant>` ; Composer : remettre `composer.json`/`composer.lock` d'avant puis `composer install --no-dev -d "$spip_root"` ; archive : restaurer les fichiers du cœur depuis `<sauvegarde_avant>` dans un dossier vide, vérifier, puis échanger les dossiers par renommage | `SpipVersion`/`inc_version.php` affiche la version 4.x d'avant ; chaque domaine montre son propre contenu (Validation) | Restaurer le code depuis l'archive de la ligne 2 |
+| 4 | *(Conditionnelle)* Restaurer une base déjà migrée vers 5.0 | Remettre un schéma 4.x pour une base touchée par la migration | L'étape 6 montre `version_installee` en 5.0 pour `<NOM_BASE>` ; dump d'avant la mise à jour vérifié ; ligne 2 faite (garde l'état migré) | Une seule base `<NOM_BASE>` à la fois | Le site concerné perd ce qui a été écrit dans cette base depuis le dump (à récupérer via la ligne 5) | Dump de la ligne 2 et dump d'avant | `mysql --defaults-extra-file=<client.cnf> <NOM_BASE> < <sauvegarde_avant>/<NOM_BASE>.sql` (SQLite : remettre le fichier `.sqlite` d'avant à sa place, site en maintenance) | `version_installee` revient à la valeur d'avant ; le site s'affiche sans demander de mise à jour | Recharger le dump de la ligne 2 |
+| 5 | *(Conditionnelle)* Rapatrier les écritures égarées | Remettre dans le bon site ce qui a été écrit dans les répertoires ou la base communs | Liste des fichiers ou objets créés depuis la mise à jour (étape 4) ; site d'origine de chacun identifié (journaux, auteurs) | Fichiers listés un par un, vers `sites/<domaine>/IMG/` ; contenus de base à ressaisir ou réimporter un par un | Le site cible récupère le contenu | Ligne 2 | Pour chaque fichier vérifié : `cp -a -- "$spip_root/IMG/<chemin>" "$spip_root/sites/<domaine>/IMG/<chemin>"` (copie, sans suppression) ; contenus SQL : ressaisie depuis l'espace privé du bon site | Le document ou contenu apparaît sur le seul bon site | Supprimer la copie ajoutée dans `sites/<domaine>/IMG/` (liste tenue pendant l'opération) |
+| 6 | Bloquer une nouvelle montée automatique de version | Empêcher que la prochaine mise à jour du serveur réinstalle SPIP 5.0 | Ligne 3 réussie ; mécanisme qui a fait la mise à jour identifié (étape 2) | Le dépôt, le fichier Composer ou le script de déploiement de la ferme | Les prochaines mises à jour restent sur 4.x | Copie du fichier modifié | Selon le mécanisme : contrainte `"spip/spip": "~<4.4.x>"` dans `composer.json` (vérifier ensuite avec `composer validate`), ou étiquette 4.x fixée dans le script de déploiement | Un essai à blanc (`composer update --dry-run` ou déploiement de test) ne propose plus 5.0 | Remettre la copie du fichier |
+| 7 | Lever la maintenance | Remettre les sites en ligne | Validation réussie pour **tous** les domaines | Mêmes vhosts que la ligne 1 | Sites de nouveau publics | Conf de maintenance conservée à part | Remettre `<fichier_vhost>.avant-maintenance` sur chaque vhost, puis `nginx -t && systemctl reload nginx` (ou `apache2ctl configtest && systemctl reload apache2`) | `curl -sI` renvoie 200 sur chaque domaine, avec son propre contenu | Réappliquer la ligne 1 |
+
+## Validation
+
+En lecture seule, pour **chaque** site de `sites/` (au moins `asso-exemple.org` et `mairie-exemple.fr`) **et** pour `admin-ferme.example` :
+
+- `curl -s https://<domaine>/ | grep -o '<title>[^<]*'` affiche un titre différent et attendu pour chaque domaine ;
+- `curl -sI https://<domaine>/IMG/<document_connu_du_site>` (avec `url_img_courtes`) sert le document de **ce** site ;
+- la requête `spip_meta` de l'étape 6 renvoie le bon `nom_site` / `adresse_site` et une `version_installee` 4.x pour chaque base ;
+- les nouveaux fichiers de cache vont dans `sites/<domaine>/tmp/` et plus dans le `tmp/` de la racine (relancer le `find -newermt` de l'étape 4 avec une date postérieure à la ligne 3) ;
+- `?exec=mutualisation` n'est accessible que sur `admin-ferme.example`. Vérifier aussi dans les journaux s'il y a eu des appels non authentifiés à `renouvelle_alea`, `dirliste` ou `dirsize` sur les autres domaines.
+
+Pour les opérations elles-mêmes, voir la colonne « Contrôle de réussite » des lignes 1 à 7.
+
+## Retour arrière
+
+- **Déclencheurs :** un contrôle de la ligne 3 échoue ; un site affiche encore un autre contenu ; une erreur PHP apparaît après le retour au code 4.x ; un site demande une mise à jour de la base.
+- **Unité de restauration :** le code partagé et l'ensemble des bases forment un seul bloc. On ne restaure pas les fichiers seuls si une base a migré.
+- **Ordre :** garder la ligne 1 en place, puis appliquer le retour arrière de la ligne 3 (si une base a été restaurée, celui de la ligne 4 avant) et revenir à l'état figé par la ligne 2. Lever la maintenance (ligne 7) seulement après une validation complète.
+
+**En pratique, tout de suite :** mettez la ferme en maintenance (ligne 1), interdisez toute mise à jour de base et toute action dans `ecrire/`, et envoyez-moi les sorties des étapes 1, 2 et 6. Ensuite je pourrai préciser la commande de retour au cœur 4.x (ligne 3) pour votre méthode d'installation.
+
+## spip-mutualisation-maintenance, cas 24 — tirage 2
+
+# Diagnostic : tous les sites de la ferme affichent le même contenu
+
+Résumé : la mise à jour a installé le **cœur SPIP 5.0.0-beta** sous une ferme qui tourne avec **Mutualisation facile 2.0.1, déclarée compatible `[4.2.0;4.*]` seulement**. Le symptôme (même contenu et mêmes documents sur tous les domaines) correspond à une mutualisation qui ne s'applique plus : chaque requête serait alors servie avec la configuration, la base et l'`IMG/` de la racine partagée au lieu de ceux de `sites/<domaine>/`. Cette ferme sous SPIP 5.0 sort du périmètre pris en charge (SPIP 4.2–4.4). Je ne propose donc pas de « correctif » pour SPIP 5. Je propose de figer la situation, de mesurer l'impact, puis de revenir au cœur 4.x d'avant la mise à jour. Le retour arrière dépend de prérequis encore inconnus (voir plus bas).
+
+Je n'ai rien exécuté et rien modifié. J'ai lu uniquement la copie de la racine partagée (`farm/`).
+
+## Constats
+
+Faits vérifiés dans la copie de la racine partagée :
+
+| # | Constat | Preuve |
+|---|---|---|
+| F1 | Le cœur installé est **SPIP 5.0.0-beta** (`ID = 50000`, `BASE = 2026_08_03_00`, PHP 8.4.0 minimum) | `ecrire/src/SpipVersion.php` |
+| F2 | L'installation est de type SPIP 5 / Composer : `vendor/spip/framework` (qui exige `spip-league/kernel`, `plugin-manager`, `http-kernel`…) et `bin/spip` qui démarre `SpipLeague\Component\Kernel\Kernel` | `vendor/spip/framework/composer.json`, `bin/spip` |
+| F3 | Mutualisation facile **2.0.1**, `compatibilite="[4.2.0;4.*]"`, chargée par `require _DIR_RACINE.'mutualisation/mutualiser.php'` depuis `config/mes_options.php` (et non depuis `plugins/`) | `mutualisation/paquet.xml`, `config/mes_options.php` |
+| F4 | Configuration effective : `demarrer_site($site, …)` avec `'repertoire' => 'sites'`, `$site` tiré de `HTTP_HOST` (sans `www.`, port remplacé par `_`), `cookie_prefix` à true, `table_prefix` à false, `url_img_courtes` à true, `creer_site` et `creer_base` à true. `_SITES_ADMIN_MUTUALISATION` vaut `admin-ferme.example` | `config/mes_options.php` |
+| F5 | La mutualisation repose sur des mécanismes du démarrage de SPIP 4 : la garde `if (!defined('_ECRIRE_INC_VERSION')) return;`, la définition de `_DIR_SITE` et de `_SPIP_PATH`, puis l'appel à `spip_initialisation_core()` / `spip_initialisation()` avec les répertoires du site | `mutualisation/mutualiser.php` |
+| F6 | Deux sites existent sur disque : `sites/mairie-exemple.fr` et `sites/asso-exemple.org`. Chacun a `config/connect.php`, `IMG/`, `local/` et `tmp/` | arborescence `sites/` |
+| F7 | Le plugin partagé `plugins/auto/cextras/v4.3.3` déclare `[4.1.0;4.*]`, donc il est lui aussi incompatible avec 5.0 | `plugins/auto/cextras/v4.3.3/paquet.xml` |
+| F8 | `config/mes_options.php` contient en clair des identifiants SQL d'installation (`_INSTALL_USER_DB` / `_INSTALL_PASS_DB`). Je ne les reproduis pas ici | `config/mes_options.php` |
+
+Hypothèse principale, non vérifiée sur le serveur : sous SPIP 5.0, le démarrage passe par le noyau `spip-league`. La mutualisation 2.x ne parvient plus à rediriger SPIP vers `sites/<domaine>/` avant l'initialisation. Deux causes sont possibles :
+- `config/mes_options.php` n'est plus chargé au même moment, ou sort tout de suite à cause de la garde `_ECRIRE_INC_VERSION` ;
+- `spip_initialisation*()` n'a plus d'effet parce que les répertoires ont déjà été fixés.
+
+Dans les deux cas, tous les domaines retombent sur la configuration de la racine. Je n'ai pas vérifié ce mécanisme dans le code de SPIP 5.0, et il ne change rien à la conduite à tenir : l'outil n'est pas compatible.
+
+Inconnues :
+- **Méthode d'installation exacte** du cœur avant et après la mise à jour (Composer, Git ou archive) : `composer.json` et `composer.lock` à la racine, `.git` et `inc_version.php` ne figurent pas dans la copie.
+- **Version 4.x d'avant la mise à jour**, et existence d'une **sauvegarde vérifiée et restaurable** des fichiers partagés et des bases.
+- **Moteur de base** de chaque site : le contrôle filtré renvoie `unknown` pour les deux `connect.php` de la copie, qui semblent être des fichiers de remplacement.
+- Ce qui sert réellement le contenu « commun » : un `config/connect.php` à la racine, une base de la racine ou un `IMG/` à la racine ? Rien de cela n'existe dans la copie.
+- **Les bases des sites ont-elles été migrées au schéma 5.0 ?** Ce serait le cas si un administrateur a été connecté ou si `exec=upgrade` / `?exec=mutualisation&upgrade=oui` a été lancé depuis la mise à jour.
+- Des écritures (articles, documents envoyés) ont-elles eu lieu depuis la mise à jour, et à quel endroit ?
+- Serveur web (Apache ou Nginx/PHP-FPM) et version de PHP.
+
+## Risques
+
+- **Rayon d'impact : toute la ferme.** Le cœur, `mutualisation/` et `plugins/auto/` sont partagés. Tous les domaines sont touchés, y compris le site d'administration `admin-ferme.example`.
+- **Écritures au mauvais endroit.** Tant que la situation dure, ce qu'un rédacteur publie ou envoie peut aboutir dans la base ou l'`IMG/` communs. Les données se mélangent alors entre clients, et des documents d'un site peuvent devenir visibles sur un autre. C'est un **risque de confidentialité**.
+- **Créations de sites parasites.** Avec `creer_site` et `creer_base` à true, une mutualisation qui fonctionne en partie pourrait créer des répertoires ou des bases pour des domaines de passage.
+- **Migration de schéma.** Si une base de site est passée au schéma 5.0 (`BASE 2026_08_03_00`), remettre seulement les fichiers 4.x ne suffit pas pour ce site. Il faudra aussi restaurer sa base d'avant la mise à jour, en perdant les écritures postérieures (cf. ligne 5).
+- **Plugins incompatibles.** cextras 4.3.3, et probablement d'autres plugins, ne sont pas compatibles 5.0.
+- **SPIP 5.0.0 est une bêta.** Elle n'est pas adaptée à une ferme en production avec Mutualisation 2.x.
+- **Identifiants en clair** dans `config/mes_options.php` (F8). Ne jamais coller ce fichier entier dans un ticket ou un chat.
+
+**Blocages avant tout retour arrière** : la méthode d'installation est inconnue ; aucune sauvegarde 4.x vérifiée n'est identifiée ; on ne sait pas si les bases ont migré.
+
+## Procédure proposée
+
+1. **Figer** : suivre la ligne 1 du plan d'action (maintenance de toute la ferme). Personne ne doit se connecter à l'espace privé ni lancer de mise à niveau.
+2. **Observations en lecture seule** (à lancer par vous, en remplaçant `<racine>` par le chemin réel) :
+   ```bash
+   spip_root="$(realpath -e -- <racine>)"; test "$spip_root" != /
+   # Version et méthode d'installation
+   rg -n "VERSION|BASE" "$spip_root/ecrire/src/SpipVersion.php" "$spip_root/ecrire/inc_version.php" 2>/dev/null
+   git -C "$spip_root" rev-parse --show-toplevel 2>/dev/null && git -C "$spip_root" status --short | head -50
+   ls -la "$spip_root"/composer.json "$spip_root"/composer.lock 2>/dev/null
+   # Ce qui existe à la racine (fichier de connexion, IMG commun), sans afficher le contenu
+   ls -la "$spip_root/config/" "$spip_root/IMG" "$spip_root/tmp" 2>/dev/null | head -50
+   # Écritures depuis la mise à jour (remplacer la date)
+   find -P "$spip_root/IMG" "$spip_root/config" "$spip_root/sites" -xdev -maxdepth 3 -newermt '<date de la mise à jour>' -printf '%TY-%Tm-%Td %TH:%TM %p\n' 2>/dev/null | sort | head -100
+   # Sites créés ou modifiés depuis la mise à jour
+   find -P "$spip_root/sites" -xdev -mindepth 1 -maxdepth 1 -newermt '<date de la mise à jour>' -printf '%p\n'
+   # Moteur de base de chaque site, sans afficher connect.php
+   for f in "$spip_root"/sites/*/config/connect.php; do e=unknown; grep -q "'sqlite3'" "$f" && e=sqlite3; grep -q "'mysql'" "$f" && e=mysql; echo "$f: $e"; done
+   # Sauvegardes disponibles (adapter le chemin)
+   ls -la <dossier_sauvegardes> | tail -20
+   ```
+   Pour chaque base de site, relevez seulement la valeur de `version_installee`, sans afficher le reste :
+   `SELECT valeur FROM spip_meta WHERE nom='version_installee';` (lancé avec `mysql --defaults-extra-file=<fichier_identifiants_protégé>`, jamais avec `-p<motdepasse>`). Une valeur proche de `2026080300` indique une base migrée au schéma 5.0.
+3. **Mesurer l'impact** : listez les contenus et documents créés depuis la mise à jour, à la racine comme dans chaque site, et les éventuels nouveaux répertoires sous `sites/`.
+4. **Préserver l'état actuel** : suivre la ligne 2 avant toute restauration.
+5. **Préparer la restauration** : identifiez la version 4.x exacte d'avant la mise à jour et sa sauvegarde, puis testez cette sauvegarde à part (copie isolée et restauration à blanc). Si l'un de ces points reste inconnu, **arrêtez-vous là** et revenez vers moi avec les résultats.
+6. Une fois les prérequis vérifiés, suivre les lignes 3, 4 et 5 dans l'ordre (la ligne 5 seulement pour les sites dont la base a migré), puis la ligne 6, puis la ligne 7.
+7. **Plus tard** : une ferme sous SPIP 5.0 demande une étude à part (mutualisation adaptée au noyau 5.0, plugins compatibles), d'abord testée en préproduction et jamais directement sur la ferme en production.
+
+## Commandes
+
+Toutes les commandes sont **proposées — non exécutées**. Les `<…>` sont des valeurs à remplacer par des valeurs vérifiées.
+
+| # | Action | Objectif | Préconditions | Périmètre exact | Impact | Sauvegarde / preuve | Commande proposée | Contrôle de réussite | Retour arrière |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | Mettre la ferme en maintenance | Empêcher de nouvelles écritures au mauvais endroit et l'exposition croisée des documents | Liste des vhosts de la ferme connue ; page 503 prête | Tous les vhosts qui pointent vers `<racine>` (serveur web de l'hôte) | Tous les sites sont indisponibles | Copie du fichier vhost avant modification : `cp -a <vhost.conf> <vhost.conf>.avant-maintenance` | Apache : `RewriteEngine On` + `RewriteRule ^ - [R=503,L]` dans les vhosts concernés, puis `apache2ctl configtest && systemctl reload apache2`. Nginx : `return 503;` dans les `server` concernés, puis `nginx -t && systemctl reload nginx` | `curl -sI https://<chaque domaine>/ \| head -1` renvoie 503 | Remettre `<vhost.conf>.avant-maintenance` en place, `configtest`/`-t`, puis `reload` |
+| 2 | Conserver l'état actuel | Garder une trace des écritures faites depuis la mise à jour et pouvoir revenir sur la restauration | Ligne 1 faite ; espace disque suffisant (`df -hP`) | `<racine>` complète (sauf caches), base(s) de la racine si elles existent, base de chaque site | Aucun impact sur le service (lecture seule de la source) | Archive horodatée et son empreinte sha256 | `tar -C <racine> --exclude='./sites/*/tmp/cache' -czf <sauvegardes>/ferme-spip5-$(date +%F-%H%M).tgz . && sha256sum <archive> > <archive>.sha256` ; pour chaque base MySQL : `mysqldump --defaults-extra-file=<fichier_identifiants_protégé> --single-transaction <base> \| gzip > <sauvegardes>/<base>-spip5-$(date +%F).sql.gz` ; pour SQLite : `sqlite3 <fichier.sqlite> ".backup '<sauvegardes>/<site>-spip5.sqlite'"` | `sha256sum -c <archive>.sha256` ; `gzip -t` sur chaque dump ; `sqlite3 <copie> 'PRAGMA integrity_check;'` renvoie `ok` | Aucun (action sans effet sur le service) |
+| 3 | Revenir au cœur 4.x d'avant la mise à jour | Rétablir un cœur compatible avec Mutualisation 2.0.1 | Ligne 2 vérifiée ; version 4.x exacte connue ; méthode d'installation connue ; sauvegarde des fichiers vérifiée et testée à part | Fichiers partagés du cœur dans `<racine>` (`ecrire/`, `prive/`, `squelettes-dist/`, `plugins-dist/`, `vendor/`, `bin/`, fichiers racine), **sans** `config/`, `sites/`, `mutualisation/` ni `plugins/` | Toute la ferme (code partagé) | Archive de la ligne 2 | Selon la méthode vérifiée, sans en mélanger deux. Git : `git -C <racine> checkout <tag-ou-commit-4.x>`. Composer : remettre `composer.json`/`composer.lock` d'avant la mise à jour, puis `composer install --no-dev` dans `<racine>`. Archive : restaurer `<sauvegarde-fichiers-4.x>` dans un répertoire de travail, puis l'échanger avec le cœur actuel | `rg -n 'spip_version_branche' <racine>/ecrire/inc_version.php` renvoie la branche 4.x attendue ; `test ! -f <racine>/ecrire/src/SpipVersion.php` (ou version 4.x) | Remettre les fichiers SPIP 5 depuis l'archive de la ligne 2 (pour revenir sur cette ligne seulement) |
+| 4 | Remettre les plugins partagés d'avant la mise à jour | Revenir à des plugins compatibles 4.x (cextras 4.3.3 et autres) si la mise à jour les a changés | Ligne 3 faite ; inventaire `plugins/` d'avant la mise à jour connu ; on vérifie avec `diff` qu'ils ont réellement changé | `<racine>/plugins/` (dont `plugins/auto/`), seulement les répertoires modifiés | Toute la ferme | Archive de la ligne 2 | Restaurer depuis `<sauvegarde-fichiers-4.x>` les seuls répertoires `plugins/<…>` modifiés | `rg -n 'version=\|compatibilite=' <racine>/plugins/*/paquet.xml <racine>/plugins/auto/*/*/paquet.xml` montre les versions d'avant la mise à jour | Restaurer ces répertoires depuis l'archive de la ligne 2 |
+| 5 | (Conditionnelle) Restaurer la base des sites migrés au schéma 5.0 | Réaligner le schéma avec le cœur 4.x | `version_installee` > version 4.x pour ce site ; dump d'avant la mise à jour vérifié ; ligne 2 faite pour cette base | La base du site `<domaine>` seulement, une ligne d'exécution par site | Ce site seul ; les écritures faites depuis la mise à jour sont perdues dans la base (on peut les récupérer depuis la ligne 2) | Dump de la ligne 2 pour ce site | MySQL : `gunzip -c <dump-avant-maj>.sql.gz \| mysql --defaults-extra-file=<fichier_identifiants_protégé> <base_du_site>` ; SQLite : remettre `<copie-avant-maj>.sqlite` à la place du fichier de `sites/<domaine>/config/bases/` | `version_installee` revient à la valeur 4.x ; le nombre d'articles correspond à la sauvegarde | Réimporter le dump de la ligne 2 pour ce site |
+| 6 | Vider les caches calculés sous SPIP 5 | Éviter de servir des squelettes compilés ou du contenu mis en cache par mauvais aiguillage | Lignes 3 à 5 faites ; ligne 2 conservée | `<racine>/tmp/cache/` et `sites/<domaine>/tmp/cache/` de chaque site (chemins résolus par `realpath -e`, tous sous `<racine>`) | Caches seulement ; recalcul plus lent au premier passage | Ligne 2 | Pour chaque chemin vérifié : `find -P "<chemin_cache_vérifié>" -xdev -mindepth 1 -maxdepth 1 -print` (relecture), puis déplacer le contenu vers `<quarantaine>/` (`mv`) plutôt que le supprimer | Les pages se recalculent ; plus de contenu commun d'un domaine à l'autre | Remettre le contenu depuis `<quarantaine>/` |
+| 7 | Lever la maintenance | Remettre la ferme en service | Validation faite (section suivante) sur un accès de test, ou après lecture des domaines en liste blanche | Les mêmes vhosts que la ligne 1 | Tous les sites redeviennent accessibles | Fichiers `<vhost.conf>.avant-maintenance` | Remettre les fichiers `.avant-maintenance`, puis `apache2ctl configtest && systemctl reload apache2` ou `nginx -t && systemctl reload nginx` | Chaque domaine renvoie 200 avec **son** contenu | Repasser par la ligne 1 |
+
+Les contenus et documents publiés au mauvais endroit depuis la mise à jour, repérés aux étapes 3 et 4 de la procédure, ne doivent pas être recopiés automatiquement. Il faut d'abord établir, site par site, à qui ils appartiennent. Je vous proposerai alors des lignes d'action dédiées.
+
+## Validation
+
+En lecture seule, sur **chaque** site (`mairie-exemple.fr`, `asso-exemple.org`, le site d'administration `admin-ferme.example` et tout autre site présent sous `sites/`), et non seulement sur le site d'administration :
+
+- `curl -s https://<domaine>/ | rg -o '<title>[^<]*</title>'` : le titre diffère d'un domaine à l'autre et correspond au site attendu.
+- `curl -sI https://<domaine>/spip.php?page=sommaire | rg -i '^(HTTP|x-spip|composed-by)'` : la version annoncée est la 4.x attendue.
+- Un document connu de chaque site (`https://<domaine>/IMG/<fichier connu>`) est servi depuis `sites/<domaine>/IMG/`, et le document d'un site n'est **pas** accessible depuis un autre domaine.
+- `version_installee` de chaque base reste égale à la valeur 4.x (relevée seule, sans afficher le reste de `spip_meta`).
+- Aucun nouveau répertoire n'est apparu sous `sites/` : refaire le `find … -newermt` de la procédure.
+- Pour les contrôles propres à chaque mutation, voir la colonne « Contrôle de réussite » des lignes 1 à 7.
+
+## Retour arrière
+
+- **Déclencheurs** : une version 4.x qui ne démarre pas, un site en erreur, une base qui demande une mise à niveau, ou des contenus encore partagés entre domaines après les lignes 3 à 6.
+- **Unité de restauration** : le **couple fichiers partagés + base de chaque site**, pris au même instant. On ne remet jamais les fichiers 4.x devant une base au schéma 5.0, ni l'inverse.
+- **Ordre** : remettre la ferme en maintenance (ligne 1), puis appliquer la colonne « Retour arrière » des lignes 6, 5, 4 et 3, dans cet ordre inverse. On revient alors à l'état conservé à la ligne 2.
+
+## Vérification de couverture
+
+Chaque action qui modifie l'état dans cette réponse a sa ligne complète dans le plan :
+- maintenance : ligne 1 ;
+- conservation de l'état actuel : ligne 2 ;
+- retour du cœur 4.x : ligne 3 ;
+- retour des plugins partagés : ligne 4 ;
+- restauration conditionnelle des bases migrées : ligne 5 ;
+- caches : ligne 6 ;
+- levée de la maintenance : ligne 7.
+
+Le rapatriement des contenus mal placés est volontairement laissé hors du plan tant que leur appartenance n'est pas établie.
+
+## spip-mutualisation-maintenance, cas 25 — ferme 4.4.22 (contrôle)
+
+# Mise à jour des plugins partagés : préparation
+
+**Conclusion : la mise à jour ne peut pas encore être lancée.** Plusieurs conditions d'arrêt sont réunies (voir « Risques ») : moteur de base inconnu pour les deux sites, provenance du code inconnue, dépendances de `cextras` introuvables dans la copie, version cible non fixée, aucune sauvegarde vérifiée. Voici donc les constats, les vérifications en lecture seule à faire d'abord, et le plan d'actions complet avec des emplacements à compléter. Aucune commande de ce document n'a été exécutée. Les actions du tableau sont **proposées — non exécutées** et restent bloquées tant que leurs préconditions ne sont pas levées.
+
+Toutes les observations viennent de la copie de la racine partagée qui m'a été fournie (désignée `<racine_ferme>` ci-dessous). Je n'ai pas eu accès au serveur.
+
+## Constats
+
+### Faits vérifiés (dans la copie)
+
+| Élément | Constat | Preuve |
+|---|---|---|
+| Cœur SPIP partagé | `4.4.22` (`_SPIP_VERSION_ID` 40422) | `ecrire/inc_version.php:464-465` |
+| Chargement de Mutualisation facile | `config/mes_options.php` fait `require _DIR_RACINE.'mutualisation/mutualiser.php'` : le plugin est dans `mutualisation/` à la racine, pas dans `plugins/` | `config/mes_options.php:14-18` |
+| Version de Mutualisation facile | `2.0.1`, compatibilité `[4.2.0;4.*]`, `<chemin path="" type="aucun" />` | `mutualisation/paquet.xml:4,6,23` |
+| Calcul de `$site` | `HTTP_HOST` sans le `www.` | `config/mes_options.php:23-24` |
+| Appel `demarrer_site()` | `'repertoire' => 'sites'`, `'table_prefix' => false`, `'cookie_prefix' => true`, `'url_img_courtes' => true` | `config/mes_options.php:124-134` |
+| Site d'administration | `_SITES_ADMIN_MUTUALISATION` = `admin-ferme.example` | `config/mes_options.php:11` |
+| Sites présents sous `sites/` | `asso-exemple.org` et `mairie-exemple.fr`. Chacun a `config/`, `IMG/`, `local/`, `tmp/` et un fichier `config/connect.php` | arborescence |
+| Plugins partagés | Un seul trouvé : `plugins/auto/cextras/v4.3.3/` (`cextras` 4.3.3, compatibilité `[4.1.0;4.*]`) | `plugins/auto/cextras/v4.3.3/paquet.xml:2-6` |
+| Dépendances de `cextras` 4.3.3 | `necessite` : `saisies` `[4.2.0;]` et `yaml` `[3.0.0;]`. `utilise` : `verifier` `[1.16.2;]` et `crayons` `[2.3.0;]` | `paquet.xml:29-32` |
+| Chemins de plugins supplémentaires | Aucune définition active de `_DIR_PLUGINS_SUPPL` ni de `_SPIP_PATH` dans `config/` ni `sites/`. `dossier_squelettes` n'apparaît que dans des commentaires | recherche ciblée |
+
+### Inconnues
+
+- **Moteur de base de chaque site.** Les deux `config/connect.php` font 2 lignes et ne contiennent aucun appel `spip_connect_db`. J'ai seulement compté les lignes et cherché le motif, sans afficher le contenu. Il peut s'agir d'une installation incomplète, d'un fichier de substitution, ou d'une connexion déplacée via `_DIR_CONNECT` / `_FILE_CONNECT_INS`. La valeur `_INSTALL_SERVER_DB` de la configuration globale ne s'applique qu'à l'installation : elle ne prouve rien sur un site déjà installé.
+- **Provenance du code.** La copie ne contient ni `.git`, ni `composer.json`/`composer.lock`, ni `plugins-dist/`. La disposition `plugins/auto/<prefixe>/v<version>/` fait penser à SVP, mais c'est une piste, pas une preuve.
+- **Où sont `saisies` et `yaml`.** Ils sont obligatoires pour `cextras` mais absents de la copie. Ils sont peut-être dans `plugins-dist/` ou ailleurs sur le serveur. Sinon `cextras` ne peut pas être actif.
+- **Plugins actifs sur chaque site**, et état de leurs schémas (`spip_meta`).
+- **Version cible** de chaque plugin à mettre à jour. Elle n'a pas été donnée et ses métadonnées n'ont pas été vérifiées.
+- **Site d'administration.** Le domaine `admin-ferme.example` n'a pas de répertoire sous `sites/` dans la copie. Je ne sais pas où et comment il est servi.
+- Pile web/PHP (Apache ou Nginx/PHP-FPM, versions), comptes propriétaires réels sur le serveur, espace disque et inodes libres.
+- Si `?exec=mutualisation` est joignable sans authentification sur les vhosts des sites.
+
+### Anomalies
+
+1. **Un mot de passe de base de données est écrit en clair dans `config/mes_options.php`** (`_INSTALL_USER_DB` / `_INSTALL_PASS_DB`, l. 57-58). Ce fichier est partagé et se trouve sous la racine web. Je ne reproduis pas la valeur. Attention : ma recherche filtrée a quand même fait passer ces lignes dans mon contexte. Considérez donc cet identifiant comme exposé (voir action 12).
+2. Les deux `connect.php` ne contiennent pas d'appel de connexion (voir ci-dessus).
+3. Dans la copie, tout est en `664`/`775` (écriture pour le groupe) et appartient à un seul compte. Ces droits ne valent que pour la copie : à comparer avec ceux du serveur. Je ne propose aucun `chmod`/`chown`.
+
+## Risques
+
+- **Toute la ferme est touchée.** `plugins/auto/` est partagé : changer un plugin change le code de tous les sites qui l'activent. Il est impossible de tester d'abord « sur un seul site » en production. Le seul vrai banc d'essai est une copie isolée de la ferme (action 5).
+- **Dépendances.** Une nouvelle version de `cextras` peut exiger des versions plus récentes de `saisies` et `yaml`. Ces plugins sont partagés et leur emplacement est inconnu. Les mettre à jour touche aussi les sites où `cextras` est inactif.
+- **Schéma.** `cextras` crée des champs dans les tables éditoriales. Une fois la mise à jour de schéma faite sur un site, revenir à l'ancien code ne suffit plus : il faut aussi restaurer la base de ce site.
+- **Vidage des caches.** La route `upgradeplugins` vide largement les caches du site visé : `_DIR_CACHE`, `cache-css`/`cache-js`, `_DIR_SKELS`, `plugin_xml_cache.gz`, etc. C'est une mutation à part entière. Le bouton « Upgrader tout » le fait pour tous les sites d'un coup, sans point de contrôle entre eux : ne pas l'utiliser.
+- **Points bloquants, avant toute commande prête à lancer :** moteur de base inconnu, provenance inconnue, emplacement de `saisies`/`yaml` inconnu, liste des plugins actifs par site inconnue, version cible non vérifiée, aucune sauvegarde vérifiée et restaurable.
+- **Exposition.** `renouvelle_alea`, `dirliste` et `dirsize` de `?exec=mutualisation` s'exécutent sans authentification. À vérifier pendant l'inventaire.
+
+## Procédure proposée
+
+### Phase A : observations en lecture seule (à lancer par vous, sur le serveur)
+
+1. Fixer et valider la racine réelle :
+   ```bash
+   spip_root="$(realpath -e -- '<racine_ferme_réelle>')"
+   test -n "$spip_root" && test "$spip_root" != /
+   test -f "$spip_root/ecrire/inc_version.php" && test -f "$spip_root/spip.php"
+   mutu_dir="$(realpath -e -- "$spip_root/sites")"
+   case "$mutu_dir" in "$spip_root"/*) ;; *) echo 'STOP: sites/ sort de la racine' >&2 ;; esac
+   find -P "$mutu_dir" -xdev -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort
+   find -P "$mutu_dir" -xdev -mindepth 2 -maxdepth 2 -type l -printf '%p -> %l\n'
+   ```
+2. Établir la provenance du cœur et des plugins :
+   ```bash
+   git -C "$spip_root" rev-parse --show-toplevel 2>/dev/null; git -C "$spip_root" status --short 2>/dev/null
+   ls -1 "$spip_root"/composer.json "$spip_root"/composer.lock 2>/dev/null
+   find -P "$spip_root/plugins" "$spip_root/plugins-dist" -xdev -mindepth 1 -maxdepth 4 \
+     -type f -name paquet.xml -print 2>/dev/null
+   for p in "$spip_root"/plugins/auto/*/*/; do
+     git -C "$p" describe --tags --always --dirty 2>/dev/null && echo "  ^ git: $p"
+   done
+   ```
+3. Trouver `saisies`, `yaml`, `verifier` et `crayons`, avec leur version et leur compatibilité :
+   ```bash
+   find -P "$spip_root/plugins" "$spip_root/plugins-dist" -xdev -maxdepth 4 -name paquet.xml -print0 2>/dev/null \
+     | xargs -0 rg -n '^[[:space:]]*(prefix|version|compatibilite|schema)=|<necessite|<utilise'
+   ```
+4. Identifier le moteur de base de chaque site, **sans afficher le fichier**. Lancez ceci de votre côté et ne me renvoyez que le résultat filtré :
+   ```bash
+   for s in asso-exemple.org mairie-exemple.fr; do
+     c="$mutu_dir/$s/config/connect.php"
+     e=$(rg -o "spip_connect_db\(.*" "$c" 2>/dev/null | rg -oi "'(mysql|sqlite3|pg)'" | tr -d "'" | sort -u)
+     echo "$s: ${e:-unknown} ; bases_sqlite=$(ls "$mutu_dir/$s/config/bases/"*.sqlite 2>/dev/null | wc -l)"
+   done
+   rg -l '_DIR_CONNECT|_FILE_CONNECT_INS' "$spip_root/config" "$mutu_dir" --glob '*.php'
+   ```
+5. Lister les plugins actifs et l'état du schéma de chaque site, à partir de sa base (`spip_meta`, entrées `plugin` et `<prefixe>_base_version`) ou de la page d'administration du plugin sur chaque site. Si vous lisez `tmp/meta_cache.php`, horodatez le résultat et recontrôlez-le en base.
+6. Repérer le site d'administration `admin-ferme.example` : son vhost et la racine qu'il sert. Filtrez la sortie de configuration (`server_name`/`root`/`fastcgi_pass`, ou `apache2ctl -S`).
+7. Mesurer la capacité et les droits : `df -hP`, `df -iP`, propriétaires et droits de `plugins/auto/` et de `sites/*`, compte qui exécute PHP-FPM ou Apache.
+8. Fixer la cible de chaque plugin. Lire `paquet.xml` dans l'archive ou le tag exact de la cible (version, compatibilité avec 4.4.22, `necessite`/`utilise`, `schema`) et remplir la matrice ci-dessous.
+
+| Plugin | Actuelle → cible | Chemin chargé | Provenance | Sites actifs | Compat. SPIP 4.4.22 | Dépendances | Modifs locales | Changement de schéma |
+|---|---|---|---|---|---|---|---|---|
+| cextras | 4.3.3 → `<cible>` | `plugins/auto/cextras/v4.3.3` | `<à établir>` | `<à établir>` | actuelle `[4.1.0;4.*]` ; cible `<à vérifier>` | saisies, yaml (+ verifier, crayons) | `<à établir>` | `<à vérifier>` |
+| saisies / yaml / autres | `<à établir>` | `<à établir>` | | | | | | |
+
+### Phase B : mutations, une fois les blocages levés
+
+Quand chaque point de la phase A est résolu, suivre dans l'ordre les **lignes 1 à 4** du plan (sauvegarde et contrôles), puis la **ligne 5** (essai sur une copie isolée), puis la **ligne 6** (création de la base d'exercice et restauration de la sauvegarde). Ne passer aux **lignes 7 à 11** (production) qu'après la réussite des lignes 5 et 6. Pour les sites, l'ordre est d'abord `asso-exemple.org` (ligne 9), puis `mairie-exemple.fr` (ligne 10). S'arrêter à la première erreur inexpliquée. La **ligne 12** (rotation de l'identifiant exposé) se planifie à part, hors de la fenêtre de mise à jour. La **ligne 13** (nettoyage de la base d'exercice) vient en dernier, après votre accord.
+
+## Commandes
+
+Toutes les commandes ci-dessous sont **proposées — non exécutées**. Les `<…>` sont des valeurs à remplacer par des valeurs vérifiées. Chaque bloc commence par les contrôles de chemins de `backup-rollback.md` §2 : racine résolue, différente de `/`, sauvegarde hors de la racine web.
+
+| # | Action | Objectif | Préconditions | Portée exacte | Impact | Sauvegarde / preuve | Commande proposée | Contrôle de réussite | Retour arrière |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | Créer le répertoire de sauvegarde | Stocker la sauvegarde hors de la racine web | `backup_parent` résolu, hors `spip_root`, différent de `/` ; espace disque suffisant | `<backup_parent>/<horodatage UTC>/` et son sous-répertoire `databases/` | Hôte (disque) | Manifeste créé à cette étape | `( umask 077; mkdir -- "$backup_root" "$backup_root/databases" )` | `stat -c '%a %U' "$backup_root"` donne `700` et le bon compte | `rmdir` des deux répertoires vides, avec votre accord |
+| 2 | Sauvegarder la base de `asso-exemple.org` | Avoir un point de restauration pour ce site | Moteur identifié (phase A.4). MySQL/MariaDB : fichier d'options `0600` fourni par vous, `--no-login-paths` pris en charge, moteurs de tables vérifiés (`--single-transaction` seulement si tout est InnoDB). SQLite : chemin exact de la base | La base de ce site uniquement | Lecture seule pour la source ; écriture dans `$backup_root/databases/` | Fichier de sauvegarde, code de sortie, taille, SHA256 dans `SHA256SUMS` | MySQL : la séquence de `backup-rollback.md` §3, avec `"$dump_client" --defaults-file="$client_opts" --no-login-paths --single-transaction --quick --routines --events --triggers --no-create-db "<db_asso>" >"$dump_path"` (sous `umask 077; set -C`). SQLite : `sqlite3 "<base_asso>" ".timeout 5000" ".backup '$backup_root/databases/asso-exemple.org.sqlite'"` | Code de sortie 0, fichier non vide. SQLite : `PRAGMA integrity_check` = `ok` et `foreign_key_check` vide | Rien à défaire. Supprimer un fichier partiel seulement avec votre accord |
+| 3 | Sauvegarder la base de `mairie-exemple.fr` | Idem, pour ce site | Idem ligne 2, pour ce site | La base de ce site uniquement | Idem | Idem | Idem ligne 2, avec `<db_mairie>` / `<base_mairie>` | Idem ligne 2 | Idem ligne 2 |
+| 4 | Archiver les fichiers persistants et le code partagé, puis calculer les sommes de contrôle | Avoir une unité de restauration cohérente | Lignes 1 à 3 réussies ; liste explicite des chemins validée ; liens symboliques inattendus examinés | `config/mes_options.php`, `mutualisation/`, `plugins/auto/` (répertoires concernés, et tous les plugins dont on change la version), `plugins-dist/` si concerné, et pour chaque site `sites/<site>/config/` et `sites/<site>/IMG/` (et `squelettes/`, `plugins/` s'ils existent). **Pas** `local/` ni `tmp/` | Hôte (disque) | `tar` + `sha256sum`, manifeste : heure UTC, hôte, sites, chemins, versions, préfixe de tables `spip`, tailles, versions des outils, copie hors hôte | `tar -C "$spip_root" -cf "$backup_root/code-partage.tar" -- config/mes_options.php mutualisation plugins/auto/<prefixe>…` et un `tar` par site, puis `sha256sum -- "$backup_root"/*.tar "$backup_root"/databases/* >>"$backup_root/SHA256SUMS"`, puis copie hors hôte vers `<destination>` | `tar -tf` sans erreur ; `sha256sum -c "$backup_root/SHA256SUMS"` OK ; présence de la copie hors hôte confirmée | Rien à défaire en production. Supprimer les archives seulement avec votre accord |
+| 5 | Essayer la mise à jour sur une copie isolée de la ferme | Valider la cible, les dépendances et le schéma hors production | Lignes 1 à 4 réussies ; environnement isolé (autre hôte ou autre conteneur, pas d'accès à la production) avec SPIP 4.4.22, les mêmes chemins de plugins et des copies des bases des sites qui activent le plugin | La copie isolée uniquement | Aucun sur la production | Journaux de l'essai, versions observées, sommes de contrôle de l'archive cible | Déposer l'archive cible exacte (`<archive_cible>`, somme vérifiée) dans le même chemin relatif que la production, puis lancer `upgradeplugins` site par site sur la copie | Plugin à la version cible, dépendances actives, schéma à jour, journaux propres, formulaires et champs extras fonctionnels sur chaque site de la copie | Détruire la copie isolée |
+| 6 | Exercice de restauration | Prouver que les sauvegardes des lignes 2 à 4 se restaurent | Point d'arrivée isolé, d'une identité différente de la source ; base vide créée d'avance ; compte d'import limité à cette base ; fichier d'options dédié | La base d'exercice et la copie de site isolée uniquement | Aucun sur la production | Comparaison des identités des deux serveurs, résultats `CHECK TABLE` / `integrity_check`, compte rendu du test SPIP | MySQL : la séquence complète de `backup-rollback.md` §3 « Restore verification », avec `restore_db=<base_exercice>` et `table_prefix=spip`. SQLite : copier la sauvegarde sous un nouveau nom isolé, puis `PRAGMA integrity_check` | `spip_meta` présente, `CHECK TABLE` OK ; site restauré navigable dans la copie | Supprimer la base d'exercice (ligne 13) |
+| 7 | Activer la maintenance sur toute la ferme | Bloquer les écritures pendant la bascule | Lignes 5 et 6 réussies ; méthode de maintenance choisie et testée (page de maintenance au niveau du vhost, `<méthode>`) ; créneau annoncé | Tous les vhosts de la ferme (le code est partagé) | Tous les sites indisponibles en écriture | Configuration d'origine sauvegardée avant modification | `<commande de maintenance validée, ex. activation d'une config vhost de maintenance + rechargement>` | Chaque domaine répond par la page de maintenance ; l'accès de l'opérateur reste possible | Revenir à la configuration d'origine sauvegardée et recharger |
+| 8 | Mettre en place le code cible du plugin (et de ses dépendances si la matrice l'exige) | Changer le code partagé en une seule fois, sans perdre l'ancien | Ligne 7 active ; même provenance que l'existant (archive/SVP → archive officielle exacte ; Git → tag vérifié du même dépôt ; Composer → changement de lock relu) ; ancienne version archivée (ligne 4) | `plugins/auto/<prefixe>/` (et les dépendances listées dans la matrice) | **Tous les sites** qui activent ces plugins | Somme de contrôle de l'archive cible ; ancien répertoire **conservé** tel quel | Archive/SVP : extraire `<archive_cible>` vers un nouveau répertoire, par exemple `plugins/auto/cextras/v<cible>/`, sans supprimer `v4.3.3/`. Git : `git -C <chemin> checkout <tag_vérifié>` | `rg -n 'version=' <nouveau_chemin>/paquet.xml` donne la cible ; l'ancien répertoire est intact | Remettre en service l'ancien répertoire (`v4.3.3/`) ou l'ancien commit. Si un schéma a déjà migré : voir lignes 9 et 10 |
+| 9 | Mettre à jour les plugins de `asso-exemple.org` | Appliquer la mise à jour de schéma et l'activation sur ce site | Ligne 8 réussie ; journaux et preuves du site capturés **avant** le vidage de caches ; sauvegarde de la ligne 2 vérifiée | `asso-exemple.org` uniquement | Vide les caches de ce site ; modifie son schéma | Copie des journaux `tmp/log/` du site, avant et après | Ouvrir, authentifié sur ce site, `https://asso-exemple.org/ecrire/?exec=mutualisation&upgradeplugins=oui&secret=<secret généré par le tableau de bord>` (lien du tableau de bord, site par site ; **pas** « Upgrader tout ») | Version cible affichée, `<prefixe>_base_version` à jour dans `spip_meta`, aucune erreur dans les journaux, contrôles fonctionnels OK | Restaurer la base de la ligne 2 **et** l'ancien code (ligne 8). Si d'autres sites ont déjà migré, les restaurer aussi (même point de contrôle) |
+| 10 | Mettre à jour les plugins de `mairie-exemple.fr` | Idem, pour ce site | Ligne 9 validée ; mêmes préconditions, pour ce site | `mairie-exemple.fr` uniquement | Idem | Idem | Idem ligne 9, avec `https://mairie-exemple.fr/…` | Idem ligne 9 | Restaurer la base de la ligne 3 + l'ancien code, et la base de `asso-exemple.org` (ligne 2) si elle a migré |
+| 11 | Sortir de la maintenance | Remettre la ferme en service | Validation complète de tous les sites (voir « Validation ») | Tous les vhosts | Fin de l'indisponibilité | Journal de validation | Inverse de la ligne 7 | Chaque domaine sert ses pages normales | Réactiver la maintenance (ligne 7) |
+| 12 | Faire tourner l'identifiant de base exposé et le sortir de `config/mes_options.php` | Corriger l'anomalie 1 | Comptes qui l'utilisent recensés ; fenêtre dédiée, **hors** de la fenêtre de mise à jour ; sauvegarde de `config/mes_options.php` | Le compte SQL nommé par `_INSTALL_USER_DB` et `config/mes_options.php` | Installations de nouveaux sites, et peut-être d'autres usages de ce compte | Copie de `mes_options.php` (ligne 4) | Changement de mot de passe sur le serveur SQL, fait par vous (sans mot de passe dans la ligne de commande), puis retrait ou externalisation de la constante | Les sites existants fonctionnent ; l'ancien secret est refusé | Remettre le `mes_options.php` sauvegardé ; changer de nouveau le mot de passe |
+| 13 | Nettoyer la base d'exercice | Libérer l'environnement d'exercice | Résultats de la ligne 6 consignés ; votre accord | La base d'exercice uniquement, sur le point d'arrivée isolé | Aucun sur la production | Compte rendu de la ligne 6 | `DROP` de `<base_exercice>` sur le point d'arrivée isolé seulement, avec son fichier d'options dédié | La base d'exercice n'existe plus ; la production est intacte | Réimporter depuis la sauvegarde si besoin |
+
+## Validation
+
+Contrôles en lecture seule, pour **chaque** site (`asso-exemple.org`, `mairie-exemple.fr`, et le site d'administration `admin-ferme.example`) :
+
+| Site | Plugin actif | Version observée | Dépendances actives | Schéma à jour | Contrôles fonctionnels | Journaux propres | Résultat |
+|---|---|---|---|---|---|---|---|
+| asso-exemple.org | | | | | | | |
+| mairie-exemple.fr | | | | | | | |
+| admin-ferme.example | | | | | | | |
+
+- Pages publiques en HTTP 200, connexion à l'espace privé, page des plugins sans erreur, formulaires et champs extras, une image de `IMG/` (URL courtes actives), tâches planifiées, journaux PHP et SPIP.
+- Sites où le plugin est **inactif** : vérifier qu'une dépendance partagée mise à jour ne les casse pas.
+- Les contrôles propres à chaque mutation sont ceux des lignes 1 à 11. Ne jamais conclure à partir du seul site d'administration.
+
+## Retour arrière
+
+**Déclencheurs :** toute erreur inexpliquée d'activation, de schéma ou de journal pendant les lignes 9 ou 10 ; une régression sur un site où le plugin est inactif ; un contrôle de validation en échec avant la ligne 11.
+
+**Unité de restauration :** le point de contrôle de la ligne 4, désigné par son manifeste et `SHA256SUMS`, pas par « la dernière sauvegarde ». Il comprend le code partagé des plugins concernés, plus la base et les fichiers persistants de chaque site touché.
+
+- Code basculé mais aucun schéma migré : appliquer le retour arrière de la ligne 8.
+- Un site migré : appliquer le retour arrière des lignes 9 et 10 dans l'ordre inverse (d'abord la 10, puis la 9), puis celui de la ligne 8. Ne jamais restaurer une base d'un point de contrôle différent de celui du code qu'elle attend. Si une dépendance partagée a changé, restaurer tout le jeu de plugins du manifeste.
+- État incertain : restaurer le jeu de code connu comme sain et **toutes** les bases touchées.
+- Rester en maintenance (ligne 7) jusqu'à la fin de la validation après restauration.
+
+---
+
+**Ce qu'il me faut pour la suite :** les résultats filtrés des étapes A.1 à A.8, en particulier le moteur de base et l'emplacement de la connexion pour chaque site, la provenance des plugins, l'emplacement de `saisies`/`yaml`, les plugins actifs par site et les versions cibles. Avec ces éléments, je remplacerai les `<…>` par des valeurs vérifiées.
+
+## spip-mutualisation-maintenance, cas 26 — ferme 4.4.22, passage à SPIP 5.0 — tirage 1
+
+# Passage de la ferme à SPIP 5.0 : préparation
+
+**Conclusion : on ne peut pas encore préparer la bascule vers SPIP 5.0.** Deux choses bloquent. Mutualisation facile 2.0.1, installé sur la ferme, se déclare compatible `[4.2.0;4.*]`, donc pas avec SPIP 5.0. Et la procédure que je suis ne couvre que SPIP 4.2 à 4.4 : pour la 5.0, il faut une procédure recherchée à part. Ci-dessous : l'état vérifié de la ferme, ce qui reste inconnu, les observations en lecture seule à faire maintenant, et le plan d'actions futur. Ce plan est **bloqué** : aucune commande qui modifie quoi que ce soit n'est prête à être lancée.
+
+Toutes les constatations ci-dessous portent sur la copie de la racine partagée qui m'a été fournie, pas sur le serveur en production.
+
+## Constatations
+
+### Socle partagé (touche toute la ferme)
+
+| Élément | Constat vérifié | Preuve |
+|---|---|---|
+| Cœur SPIP | `4.4.22` (`_SPIP_VERSION_ID` 40422), PHP accepté de `7.4.0` à `8.5.99` | `ecrire/inc_version.php:464-465`, `:40-41` |
+| Chargement de Mutualisation | `config/mes_options.php` fait `require _DIR_RACINE.'mutualisation/mutualiser.php'` : le plugin est à la racine, dans `mutualisation/`, pas dans `plugins/` | `config/mes_options.php:14-18` |
+| Version de Mutualisation facile | `2.0.1`, stable, `compatibilite="[4.2.0;4.*]"`, `<chemin path="" type="aucun" />` | `mutualisation/paquet.xml` |
+| Dossier des sites (`repertoire`) | `'sites'`, passé à `demarrer_site()` | `config/mes_options.php:133` |
+| Site d'administration | `_SITES_ADMIN_MUTUALISATION` = `admin-ferme.example` | `config/mes_options.php:11` |
+| Calcul de `$site` | `HTTP_HOST` sans `www.`, avec redirection canonique (liste d'exceptions `$www` vide) | `config/mes_options.php:21-24` |
+| Options de `demarrer_site()` | `table_prefix => false`, `cookie_prefix => true`, `url_img_courtes => true`, `creer_site => true`, `creer_base => true`, `creer_user_base => false` ; les valeurs `mail`, `code`, `url_creer_base` et `avant_initialisation` ne sont pas reproduites ici | `config/mes_options.php:124-147` |
+| Écart avec le modèle | Par rapport à `mutualisation/mes_options.php.txt`, le seul écart est le nom du site d'administration. Je n'ai pas fait de comparaison plus fine | diff des fichiers, espaces ignorés |
+| Plugins partagés | `plugins/auto/cextras/v4.3.3/` : `cextras` `4.3.3`, `compatibilite="[4.1.0;4.*]"`, nécessite `saisies [4.2.0;]` et `yaml [3.0.0;]`, utilise `verifier` et `crayons` | `paquet.xml` du plugin |
+| `plugins-dist/` | Absent de la copie fournie | arborescence |
+
+### Sites (dans `sites/`)
+
+| Site | Chemin | Installation | Moteur de base | Données persistantes | Plugins actifs |
+|---|---|---|---|---|---|
+| `asso-exemple.org` | `sites/asso-exemple.org/` | `config/connect.php` présent ; `IMG/`, `local/`, `tmp/` présents (vides dans la copie) | **inconnu** : le fichier (52 octets) ne contient aucun appel `spip_connect_db` | inconnues | inconnus |
+| `mairie-exemple.fr` | `sites/mairie-exemple.fr/` | idem | **inconnu**, même raison | inconnues | inconnus |
+| `admin-ferme.example` | **non trouvé** dans `sites/` | — | — | — | — |
+
+### Inconnues
+
+- Provenance du cœur et des plugins (Git, Composer, archive ou SVP) et modifications locales. La copie ne contient ni `.git`, ni `composer.json`, ni `composer.lock`. Le chemin `plugins/auto/cextras/v4.3.3/` ressemble à une installation par SVP, mais une ressemblance ne prouve rien.
+- Version exacte de SPIP 5.0 visée (release ou tag) et versions de PHP qu'elle exige. Je n'ai rien vérifié en amont aujourd'hui et je ne retiens aucune version « de mémoire ».
+- Existence d'une version de Mutualisation facile qui se déclare compatible 5.0 (dépôt `spip-contrib-extensions/mutualisation`).
+- Existence de versions de `cextras`, `saisies`, `yaml`, `verifier` et `crayons` compatibles 5.0. Les plugins `saisies` et `yaml`, exigés par `cextras`, ne figurent pas dans la copie : leur emplacement est inconnu.
+- Moteur de base, préfixe de tables et taille de chaque site ; plugins actifs sur chaque site.
+- Emplacement du site d'administration `admin-ferme.example` (à la racine ou ailleurs).
+- Serveur web, versions de PHP-FPM et de PHP CLI, espace disque, inodes, sauvegardes existantes.
+- Accès à `?exec=mutualisation` depuis les vhosts autres que celui d'administration.
+
+## Risques
+
+- **Toute la ferme est concernée.** Le cœur, `mutualisation/` et `plugins/auto/` sont partagés : changer de cœur fait passer tous les sites en même temps. On ne peut pas tester sur un seul site en production. Un pilote demande une copie isolée de toute la ferme.
+- **Blocage de compatibilité : Mutualisation facile.** `[4.2.0;4.*]` exclut 5.0. Or ce plugin est chargé par `require` avant le pipeline des plugins : s'il ne fonctionne pas, aucun site ne démarre (il définit `_DIR_SITE`, `_SPIP_PATH` et les préfixes). Tant qu'aucune version compatible 5.0 n'existe et n'a été testée, la migration est impossible.
+- **Blocage de compatibilité : `cextras` 4.3.3.** `[4.1.0;4.*]` exclut aussi 5.0. Ses dépendances (`saisies`, `yaml`) restent à inventorier.
+- **Retour en arrière.** Une fois qu'un site a migré son schéma de base vers 5.0, remettre l'ancien cœur 4.4.22 ne suffit plus. Il faut aussi restaurer la base de ce site et ses fichiers persistants pris au même point de contrôle.
+- **Sauvegardes.** Aucune sauvegarde vérifiée et testée en restauration n'est démontrée, et le moteur de base de chaque site est inconnu. C'est bloquant à lui seul.
+- **Création automatique de sites.** `creer_site => true` et `creer_base => true` : un nom d'hôte inattendu peut créer un site ou une base. À garder en tête pendant la maintenance et pendant les tests en préproduction.
+- **Exposition de `?exec=mutualisation`.** Les actions `renouvelle_alea`, `dirliste` et `dirsize` s'exécutent sans authentification sur chaque site. La route `upgrade=oui` ne repose que sur un secret faible, `md5(version_installee-popularite_total)`, que l'on peut retrouver dans `tmp/meta_cache.php`. Il faut vérifier dans les journaux d'accès si elle a été appelée. La bloquer au niveau du proxy serait une modification à prévoir comme une ligne du plan, pas une observation.
+- **Droits à vérifier.** Dans la copie, `connect.php` est en `664` et les dossiers `config/` en `775` (accessibles en écriture au groupe). Il faut le confirmer sur le serveur réel et le comparer au compte PHP-FPM ou Apache. Je ne propose aucun `chmod` ni `chown`.
+
+## Procédure proposée
+
+Les étapes 1 à 6 sont en lecture seule. L'opérateur les lance et me renvoie uniquement les faits demandés.
+
+1. **Délimiter la racine réelle.** `spip_root=<racine partagée vérifiée>` ; `realpath -e`, refuser `/`, vérifier que `ecrire/inc_version.php` et `spip.php` existent. Lister les vhosts avec les filtres de `inventory-diagnosis.md` §1 (directives `server_name`, `root` et `fastcgi_pass` seulement).
+2. **Établir la provenance**, sans jamais renvoyer d'URL de remote brute :
+   ```bash
+   git -C "$spip_root" rev-parse --show-toplevel 2>/dev/null
+   git -C "$spip_root" status --short 2>/dev/null
+   git -C "$spip_root" describe --tags --always --dirty 2>/dev/null
+   test -f "$spip_root/composer.json" && test -f "$spip_root/composer.lock" && echo composer
+   find -P "$spip_root/plugins" "$spip_root/plugins-dist" -xdev -mindepth 1 -maxdepth 3 -name paquet.xml -print 2>/dev/null
+   ```
+3. **Moteur de base, site par site.** Ne rien afficher d'autre que `mysql`, `sqlite3` ou `unknown` :
+   ```bash
+   for f in "$spip_root"/sites/*/config/connect.php; do
+     t=unknown
+     rg -q "spip_connect_db\(.*'sqlite3'" -- "$f" && t=sqlite3
+     rg -q "spip_connect_db\(.*'mysql'" -- "$f" && t=mysql
+     printf '%s %s\n' "${f%/config/connect.php}" "$t"
+   done
+   find -P "$spip_root/sites" -xdev -mindepth 2 -maxdepth 4 -path '*/config/bases/*' -type f -printf '%p %s\n'
+   ```
+4. **Site d'administration et chemins de plugins supplémentaires** : `rg -n '_DIR_PLUGINS_SUPPL|_SPIP_PATH|dossier_squelettes' "$spip_root/config" "$spip_root/sites" --glob '*.php'` ; trouver où se trouve `admin-ferme.example`.
+5. **Capacité, versions de PHP et droits** : `df -hP` et `df -iP` sur la racine ; `php -v` ; la version PHP de **chaque** pool FPM ; propriétaires et modes avec `find … -printf '%u:%g %m %y %p'` (inventaire §6). Rechercher dans les journaux d'accès les appels à `exec=mutualisation`.
+6. **Plugins actifs par site.** Les lire dans l'espace privé de chaque site ou dans `spip_meta`, pas dans un cache `tmp/` sans horodatage.
+7. **Compatibilité, à vérifier en amont aujourd'hui** : tag exact de SPIP 5.0 visé et PHP qu'il exige ; `paquet.xml` actuel de Mutualisation facile (branche principale et tags) ; `paquet.xml` des versions compatibles 5.0 de `cextras`, `saisies`, `yaml`, `verifier` et `crayons`. Remplir le tableau de compatibilité de `core-upgrade.md` §1.
+8. **Décision.** Si Mutualisation facile n'a aucune version qui déclare 5.0 et qui a été testée, **on arrête** : la ferme reste en 4.4.22. Sinon, il faut une procédure 5.0 recherchée à part (hors du périmètre 4.2–4.4 de la procédure actuelle), puis les lignes 1 à 3 du plan d'actions, dans l'ordre. Les lignes 4 à 8 ne s'exécutent qu'après une préproduction 5.0 réussie et la levée de toutes les conditions d'arrêt.
+
+## Commandes : plan d'actions (**proposé, non exécuté** ; **bloqué** tant que la procédure ci-dessus n'est pas terminée)
+
+| # | Action | Objectif | Préconditions | Portée exacte | Impact | Sauvegarde / preuve | Commande proposée | Contrôle de réussite | Retour arrière |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | Créer le dossier de sauvegarde | Réserver un emplacement hors de la racine web pour le jeu de sauvegardes | Étapes 1 à 3 faites ; `backup_parent` résolu, différent de `/` et hors de `spip_root` (`backup-rollback.md` §2) | `<backup_parent>/<horodatage UTC>/` et `databases/` | Hôte seulement ; aucun site touché | Manifeste : hôte, heure UTC, chemins | `umask 077; mkdir -- "$backup_root" "$backup_root/databases"`, après les assertions du §2 | `realpath -e` donne le chemin attendu, en mode 700 | `rmdir` des dossiers vides, après accord de l'opérateur |
+| 2 | Sauvegarder chaque site : base et fichiers persistants, plus le socle partagé | Disposer d'un point de restauration cohérent pour **chaque** site et pour le code partagé en 4.4.22 | Ligne 1 faite ; moteur connu pour chaque site ; pour MySQL, fichier d'options en 0600 préparé par l'opérateur ; écritures gelées ou limite de cohérence annoncée | Bases de `asso-exemple.org`, de `mairie-exemple.fr` et du site d'administration ; leurs `config/` et `IMG/` ; `config/mes_options.php` ; `mutualisation/` ; `plugins/` ; `ecrire/` et le reste du cœur selon la provenance | Lecture des sites ; écriture dans `backup_root` seulement | `SHA256SUMS`, tailles, codes de retour, versions des outils, copie hors de l'hôte | MySQL : le modèle de dump de `backup-rollback.md` §3 avec `--defaults-file`, `--no-login-paths` et `--single-transaction`, si les tables sont InnoDB. SQLite : `.backup` puis `PRAGMA integrity_check` (§4). Fichiers : `tar` sur une liste explicite (§5) | Dump non vide et code de retour 0 ; `integrity_check` = `ok` ; `sha256sum -c` OK | Aucune modification à annuler : on conserve les artefacts |
+| 3 | Test de restauration isolé | Prouver que la sauvegarde de la ligne 2 se restaure | Ligne 2 validée ; serveur de test isolé, sans accès ni identifiants de production | Une base de test par site ; une copie isolée du site | Environnement de test seulement | Rapport du test, identité distincte du serveur de test | Modèle de `backup-rollback.md` §3 (vérification de restauration) ou §4 (SQLite) | Table `<prefix>_meta` présente et `CHECK TABLE` OK ; site restauré fonctionnel | Supprimer la base de test après relevé des résultats et accord de l'opérateur |
+| 4 | Construire une préproduction SPIP 5.0 de toute la ferme | Tester en 5.0 le cœur, Mutualisation facile et les plugins, avec des copies des bases | Lignes 2 et 3 faites ; tag 5.0 exact vérifié ; **une version de Mutualisation facile qui déclare 5.0** ; versions compatibles de tous les plugins ; procédure 5.0 recherchée à part ; provenance connue | Dossier de préproduction distinct de `spip_root` | Aucun en production | Manifeste des versions et sommes de contrôle | **Non fourni** : il dépend de la provenance, du tag 5.0 et de la procédure 5.0 qui restent inconnus | Chaque site de test passe le registre de validation (`core-upgrade.md` §5) | Supprimer la préproduction |
+| 5 | Mettre toute la ferme en maintenance | Geler les écritures pendant la bascule | Ligne 4 réussie ; fenêtre de maintenance annoncée ; mécanisme existant du serveur web ou du répartiteur identifié | Tous les vhosts de la ferme | Sites indisponibles | Configuration du vhost et du proxy sauvegardée | **Non fourni** : il dépend du serveur web détecté à l'étape 1. Aucune constante SPIP inventée | Réponse de maintenance sur chaque domaine | Remettre la configuration sauvegardée |
+| 6 | Basculer le code partagé vers 5.0 | Remplacer cœur, `mutualisation/` et plugins en une seule opération | Lignes 2 à 5 faites ; inventaire relancé, liste des sites inchangée | `ecrire/` et le reste du cœur, `mutualisation/`, `plugins/` | **Toute la ferme** | Ancienne version exacte conservée (ligne 2) | **Non fourni** : selon la méthode d'installation actuelle (`core-upgrade.md` §2), sans en changer | Version 5.0 lue dans le cœur basculé | Remettre l'ancienne version exacte, si aucun schéma n'a migré |
+| 7 | Mettre à jour la base de chaque site, un site après l'autre | Faire migrer le schéma de chaque base vers 5.0 | Ligne 6 faite ; journaux de chaque site relevés avant | Un site à la fois | Schéma de ce site, plus purge de son `tmp/` | Journaux SPIP et PHP de ce site ; point de contrôle de la ligne 2 | Mise à jour authentifiée dans l'espace privé (`ecrire/`) ; **pas** de route `upgrade=oui` dont on devinerait le secret | Schéma à jour, connexion à l'espace privé, pages publiques, formulaires, journaux propres | Remettre le code de la ligne 2 **et** la base et les fichiers de ce site au même point de contrôle |
+| 8 | Sortir de la maintenance | Rouvrir les sites | Tous les sites validés, y compris celui d'administration | Tous les vhosts | Retour au service | Registre de validation complet | Annuler la ligne 5 | Code HTTP et contenu attendus sur chaque domaine | Revenir à la ligne 5 |
+
+## Validation
+
+- **Maintenant (lecture seule)** : les faits des étapes 1 à 7 pour **chaque** site (`asso-exemple.org`, `mairie-exemple.fr`, `admin-ferme.example`). Aucun moteur `unknown`, aucune provenance `unknown`, et un tableau de compatibilité rempli à partir des `paquet.xml` actuels.
+- **Plan d'actions** : contrôles de réussite des lignes 1 à 3 avant toute préproduction ; ceux de la ligne 4 sur un site de test par combinaison de plugins (et par moteur, MySQL et SQLite, s'il y a les deux) ; puis, dans l'ordre, ceux des lignes 6, 7 (site par site) et 8. Que le site d'administration fonctionne ne prouve pas que les autres bases ont migré.
+
+## Retour arrière
+
+- **Déclencheurs** : échec inexpliqué de l'un des contrôles des lignes 6 ou 7, erreur PHP ou SPIP dans les journaux, schéma non à jour, ou état de migration incertain.
+- **Unité à restaurer** : le code partagé 4.4.22 exact, plus, pour chaque site qui a migré ou écrit avec le nouveau code, sa base et ses fichiers persistants pris au même point de contrôle (ligne 2). Un état incertain se traite comme une migration : on restaure la base.
+- **Ordre** : retour arrière de la ligne 7, site par site, puis de la ligne 6, puis rester sous la ligne 5 jusqu'à ce que le registre de validation soit à nouveau complet, puis ligne 8. On ne fait jamais tourner un cœur 4.4 sur une base migrée en 5.0.
+
+---
+
+Vérification de couverture : les seules actions qui modifient quelque chose dans cette réponse sont la création du dossier de sauvegarde, les sauvegardes, le test de restauration, la préproduction, la maintenance, la bascule du code, la mise à jour des bases et la sortie de maintenance. Elles correspondent aux lignes 1 à 8, et aucune n'a été exécutée. Pour avancer, envoyez-moi d'abord les résultats des étapes 1 à 7 (en particulier : la provenance, le moteur de base de chaque site, et la réponse à la question « existe-t-il une version de Mutualisation facile compatible 5.0 ? »).
+
+## spip-mutualisation-maintenance, cas 26 — tirage 2
+
+# Passage de la ferme à SPIP 5.0 : préparation
+
+**Réponse courte : je ne peux pas vous fournir une procédure de migration vers SPIP 5.0 prête à lancer.** Deux blocages ressortent des fichiers. D'abord, Mutualisation facile 2.0.1 installé déclare `compatibilite="[4.2.0;4.*]"`, ce qui exclut SPIP 5.0. Ensuite, la procédure de maintenance que j'applique ne couvre que les fermes SPIP 4.2–4.4. Je vous donne ci-dessous ce que j'ai constaté, ce qui manque, et les seules actions qu'on peut préparer sans risque dès maintenant. Je n'ai rien exécuté ni modifié. J'ai travaillé uniquement sur la copie de la racine partagée.
+
+## Constats
+
+Faits vérifiés dans la copie de la racine partagée :
+
+| Élément | Constat | Preuve |
+|---|---|---|
+| Cœur SPIP partagé | 4.4.22 (`_SPIP_VERSION_ID` 40422, `spip_version_code` 2026_09_01, `spip_version_base` 2026_08_03_00) | `ecrire/inc_version.php:464-475` |
+| PHP accepté par ce cœur | 7.4.0 à 8.5.99 | `ecrire/inc_version.php:40-41` |
+| Chargement de la mutualisation | `config/mes_options.php` fait un `require` de `_DIR_RACINE.'mutualisation/mutualiser.php'`. Le plugin est dans `mutualisation/` à la racine, pas dans `plugins/` | `config/mes_options.php:14-18` |
+| Mutualisation facile | version 2.0.1, `compatibilite="[4.2.0;4.*]"`, `<chemin path="" type="aucun" />` | `mutualisation/paquet.xml` |
+| Appel effectif `demarrer_site()` | `repertoire => 'sites'`, `table_prefix => false`, `cookie_prefix => true`, `url_img_courtes => true`, `creer_site => true`, `creer_base => true` | `config/mes_options.php:124-143` |
+| Calcul de `$site` | depuis `HTTP_HOST` : retrait de `www.` avec redirection, `:80` et les ports remplacés par `_` | `config/mes_options.php:23-45` |
+| Site d'administration | `_SITES_ADMIN_MUTUALISATION = 'admin-ferme.example'` | `config/mes_options.php:11` |
+| Moteur SQL par défaut à l'installation | `_INSTALL_SERVER_DB = 'mysql'`, préfixe de base `mu_` | `config/mes_options.php:51-55` |
+| Sites trouvés dans `sites/` | `asso-exemple.org` et `mairie-exemple.fr`. Chacun a `config/connect.php`, `IMG/`, `local/` et `tmp/` | arborescence |
+| Plugin partagé | `plugins/auto/cextras/v4.3.3` : Champs Extras 4.3.3, `compatibilite="[4.1.0;4.*]"`. Il exige `saisies` ≥ 4.2.0 et `yaml` ≥ 3.0.0 | `plugins/auto/cextras/v4.3.3/paquet.xml` |
+
+Inconnues (je ne peux pas conclure avec la copie seule) :
+
+- **Origine du cœur** : la copie ne contient ni `.git`, ni `composer.json`/`composer.lock`, ni `spip.php`, ni `plugins-dist/`. Je ne sais donc pas si le cœur a été installé par Git, Composer, archive ou spip_loader, ni s'il porte des modifications locales.
+- **Moteur SQL réel de chaque site** : mon filtre restreint n'a reconnu ni `mysql` ni `sqlite3` dans les deux `connect.php`. Le moteur reste **inconnu** par site. Il faut le confirmer sur le serveur avec un filtre restreint, sans afficher le fichier.
+- **`saisies` et `yaml`**, dont cextras a besoin, sont absents de `plugins/auto/` dans la copie. Ils sont peut-être dans `plugins-dist/` ou dans un chemin ajouté, mais je ne l'ai pas vu.
+- **Plugins actifs par site**, plugins propres à un site, `_DIR_PLUGINS_SUPPL` : rien dans la copie, à vérifier.
+- Pile web/PHP-FPM, versions PHP par pool, espace disque et inodes, sauvegardes existantes : rien de vérifiable ici.
+- **Exigences de SPIP 5.0** (PHP minimal, paquets Composer, compatibilité des plugins) : je ne les ai pas vérifiées sur les sources officielles aujourd'hui. Je ne les donne pas de mémoire.
+
+## Risques
+
+- **Blocage de compatibilité (bloquant)** : Mutualisation facile 2.0.1 se déclare compatible jusqu'à SPIP 4.* seulement. Tant qu'aucune version publiée de Mutualisation ne déclare SPIP 5.0 compatible, passer le cœur partagé en 5.0 met **toute la ferme** hors du périmètre supporté. Ce plugin est chargé par `require` avant le pipeline des plugins, donc s'il casse, tous les sites cassent. Il faut vérifier sur le dépôt actuel (https://git.spip.net/spip-contrib-extensions/mutualisation) s'il existe une branche ou une version compatible 5.0. Je n'ai pas pu le faire depuis ici.
+- **Blocage de compatibilité des plugins** : Champs Extras 4.3.3 déclare `[4.1.0;4.*]`. Il faudra trouver une version compatible 5.0 de cextras, et aussi de `saisies` et `yaml`.
+- **Périmètre** : SPIP 5.0 sort du cadre de cette procédure de maintenance (4.2–4.4). La bascule demande une procédure documentée séparément, pour la version 5.0 exacte visée et ses paquets.
+- **Rayon d'impact** : un seul cœur et un seul `mutualisation/` servent tous les sites. On ne peut pas tester la 5.0 sur un seul site de production : il faut une copie isolée complète (code partagé, sites, bases).
+- **Irréversibilité côté base** : dès qu'une base de site a été migrée par le cœur 5.0, revenir au cœur 4.4.22 ne suffit plus. Il faut restaurer la base et les fichiers persistants de ce site.
+- **Origine du cœur inconnue** : c'est une condition d'arrêt. Je ne choisis pas la méthode (Git, Composer ou archive) à votre place.
+- **Anomalie de sécurité, à part** : `config/mes_options.php`, partagé par toute la ferme, contient des identifiants de connexion MySQL en clair (lignes 55-58). Je ne les reproduis pas ici. Vérifiez qui peut lire ce fichier et s'il est servi par le web. Ce point est hors du sujet de la migration, mais il ne faut pas copier ce fichier vers un environnement de test moins protégé.
+- **Exposition de `?exec=mutualisation`** : `renouvelle_alea`, `dirliste` et `dirsize` répondent sans authentification sur chaque site. La route `upgrade=oui` ne repose que sur un secret calculé à partir de données présentes dans `tmp/meta_cache.php`. À contrôler dans les journaux d'accès et à bloquer côté proxy hors des fenêtres de maintenance (ce blocage est une modification, à traiter à part).
+
+## Procédure proposée
+
+Seulement des observations en lecture seule et des étapes de planification, dans cet ordre :
+
+1. **Compatibilité amont** (sans toucher au serveur) : sur les sources officielles, relevez l'étiquette exacte de SPIP 5.0 visée, son PHP minimal, et les `paquet.xml` actuels de Mutualisation facile, cextras, saisies et yaml. **Si Mutualisation ne déclare pas SPIP 5.0, on s'arrête là** : la ferme reste en 4.4.x et on surveille l'amont.
+2. **Origine du cœur**, sur le serveur, en lecture seule (remplacez `<racine_ferme>` par le chemin vérifié) :
+   ```bash
+   spip_root="$(realpath -e -- <racine_ferme>)"; test "$spip_root" != /
+   git -C "$spip_root" rev-parse --show-toplevel 2>/dev/null
+   git -C "$spip_root" status --short 2>/dev/null
+   git -C "$spip_root" describe --tags --always --dirty 2>/dev/null
+   ls -1 "$spip_root" | grep -E '^(composer\.(json|lock)|spip\.php|plugins-dist|vendor)$'
+   ```
+   N'envoyez pas `git remote -v` : l'URL peut contenir des identifiants.
+3. **Moteur SQL par site**, sans afficher `connect.php` :
+   ```bash
+   for d in "$spip_root"/sites/*/; do
+     printf '%s ' "$(basename "$d")"
+     grep -qE "'sqlite3'" "$d/config/connect.php" && echo sqlite3 && continue
+     grep -qE "'mysql'" "$d/config/connect.php" && echo mysql || echo unknown
+   done
+   ```
+4. **Plugins** : chemins et versions des plugins partagés, et plugins actifs sur chaque site :
+   ```bash
+   find -P "$spip_root/plugins" "$spip_root/plugins-dist" -xdev -mindepth 1 -maxdepth 3 -name paquet.xml -print 2>/dev/null
+   rg -n '_DIR_PLUGINS_SUPPL|_SPIP_PATH' "$spip_root/config" "$spip_root/sites" --glob '*.php' -l
+   ```
+   Pour chaque `paquet.xml` trouvé, ne remontez que les lignes `prefix`, `version` et `compatibilite`.
+5. **Pile et capacité** : version PHP de chaque pool FPM (pas seulement `php -v`), `df -hP` et `df -iP` sur la racine.
+6. **Sauvegardes** : suivez les lignes 1 et 2 du plan d'actions. Elles sont utiles dès maintenant, quelle que soit la décision sur la 5.0.
+7. Une fois les points 1 à 5 levés sans blocage, préparez la répétition isolée (ligne 3). La bascule de production (ligne 4) reste **bloquée** tant qu'une procédure 5.0 dédiée n'a pas été rédigée et validée sur cette répétition.
+
+Pour les modifications, suivez les lignes 1 à 4 du plan d'actions dans l'ordre. Chaque ligne n'est possible que si ses préconditions sont remplies.
+
+## Commandes
+
+Plan d'actions. Toutes les commandes sont **proposées et non exécutées**. Les `<...>` sont à remplacer par des valeurs vérifiées.
+
+| # | Action | Objectif | Préconditions | Portée exacte | Impact | Sauvegarde / preuve | Commande proposée (non exécutée) | Contrôle de réussite | Retour arrière |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | Sauvegarder la base de chaque site | Disposer d'un point de restauration par site | Moteur de chaque site confirmé (étape 3). Pour MySQL, fichier d'options client protégé (`chmod 600`), sans mot de passe en argument. Espace disque suffisant | Une base par site : `asso-exemple.org`, `mairie-exemple.fr` (et tout autre site trouvé) | Lecture sur la base. Charge passagère | Fichier de dump horodaté et son SHA-256 dans un manifeste | MySQL : `mysqldump --defaults-extra-file=<fichier_options_600> --single-transaction --routines --triggers <base_du_site> > <dossier_sauvegarde>/<site>-<date>.sql && sha256sum <dossier_sauvegarde>/<site>-<date>.sql >> <manifeste>`. SQLite : `sqlite3 <racine>/sites/<site>/config/bases/<fichier>.sqlite ".backup '<dossier_sauvegarde>/<site>-<date>.sqlite'"` | Le dump n'est pas vide et `sha256sum -c <manifeste>` passe. **Restauration testée dans une base isolée** (ligne 3) | Aucun : la sauvegarde ne modifie rien. Supprimer les fichiers de sauvegarde ratés dans `<dossier_sauvegarde>` seulement |
+| 2 | Archiver le code partagé et les fichiers persistants | Pouvoir restaurer le cœur 4.4.22, `mutualisation/`, `plugins/` et `config/`, plus `IMG/` et `config/` de chaque site | Racine résolue par `realpath`, différente de `/`. Espace disque suffisant | `<racine_ferme>` sans `sites/*/local` ni `sites/*/tmp` (caches, non persistants) | Lecture seule sur la ferme | Archive horodatée et son SHA-256. **L'archive contient des identifiants (`config/mes_options.php`, `connect.php`) : à stocker avec des droits restreints** | `tar --exclude='sites/*/local' --exclude='sites/*/tmp' -C <racine_ferme> -czf <dossier_sauvegarde>/ferme-<date>.tgz . && sha256sum <dossier_sauvegarde>/ferme-<date>.tgz >> <manifeste>` | `tar -tzf` liste bien `ecrire/inc_version.php`, `mutualisation/paquet.xml`, `sites/*/IMG`. Le SHA-256 correspond | Aucun : rien n'est modifié |
+| 3 | Monter une répétition isolée de la ferme en 5.0 | Tester cœur 5.0, Mutualisation et plugins sur une copie | Lignes 1 et 2 vérifiées. **Mutualisation, cextras, saisies et yaml en versions déclarées compatibles 5.0** (étape 1). Origine du cœur connue (étape 2). Procédure 5.0 dédiée rédigée | Hôte ou vhost de test séparé, bases copiées sous d'autres noms, identifiants différents de ceux de production | Aucun sur la production | Journal de la répétition et grille de validation par site | **Pas de commande tant que la précondition de compatibilité n'est pas remplie.** Ensuite : restaurer les sauvegardes 1 et 2 dans `<racine_test>`, installer SPIP 5.0 `<étiquette_vérifiée>` avec la **même méthode** que la production, puis mettre à jour chaque base de test par l'espace privé authentifié | Tous les sites de test passent la grille de validation (public, connexion privée, schéma à jour, plugins actifs, formulaires et envois de fichiers, tâches, journaux) | Supprimer `<racine_test>` et les bases de test, après avoir vérifié par `realpath` que le chemin est bien celui de test |
+| 4 | Basculer le cœur partagé de production en 5.0 | Migration effective | Ligne 3 réussie sur **tous** les sites. Sauvegardes 1 et 2 de moins de <délai> et restauration testée. Fenêtre de maintenance pour toute la ferme. Procédure 5.0 validée | Toute la ferme : cœur partagé, `mutualisation/`, `plugins/`, puis chaque base de site, l'une après l'autre | **Tous les sites** | Manifeste des lignes 1 et 2. Point de contrôle par site (base migrée oui ou non) | **Bloquée, aucune commande fournie** : Mutualisation 2.0.1 ne déclare pas SPIP 5.0 et ce cas sort du périmètre 4.2–4.4. La commande sera rédigée à partir de la procédure 5.0 validée en ligne 3 | Grille de validation remplie pour chaque site, pas seulement le site d'administration | Avant migration des bases : remettre le code archivé en ligne 2. Après migration d'une base : remettre le code de la ligne 2 **et** restaurer la base de ce site (ligne 1) et son `IMG/` |
+
+## Validation
+
+En lecture seule, pour **chaque** site (`asso-exemple.org`, `mairie-exemple.fr`, `admin-ferme.example` et tout autre site trouvé), pas seulement le site d'administration :
+
+- avant toute action : la liste des sites sous `sites/` est inchangée depuis l'inventaire, et le moteur SQL est identifié pour chacun ;
+- `curl -sS -o /dev/null -w '%{http_code}\n' https://<site>/` renvoie 200 et la page contient le contenu attendu ;
+- connexion manuelle à l'espace privé, puis contrôle des plugins actifs et de l'état « base à jour » ;
+- journaux PHP-FPM, serveur web et SPIP sans nouvelle erreur.
+
+Pour les modifications, les contrôles de réussite sont dans les lignes 1 à 4 du plan d'actions.
+
+## Retour arrière
+
+- **Déclencheurs** : un site échoue à la grille de validation, une erreur PHP fatale apparaît, Mutualisation ne charge plus (toute la ferme tombe) ou un schéma de base est incohérent.
+- **Unité de restauration** : le code partagé (archive de la ligne 2) pour toute la ferme, plus, pour chaque site dont la base a été migrée ou modifiée sous le nouveau cœur, sa base (ligne 1) et son `IMG/` (ligne 2). Ne jamais remettre le cœur 4.4.22 face à une base déjà migrée par la 5.0.
+- **Ordre** : dans la répétition, appliquez le retour arrière de la ligne 3. En production, appliquez celui de la ligne 4, qui renvoie aux lignes 2 puis 1. Si l'état de migration d'un site n'est pas clair, considérez que sa base doit être restaurée.
+
+**En résumé :** sauvegardez maintenant (lignes 1 et 2, avec un test de restauration), complétez l'inventaire (étapes 2 à 5), et vérifiez sur les sources actuelles si une version de Mutualisation facile déclarée compatible SPIP 5.0 existe. Tant que ce n'est pas le cas, la ferme doit rester en SPIP 4.4.x.

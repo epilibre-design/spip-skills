@@ -1,0 +1,185 @@
+<?php
+
+	/*
+	 * Inscrire ici le nom du site d'administration du tableau de bord
+	 * de la mutualisation (ou plusieurs, separes par des virgules)
+	 * (dans cet exemple, 'scriibe.net' est le top level domain, TLD)
+	 * pour autoriser tous les sites, ne pas definir la constante ;
+	 * Si le site maitre n'est pas dans sites/ mais a la racine, mettre ''
+	 * et ajouter 'mutualisation' dans $dossier_squelettes
+	 */
+	define ('_SITES_ADMIN_MUTUALISATION', 'scriibe.net');
+
+	if (!defined("_ECRIRE_INC_VERSION")) return;
+	if (!is_readable (_DIR_RACINE.'mutualisation/mutualiser.php')) {
+		echo _L("Fichier 'mutualisation/mutualiser.php' manquant dans la racine " . _DIR_RACINE);
+		exit;
+	}
+	require _DIR_RACINE.'mutualisation/mutualiser.php';
+
+	/* placer dans ce tableau les sites ou l'on ne veut pas la redirection canonique */
+	$www = array();
+
+	$site = str_replace('www.', '', $_SERVER['HTTP_HOST']);
+	if ($site != $_SERVER['HTTP_HOST'] AND !in_array($site, $www)) {
+		include_spip('inc/headers');
+		$req = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '/';
+		if (isset($_SERVER['HTTPS'])
+		AND test_valeur_serveur($_SERVER['HTTPS']))
+			$protocole = 'https';
+		elseif (!isset($_SERVER["SCRIPT_URI"]) OR !($p = strpos($_SERVER["SCRIPT_URI"], '://')))
+			$protocole = 'http';
+		else $protocole = substr($_SERVER["SCRIPT_URI"],0,$p);
+		redirige_par_entete($protocole . '://' . $site . $req);
+	}
+
+	/*
+	 * Compatibilite avec le ":" de $dossier_squelettes
+	 * Si l'url indique explicitement un port (grace a ":")
+	 * tout eliminer s'il s'agit du port 80
+	 * et remplacer ":" par _ pour les autres ports
+	 */
+	if (strpos($site, ':')) {
+		if (preg_match('/:80$/', $site)) $site = substr($site,-3);
+		else $site = str_replace(':', '_', $site);
+	}
+
+	/**
+	 * Si _INSTALL_DB_PREFIX est défini, prefixe_mutualisation() utilisera sa longueur pour
+	 * générer son résultat (maximum de 15 caractères pour la création d'utilisateur MySQL)
+	 */
+	define ('_INSTALL_PREFIX_DB','mu_');
+	define ('_INSTALL_SITE_PREF', prefixe_mutualisation($site));
+	define ('_INSTALL_NAME_DB', _INSTALL_PREFIX_DB. _INSTALL_SITE_PREF);
+
+	define ('_INSTALL_SERVER_DB', 'mysql');
+	define ('_INSTALL_HOST_DB', 'localhost');
+	define ('_INSTALL_USER_DB', 'loginsql');
+	define ('_INSTALL_PASS_DB', '123456HDJ');
+
+	/* mettre en commentaire la ligne suivante si vous utilisez l'option table_prefixe plus bas dans la config */
+	define ('_INSTALL_TABLE_PREFIX', 'spip');
+
+	/*
+	 * Si le nom du serveur est different du nom dns,
+	 * ca peut parfois poser probleme
+	 * il faut alors le definir ici
+	 */
+	# define ('_INSTALL_HOST_DB_LOCALNAME', 'nom_serveur');
+
+	/*
+	 * Si le serveur n'est pas mysql, il faut le preciser obligatoirement.
+	 * # define ('_INSTALL_SERVER_DB', 'pg'); // mysql|pg|sqlite2|sqlite3
+	 *
+	 * /!\ En PG, il est conseille d'utiliser la creation d'utilisateur SQL
+	 */
+
+	/*
+	 * Creer automatiquement les users SQL (pg|mysql)
+	 *
+	 * Cela permet
+	 * - d'avoir un utilisateur root possedant les droits
+	 * de creation de bases (cet utilisateur possedant obligatoirement
+	 * une base a son nom en PG - PG ne se connecte pas sans donner un nom de bdd)
+	 * - de creer des utilisateurs sql automatiquement
+	 * ne possedant que les droits d'administation
+	 * de leur base de donnee qui sera creee
+	 *
+	 * Il faut remplacer alors
+	 * _INSTALL_(USER|PASS)_DB par _INSTALL_(USER|PASS)_DB_ROOT
+	 *
+	 * et ajouter dans demarrer_site l'option
+	 * 'creer_user_base' => true
+	 */
+	# define ('_INSTALL_USER_DB_ROOT', 'mon_root');
+	# define ('_INSTALL_PASS_DB_ROOT', '********');
+
+	/*
+	 * Creer les bases de donnees via un ping sur une URL (methode AlternC)
+	 *
+	 * Il suffit de renseigner l'option url_creer_base, en lui passant les bons parametres :
+	 * 'url_creer_base' => 'https://bureau.tld/admin/sql_doadd.php?username=USER&password=PASS&dbn='.prefixe_mutualisation($site)
+	 */
+
+
+	/*
+	 * Transformer sur les pages publiques les url des images
+	 * /sites/mon_site/IMG/* -> /IMG/*
+	 * /sites/mon_site/local/* -> /local/*
+	 *
+	 * - Necessite le mod_rewrite (reecriture d'url) d'apache
+	 * - Ne fonctionne qu'avec des mutualisations de nom de domaine
+	 * ('http_host' : http://mon_site_mutu.tld)
+	 * (donc pas avec une mutualisation de repertoire - http://site/mon_spip_mutu/)
+	 *
+	 * et ajouter dans demarrer_site l'option
+	 * 'url_img_courtes' => true
+	 *
+	 * Il est possible de regenerer les fichiers .htaccess
+	 * crees automatiquement dans /IMG et /local
+	 * grace a ?var_mode=creer_htaccess_img
+	 *
+	 */
+
+	demarrer_site($site,
+		array(
+			'creer_site' => true,        // Creer ou non le site s'il n'existe pas (defaut: false)
+			'creer_base' => true,        // Creer ou non la base de donnee si elle n'existe pas (false)
+			'creer_user_base' => false,  // Creer ou non un utilisateur pour la nouvelle base de donnee (false)
+			'mail' => '',                // Adresse mail pour recevoir un mail lors d'une creation de site mutualise ('')
+			'code' => 'ecureuil',        // Code d'activation ('ecureuil')
+			'table_prefix' => false,     // Definir automatiquement le prefixe de table (false) ... mettre true si tous les sites dans la meme base
+			'cookie_prefix' => true,     // Definir automatiquement le prefixe de cookie (false)
+			'repertoire' => 'sites',     // Nom du repertoire contenant les sites mutualises ('sites')
+			'url_img_courtes' => true,   // Utiliser la redirection des URL d'images courtes dans la partie publique (false)
+										 // /!\ il faut qu'apache ait le droit d'ecrire dans les dossiers IMG/ et local/ a la racine du site !
+										 // C'est la que la mutualisation va ecrire les regles de redirection automatiques pour les images de chaque site
+			# 'utiliser_panel' => false, // Utiliser une table externe pour recuperer des identifiants ... (code, user, pass) permettant a un utilisateur d'installer le site (false)
+			# 'annonce' => '<p>Un service propos&eacute; par <a href="https://www.spip.net/">la communaut&eacute; SPIP</a></p>', // Texte a afficher en bas du formulaire d'activation de la mutualisation
+			'url_creer_base' => '',       // Creer la base de donnees via une URL (methode AlternC)
+			// fonction qui sera appelée avant l'initialisation de SPIP 
+			'avant_initialisation' => ''
+		)
+	);
+
+	/*
+	 * Notes concernant SQLite
+	 *
+	 * 1) creer_base = false
+	 * 	Avec SQLite, il est inutile de mettre creer_base a true.
+	 * 	Si creer_base est true, une base sera cree (par l'outil de mutualisation)
+	 * 	dans le repertoire defini par la constante _DIR_DB.
+	 *
+	 * 	Si cette constante n'est pas renseignee, elle vaudra
+	 * 	_DIR_ETC/bases/ soit : config/bases/, ce qui ne correspond pas
+	 * 	a l'emplacement du futur site : sites/X/config/bases.
+	 *
+	 * 	En laissant l'option a false, SPIP creera la base de donnee
+	 * 	au moment de l'installation (exec=install) et a ce moment
+	 * 	la, _DIR_ETC vaudra 'sites/X/config' donc la base sera stockee
+	 * 	ou il faut si _DIR_DB n'est pas defini.
+	 *
+	 * 2) creer_user_base = false
+	 * 	SQLite ne gerant pas de droits d'utilisateurs,
+	 * 	(les droits sont ceux du fichier .sqlite)
+	 * 	mettre true provoquera des erreurs (je suppose)
+	 *
+	 * 3) constantes a definir :
+	 *  define ('_INSTALL_SERVER_DB', 'sqlite3'); //  sqlite2 ou sqlite3
+	 *  define ('_INSTALL_NAME_DB', 'mu_'.prefixe_mutualisation($site));  // 'mu_' ou autre chose mais PAS PLUS DE 3 CARACTERES !!!
+	 *
+	 * 	les constantes _INSTALL_(HOST|PASS|USER)_DB sont inutiles.
+	 */
+
+	/*
+	 * Notes concernant MySQL
+	 *
+	 * - Pour la creation d'utilisateurs MYSQL
+	 * (creer_base+creer_user_base)
+	 * il est possible de definir les droits de ces utilisateurs avec la constante
+	 * _PRIVILEGES_MYSQL_USER_BASE (ici avec les valeurs utilisees par defaut) :
+	 *
+	 *  define('_PRIVILEGES_MYSQL_USER_BASE','Alter, Select, Insert, Update, Delete, Create, Drop');
+	 *
+	 */
+?>

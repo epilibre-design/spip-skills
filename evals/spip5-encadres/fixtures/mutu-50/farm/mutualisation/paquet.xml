@@ -1,0 +1,24 @@
+<paquet
+	prefix="Mutualisation"
+	categorie="maintenance"
+	version="2.0.1"
+	etat="stable"
+	compatibilite="[4.2.0;4.*]"
+	logo="mutualiser-128.png"
+	documentation="https://contrib.spip.net/La-mutualisation-facile-modifications-manuelles"
+>
+
+	<nom>Mutualisation facile</nom>
+	<!-- Créer une ferme à Spip -->
+
+	<auteur>Fil</auteur>
+	<auteur>Teddy</auteur>
+
+	<copyright>2007-2023</copyright>
+
+	<licence lien="http://www.gnu.org/licenses/lgpl-3.0.html">LGPL 3</licence>
+	<licence lien="http://www.gnu.org/licenses/gpl-3.0.html">GPL 3 (2013)</licence>
+	<licence lien="http://www.wtfpl.net/about/">WTFPL 2 (2013)</licence>
+
+	<chemin path="" type="aucun" />
+</paquet>

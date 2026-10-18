@@ -1,6 +1,6 @@
 ---
 name: spip-mutualisation-maintenance
-description: Use when diagnosing or preparing maintenance of an existing SPIP 4.2–4.4 farm using Mutualisation facile 2.x, including inventory, shared core or plugin upgrades, MariaDB/MySQL or SQLite backup and rollback, and compromise investigation.
+description: Use when diagnosing or preparing maintenance of an existing SPIP 4.2–4.4 farm using Mutualisation facile 2.x, including inventory, shared core or plugin upgrades, MariaDB/MySQL or SQLite backup and rollback, and compromise investigation. Written for SPIP 4.x; mutualisation is experimental in SPIP 5.0 (see the SPIP 5.0 section).
 ---
 
 # SPIP mutualisation maintenance
@@ -12,6 +12,24 @@ Establish the topology before choosing commands. Read-only observations may be r
 A single SPIP core and shared plugin tree can serve every site, while each site keeps its own configuration, database, `IMG/`, `local/`, and `tmp/`. Always state whether an observation or proposed change affects one site, several sites, the shared farm, or the host.
 
 Mutualisation facile is not an ordinary `plugins/` plugin: the shared site's `mes_options.php` `require`s it before the plugin pipeline runs, normally from a top-level `mutualisation/` directory (`mes_options.php.txt:14-18`; `paquet.xml` declares `<chemin path="" type="aucun" />`). Resolve the actual `require` target; do not look for it under `plugins/`.
+
+## SPIP 5.0
+
+This skill covers 4.2–4.4 farms. Check the shared root's version first and name the marker you relied on. The farm
+runs 5.0 if **any** of: `ecrire/src/SpipVersion.php` declares `VERSION = '5.…'`, `bin/spip` exists,
+`vendor/spip/framework/` exists, plugins live in `plugins-dist/spip/`.
+
+- Mutualisation is work in progress in SPIP 5.0: the 5.0 documentation marks the mutualised entry point
+  (`sites/default/public/index.php`) "expérimental — todo", and no farm procedure exists. On a 5.0 farm, run only the
+  read-only inventory; do not draft upgrade, backup or migration plans for it. Asked to move a farm to 5.0: say it is
+  not supported yet, and offer at most a trial on an isolated copy, outside production.
+- Mutualisation facile 2.0.1 declares `[4.2.0;4.*]` and does not isolate sites on 5.0: the 5.0 kernel defines
+  `_DIR_IMG`, `_DIR_TMP`, `_DIR_VAR`, `_DIR_CONNECT` before `config/mes_options.php` runs, so `demarrer_site()` only
+  sets `_DIR_SITE` and `_SPIP_PATH`, and every site uses the shared root's connection, `IMG/`, `local/` and `tmp/`.
+  Sites of a 5.0 farm showing the same content is this, not a configuration error: freeze writes, preserve the
+  current state, then restore the pre-upgrade 4.4 backup (shared files and every site's database).
+
+Details: none upstream yet; `spip-migration-5` covers single sites.
 
 ## Supported scope
 
