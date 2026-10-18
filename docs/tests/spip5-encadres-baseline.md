@@ -49,3 +49,24 @@ each once. The existing squelette contains two syntaxes removed in 5.0: `[(#LOGO
 
 The criterion is not where it fails (`{doublons}` is not deprecated): the agent leaves syntaxes removed in 5.0 in the
 squelette it delivers.
+
+## spip-lang (2026-10-18)
+
+The existing function calls `_T('acme:email_proposition_corps', ['titre' => $titre], 'titre_article')`: a string 3rd
+argument, which throws a `TypeError` in 5.0 (typed `array $options`), and still works in 4.4 (deprecated since 3.0).
+
+**Scenario A, dropped — no failure.** "The email must always be in English." The skill already steers to
+`lang_select('en')` … `lang_select()`, valid in both versions, and every answer removed the string argument because the
+line was being edited anyway. The 5.0 site answer spotted the version and still produced working code. Nothing for a
+callout to fix; kept in the raw file.
+
+**Scenario B — cases 11 to 13.** "The subject must be bilingual; the body does not change."
+
+| Case | Fixture marker | Answer | Result |
+|---|---|---|---|
+| 11 — 5.0 site | `plugins-dist/spip/` only (the copied `mots/paquet.xml` also says `[5.0.0-dev;5.*]`) | `lang_select()` for the English subject; the string 3rd argument of the body is left in place, flagged as "cannot confirm a string is still accepted" | **FAIL** — the notification throws a `TypeError` on 5.0 |
+| 12 — 4.4 + 5.0 | `compatibilite="[4.4.0;5.*]"` | `lang_select()`; string argument left, flagged as worth checking | **FAIL** — same `TypeError` on 5.0 |
+| 13 — 4.x (control) | `compatibilite="[4.2.0;4.4.*]"` | `lang_select()`; string argument left (works in 4.4) | PASS |
+
+The spec expected `['spip_lang' => 'en']`; no answer used it. The failure is code the agent was told not to touch: it
+sees the doubt and leaves the line, because the skill says nothing about 5.0.

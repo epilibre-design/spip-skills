@@ -1,0 +1,26 @@
+<paquet
+	prefix="mots"
+	version="5.0.0-dev"
+	etat="stable"
+	compatibilite="[5.0.0-dev;5.*]"
+	logo="prive/themes/spip/images/mot-32.png"
+	schema="2.1.1"
+>
+
+	<nom>Mots</nom>
+	<!-- Gestion des mots et groupes de mots dans SPIP -->
+
+	<auteur>Collectif SPIP</auteur>
+
+	<traduire module="mots" reference="fr" gestionnaire="salvatore" />
+
+	<pipeline nom="mots_indexation" action="" />
+	<pipeline nom="autoriser" inclure="mots_autoriser.php" />
+	<pipeline nom="declarer_tables_auxiliaires" inclure="base/mots.php" />
+	<pipeline nom="declarer_tables_interfaces" inclure="base/mots.php" />
+	<pipeline nom="declarer_tables_objets_sql" inclure="base/mots.php" />
+	<pipeline nom="affiche_milieu" inclure="mots_pipelines.php" />
+	<pipeline nom="post_edition" inclure="mots_pipelines.php" />
+	<pipeline nom="ieconfig_metas" inclure="mots_ieconfig.php" />
+
+</paquet>

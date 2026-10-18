@@ -2,13 +2,32 @@
 name: spip-lang
 description: Use for SPIP translation/i18n work — creating, editing, or auditing language files
   (lang/prefix_XX.php, lang/paquet-prefix_XX.php), naming keys, adding translations,
-  using _T() / <:module:key:>, or debugging missing/untranslated strings.
+  using _T() / <:module:key:>, or debugging missing/untranslated strings. Written for SPIP 4.x;
+  on a SPIP 5.0 project the _T() options change (see the SPIP 5.0 section).
 ---
 
 # SPIP language files
 
 SPIP stores translatable strings in PHP files under `lang/`. Each plugin declares its
 language module in `paquet.xml`; the reference language is defined by `<traduire reference="…">` (typically `fr`).
+
+## SPIP 5.0
+
+This skill describes SPIP 4.x. Check the version first and name the marker you relied on. A site is 5.0 if **any**
+of: `ecrire/src/SpipVersion.php` declares `VERSION = '5.…'`, `bin/spip` exists, `vendor/spip/framework/` exists,
+plugins live in `plugins-dist/spip/`. A plugin targets 5.0 if its `paquet.xml` `compatibilite` starts at 5.0 or
+its `composer.json` requires `spip/framework`.
+
+- The 3rd argument of `_T()` and `_L()` is typed `array` in 5.0: the old string form `_T($k, $args, 'css_class')`
+  throws a `TypeError`. Write `['class' => 'css_class']` (already valid in 4.4) or drop it, in every file you touch,
+  even on lines you were not asked to change.
+- One call in another language: `_T($k, ['spip_lang' => 'en'])` is deprecated → `_T($k, [], ['lang' => 'en'])`.
+  4.4's `_T()` silently **ignores** the `lang` option: code for 4.4 **and** 5.0 uses `lang_select('en')` …
+  `lang_select()` (both versions) or keeps `spip_lang`.
+- Unchanged: language files, `<traduire>`, `lang_select()`. In squelettes, `<:module:key:>` is case-sensitive: keep
+  the lowercase keys this skill requires.
+
+Details: `spip-migration-5` (`references/catalogue.md`).
 
 ---
 

@@ -82,3 +82,18 @@ list (RED 2/5, GREEN 5/5).
 | 8 — 5.0 site | FAIL (2/5) | **PASS (5/5)** | cites `vendor/spip/framework/`, `{groupby id_rubrique}`, fixes `{right}` and both `<INCLURE … />` |
 | 9 — 4.4 + 5.0 | FAIL (2/5) | **PASS (5/5)** | cites `[4.4.0;5.*]`, keeps `{fusion}` (no `{groupby}` in 4.4), fixes `{right}` and `<INCLURE … />` |
 | 10 — 4.x (no leak) | PASS | **PASS (2/2)** | cites `[4.2.0;4.4.*]`, `{fusion}`, file left as is; 5.0 changes listed as a future note |
+
+## spip-lang (2026-10-18)
+
+Callout facts checked on the local 5.0.0-beta instance (`ecrire/bootstrap/inc/i18n.php`): `_T(string $texte, array
+$args = [], array $options = [])` and `_L(string $text, array $args = [], array $options = [])`, so a string 3rd argument
+is a `TypeError`; `$args['spip_lang']` triggers `trigger_deprecation('spip', '5.0', …)` and is moved to
+`$options['lang']`; `lang_select()` unchanged. In 4.4.22 (`ecrire/inc/utils.php`): `_T()` reads only
+`$args['spip_lang']` — the `lang` option is silently ignored — and accepts `['class' => …]` (the string form is
+deprecated since 3.0).
+
+| Case | RED | GREEN | Notes |
+|---|---|---|---|
+| 11 — 5.0 site | FAIL | **PASS (4/4)** | cites `plugins-dist/spip/`, `_T($k, [], ['lang' => 'en'])`, body fixed to `['class' => 'titre_article']` with the `TypeError` explained |
+| 12 — 4.4 + 5.0 | FAIL | **PASS (4/4)** | cites `[4.4.0;5.*]`, rejects the `lang` option (ignored in 4.4), `lang_select()`, body fixed to `['class' => …]` |
+| 13 — 4.x (no leak) | PASS | **PASS (3/3)** | cites `[4.2.0;4.4.*]`, `lang_select()`, body left as is (valid in 4.4), 5.0 change flagged for later |

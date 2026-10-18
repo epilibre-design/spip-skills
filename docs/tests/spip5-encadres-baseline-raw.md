@@ -704,3 +704,443 @@ Voici `mot.html` modifié. J'ai ajouté un bloc « Rubriques concernées » apr�
 - **Rubrique directe seulement** : on liste la rubrique *qui contient* l'article, pas ses rubriques parentes.
 - Je n'ai pas modifié `BOUCLE_articles`. J'ai ajouté une deuxième boucle ARTICLES distincte (`_articles_rubs`) pour ne pas mélanger les deux affichages. La requête de plus est légère.
 - Variante plus courte, si vous préférez dédoublonner en SQL : `<BOUCLE_articles_rubs(ARTICLES){id_mot}{fusion id_rubrique}>`, qui regroupe les articles par rubrique (GROUP BY). Avec cette variante, le `{doublons rubmot}` de la boucle interne n'est plus nécessaire. Attention : ma documentation ne décrit `{fusion}` que pour les boucles DATA. Je recommande donc la version avec `{doublons}` ci-dessus, qui est la forme documentée.
+
+---
+
+# spip-lang — scénario A (email toujours en anglais), abandonné : pas d’échec
+
+---
+
+## spip-lang A, site avec `plugins-dist/spip/`
+
+#### Pourquoi l'email part dans la langue du visiteur
+
+`_T()` traduit toujours dans la **langue active** au moment de l'appel. Quand `acme_notifier_webmestre()` est déclenchée par la proposition d'un article, la langue active est celle du visiteur qui a fait la demande. Le sujet et le corps sont donc traduits dans sa langue.
+
+Pour forcer l'anglais, on passe temporairement en anglais avec `lang_select('en')` avant les appels à `_T()`. Ensuite, on restaure la langue précédente avec `lang_select()`, sans argument. Il faut la restaurer : sinon, la suite de la requête (affichage, autres traitements) resterait en anglais.
+
+#### Code modifié (`squelettes/mes_fonctions.php`)
+
+```php
+<?php
+
+if (!defined('_ECRIRE_INC_VERSION')) {
+	return;
+}
+
+/**
+ * Prévient le webmestre qu'un article vient d'être proposé à la publication.
+ *
+ * L'email est toujours rédigé en anglais, quelle que soit la langue
+ * du visiteur qui a proposé l'article.
+ */
+function acme_notifier_webmestre(int $id_article): void {
+	$titre = sql_getfetsel('titre', 'spip_articles', 'id_article=' . $id_article);
+
+	// Passer en anglais uniquement le temps de construire le message
+	lang_select('en');
+	$sujet = _T('acme:email_proposition_sujet');
+	$corps = _T('acme:email_proposition_corps', ['titre' => $titre]);
+	// Restaurer la langue précédente (ne pas réutiliser la valeur de retour de lang_select('en'))
+	lang_select();
+
+	$envoyer_mail = charger_fonction('envoyer_mail', 'inc');
+	$envoyer_mail($GLOBALS['meta']['email_webmaster'], $sujet, $corps);
+}
+```
+
+#### Points d'attention
+
+1. **Ne pas faire `$old = lang_select('en'); … lang_select($old);`**. `lang_select('en')` renvoie `'en'`, la langue qu'on lui passe, et non la langue précédente. Le second appel laisserait donc l'anglais actif. Il faut restaurer avec `lang_select()` ou `lang_select(null)`.
+
+2. **Troisième argument de `_T()` supprimé.** L'ancien code passait la chaîne `'titre_article'` en troisième paramètre. Or la signature est `_T(string $cle, array $args = [], array $options = [])` : ce paramètre attend un tableau d'options (`force`, `sanitize`), pas une chaîne. Je l'ai retiré. S'il servait à quelque chose de précis, dites-le-moi.
+
+3. **Le fichier de langue anglais doit exister.** Il faut un `lang/acme_en.php` avec les clés `email_proposition_sujet` et `email_proposition_corps`, ce dernier contenant le placeholder `@titre@`. Si une clé manque en anglais, `_T()` ne signale aucune erreur : il se rabat silencieusement sur la langue du site, puis sur `fr`. Le webmestre recevrait alors un email en français sans aucun avertissement. Le module `acme` ne fait pas partie des fichiers que j'ai pu consulter, donc vérifiez ce fichier. Exemple :
+
+   ```php
+   <?php
+   // This is a SPIP language file  --  Ceci est un fichier langue de SPIP
+   return [
+       // E
+       'email_proposition_corps' => 'The article "@titre@" has been submitted for publication.',
+       'email_proposition_sujet' => 'New article submitted for publication',
+   ];
+   ```
+
+4. **Échappement du titre (optionnel).** Par défaut, `_T()` échappe le HTML dans les valeurs des placeholders (`sanitize` vaut `true`). Pour un email en texte brut, un titre contenant `&` ou `<` peut donc apparaître sous forme d'entités. Si c'est gênant, utilisez `_T('acme:email_proposition_corps', ['titre' => $titre], ['sanitize' => false])`. Ne le faites que si le corps n'est jamais interprété comme du HTML.
+
+5. **Version de SPIP.** Le site tourne en SPIP 5.0 : les plugins-dist sont en `5.0.0-dev`. Ma documentation décrit `lang_select()` et `_T()` sans signaler de changement pour la 5.0, mais elle ne couvre pas cette version explicitement. Testez donc l'envoi une fois, par exemple en proposant un article depuis une session en français, et vérifiez que l'email arrive bien en anglais.
+
+---
+
+## spip-lang A, plugin 4.4 + 5.0
+
+#### Forcer l'anglais pour l'email au webmestre
+
+##### Cause
+
+`_T()` traduit dans la langue **courante** de la requête. Quand un visiteur propose un article, c'est sa langue qui est active, donc l'email part dans sa langue. Pour forcer une autre langue, il faut l'empiler avec `lang_select('en')` autour des appels `_T()`, puis restaurer la langue précédente avec `lang_select(null)`.
+
+Attention à un piège : `lang_select('en')` renvoie `'en'`, pas la langue précédente. Il ne faut donc pas garder sa valeur de retour pour restaurer ensuite. On restaure toujours avec `lang_select(null)` ou `lang_select()`.
+
+##### Code modifié : `inc/acme_notifications.php`
+
+```php
+<?php
+
+if (!defined('_ECRIRE_INC_VERSION')) {
+	return;
+}
+
+/**
+ * Prévient le webmestre qu'un article vient d'être proposé à la publication.
+ *
+ * L'email est toujours rédigé en anglais, quelle que soit la langue
+ * du visiteur qui a proposé l'article.
+ */
+function acme_notifier_webmestre(int $id_article): void {
+	$titre = sql_getfetsel('titre', 'spip_articles', 'id_article=' . $id_article);
+
+	// Bascule en anglais uniquement le temps de construire le message
+	lang_select('en');
+	$sujet = _T('acme:email_proposition_sujet');
+	$corps = _T('acme:email_proposition_corps', ['titre' => $titre]);
+	lang_select(null); // restaure la langue du visiteur
+
+	$envoyer_mail = charger_fonction('envoyer_mail', 'inc');
+	$envoyer_mail($GLOBALS['meta']['email_webmaster'], $sujet, $corps);
+}
+```
+
+Ce qui change :
+
+1. **`lang_select('en')` / `lang_select(null)`** encadrent les deux `_T()`. On restaure la langue juste après, pour que le reste de la requête (la page affichée au visiteur, les autres traitements) reste dans sa langue.
+2. **Troisième argument de `_T()`** : l'ancien code passait la chaîne `'titre_article'`. La signature est `_T(string $cle, array $args = [], array $options = [])` : le troisième paramètre est un tableau d'options (`force`, `sanitize`), pas une chaîne. Je l'ai retiré, car il n'apporte rien ici. *(Ce point vient de la signature documentée, je ne l'ai pas vérifié sur une installation.)*
+
+##### Indispensable : le fichier de langue anglais
+
+Le plugin n'a aujourd'hui **aucun dossier `lang/`**. Les clés `acme:email_proposition_*` n'existent donc dans aucune langue. Or `_T()` ne signale pas une clé manquante : il essaie la langue du site, puis `fr`, et en dernier recours il **renvoie le nom brut de la clé** (`email_proposition_sujet`). Sans fichier anglais, le webmestre recevrait ce nom de clé, ou du français si seul `acme_fr.php` existait, même avec `lang_select('en')`.
+
+Il faut donc créer au minimum le fichier de référence et sa traduction anglaise, avec les mêmes clés.
+
+`lang/acme_fr.php` (référence) :
+
+```php
+<?php
+// This is a SPIP language file  --  Ceci est un fichier langue de SPIP
+return [
+	// E
+	'email_proposition_corps' => 'L’article « @titre@ » vient d’être proposé à la publication.',
+	'email_proposition_sujet' => 'Nouvel article proposé à la publication',
+];
+```
+
+`lang/acme_en.php` :
+
+```php
+<?php
+// This is a SPIP language file  --  Ceci est un fichier langue de SPIP
+return [
+	// E
+	'email_proposition_corps' => 'The article “@titre@” has just been submitted for publication.',
+	'email_proposition_sujet' => 'New article submitted for publication',
+];
+```
+
+Les fichiers sont à enregistrer en UTF-8 sans BOM. Le paramètre `@titre@` doit figurer dans les deux langues.
+
+Déclarez aussi le module dans `paquet.xml`, avec le français comme langue de référence :
+
+```xml
+<paquet
+	prefix="acme"
+	categorie="communication"
+	version="1.0.1"
+	etat="stable"
+	compatibilite="[4.4.0;5.*]"
+>
+	<nom>Acme</nom>
+	<auteur>Acme</auteur>
+	<licence>GPL 3</licence>
+
+	<traduire module="acme" reference="fr" />
+</paquet>
+```
+
+Le plugin manque aussi des chaînes obligatoires `lang/paquet-acme_fr.php` (`acme_description`, `acme_slogan`) pour le gestionnaire de plugins. Elles ne concernent pas l'email, mais c'est le moment de les ajouter.
+
+##### Point à surveiller (facultatif)
+
+Par défaut, `_T()` échappe le HTML dans les valeurs des paramètres (`sanitize => true`). Un titre contenant `&` ou `<` apparaîtra donc échappé, par exemple `&amp;`, dans le corps de l'email. Comme l'email est en texte brut, vous pouvez passer `['sanitize' => false]` en troisième argument :
+
+```php
+$corps = _T('acme:email_proposition_corps', ['titre' => $titre], ['sanitize' => false]);
+```
+
+##### Vérification
+
+Proposez un article depuis une session dans une autre langue (par exemple en français) : l'email reçu doit être en anglais, et la page affichée ensuite au visiteur doit rester en français. Si le sujet apparaît sous la forme `email_proposition_sujet`, le fichier `lang/acme_en.php` n'est pas trouvé : vérifiez son nom et son emplacement.
+
+---
+
+## spip-lang A, plugin 4.x
+
+Les appels `_T()` utilisent la langue courante, c'est-à-dire celle du visiteur qui a proposé l'article. Pour forcer l'anglais, il faut passer en anglais avec `lang_select('en')` juste avant de construire le sujet et le corps, puis revenir à la langue précédente avec `lang_select(null)`.
+
+Attention : `lang_select()` renvoie la langue qu'on lui passe, pas la langue précédente. Il ne faut donc pas faire `$old = lang_select('en'); ... lang_select($old);`, sinon on ne restaure rien. Il faut appeler `lang_select(null)` (ou `lang_select()` sans argument), qui dépile et remet la langue précédente.
+
+#### Code corrigé — `inc/acme_notifications.php`
+
+```php
+<?php
+
+if (!defined('_ECRIRE_INC_VERSION')) {
+	return;
+}
+
+/**
+ * Prévient le webmestre qu'un article vient d'être proposé à la publication.
+ *
+ * Le webmestre ne lit que l'anglais : l'email part toujours en anglais,
+ * quelle que soit la langue du visiteur qui a proposé l'article.
+ */
+function acme_notifier_webmestre(int $id_article): void {
+	$titre = sql_getfetsel('titre', 'spip_articles', 'id_article=' . $id_article);
+
+	// On passe en anglais le temps de traduire les chaînes de l'email...
+	lang_select('en');
+	$sujet = _T('acme:email_proposition_sujet');
+	$corps = _T('acme:email_proposition_corps', ['titre' => $titre]);
+	// ...puis on revient à la langue précédente (celle du visiteur)
+	lang_select(null);
+
+	$envoyer_mail = charger_fonction('envoyer_mail', 'inc');
+	$envoyer_mail($GLOBALS['meta']['email_webmaster'], $sujet, $corps);
+}
+```
+
+#### Ce qui change
+
+1. **`lang_select('en')` / `lang_select(null)`** entourent les deux appels `_T()`. Le sujet et le corps sont donc traduits en anglais. La langue du visiteur est rétablie aussitôt après, donc le reste de la page n'est pas touché.
+2. **J'ai corrigé un bug au passage** : le 3e argument de `_T()` était la chaîne `'titre_article'`. Or la signature est `_T(string $cle, array $args = [], array $options = [])`, et le 3e paramètre doit être un tableau d'options (`force`, `sanitize`). Passer une chaîne à un paramètre typé `array` provoque une `TypeError` en PHP 8. Je l'ai donc supprimé : le placeholder `@titre@` est déjà fourni par `['titre' => $titre]`.
+
+#### À vérifier : la chaîne doit exister en anglais
+
+`lang_select('en')` ne suffit pas tout seul. Si le plugin n'a pas les clés en anglais, `_T()` ne signale aucune erreur. Il cherche la clé dans la langue du site (`langue_site`), puis en `fr`, et en dernier recours il affiche la clé brute. L'email partirait alors en français, ou avec le texte `email_proposition_sujet`.
+
+Dans le plugin tel qu'il est, je ne vois **ni dossier `lang/` ni déclaration `<traduire>` dans `paquet.xml`**. Pour que l'email parte vraiment en anglais, il faut :
+
+**`paquet.xml`** : déclarer le module de langue.
+
+```xml
+<paquet
+	prefix="acme"
+	categorie="communication"
+	version="1.0.0"
+	etat="stable"
+	compatibilite="[4.2.0;4.4.*]"
+>
+	<nom>Acme</nom>
+	<auteur>Acme</auteur>
+	<licence>GPL 3</licence>
+	<traduire module="acme" reference="fr" />
+</paquet>
+```
+
+**`lang/acme_fr.php`** (langue de référence) :
+
+```php
+<?php
+// This is a SPIP language file  --  Ceci est un fichier langue de SPIP
+return [
+	// E
+	'email_proposition_corps' => 'L’article « @titre@ » vient d’être proposé à la publication.',
+	'email_proposition_sujet' => 'Nouvel article proposé à la publication',
+];
+```
+
+**`lang/acme_en.php`** (c'est ce fichier que l'email utilisera) :
+
+```php
+<?php
+// This is a SPIP language file  --  Ceci est un fichier langue de SPIP
+return [
+	// E
+	'email_proposition_corps' => 'The article “@titre@” has just been submitted for publication.',
+	'email_proposition_sujet' => 'New article submitted for publication',
+];
+```
+
+Si ces fichiers existent déjà ailleurs dans votre projet, vérifiez seulement que `acme_en.php` contient bien les deux clés `email_proposition_sujet` et `email_proposition_corps`. Les textes ci-dessus ne sont que des exemples : adaptez-les.
+
+#### Remarque sur le titre
+
+Par défaut, `_T()` échappe le HTML des valeurs passées en `$args` (`sanitize => true`). Comme l'email est en texte brut, un titre qui contient `&` ou `<` peut apparaître échappé. Si c'est gênant, utilisez `_T('acme:email_proposition_corps', ['titre' => $titre], ['sanitize' => false])`, mais seulement parce que le corps n'est pas affiché comme du HTML.
+
+---
+
+# spip-lang — scénario B (sujet bilingue), cas 11 à 13
+
+---
+
+## spip-lang, cas 11 — site avec `plugins-dist/spip/`
+
+Voici la modification de `squelettes/mes_fonctions.php`.
+
+On calcule d'abord le sujet dans la langue courante, qui est celle du visiteur. Ensuite, `lang_select('en')` passe temporairement en anglais pour calculer le second sujet, et `lang_select()` sans argument rétablit la langue d'avant. Il ne faut pas stocker la valeur de retour de `lang_select('en')` pour la restaurer : la fonction renvoie `'en'`, pas la langue précédente.
+
+```php
+<?php
+
+if (!defined('_ECRIRE_INC_VERSION')) {
+	return;
+}
+
+/**
+ * Prévient le webmestre qu'un article vient d'être proposé à la publication.
+ *
+ * Sujet bilingue : langue du visiteur, puis « / », puis anglais.
+ */
+function acme_notifier_webmestre(int $id_article): void {
+	$titre = sql_getfetsel('titre', 'spip_articles', 'id_article=' . $id_article);
+
+	// Sujet dans la langue courante (celle du visiteur)
+	$sujet_visiteur = _T('acme:email_proposition_sujet');
+
+	// Même sujet en anglais : on bascule, puis on restaure la langue précédente
+	lang_select('en');
+	$sujet_en = _T('acme:email_proposition_sujet');
+	lang_select();
+
+	$sujet = $sujet_visiteur . ' / ' . $sujet_en;
+
+	$corps = _T('acme:email_proposition_corps', ['titre' => $titre], 'titre_article');
+
+	$envoyer_mail = charger_fonction('envoyer_mail', 'inc');
+	$envoyer_mail($GLOBALS['meta']['email_webmaster'], $sujet, $corps);
+}
+```
+
+Le corps est calculé exactement comme avant. Il reste dans la langue du visiteur, parce que la langue est restaurée avant son calcul.
+
+##### Points à vérifier
+
+- **La clé doit exister en anglais.** Il faut une entrée `'email_proposition_sujet'` dans `lang/acme_en.php`. Sinon, `_T()` ne signale aucune erreur : il retombe sur la langue du site, puis sur `fr`, et vous obtiendrez le même sujet en français des deux côtés du « / ». Pour vérifier d'où vient une chaîne, ajoutez `?var_mode=traduction` à l'URL.
+- **Visiteur anglophone.** Le sujet donnera « Subject / Subject ». C'est conforme à la demande. Si vous préférez éviter le doublon, remplacez la concaténation par :
+  ```php
+  $sujet = ($sujet_visiteur === $sujet_en) ? $sujet_visiteur : $sujet_visiteur . ' / ' . $sujet_en;
+  ```
+- **Troisième argument de `_T()` dans le corps (non modifié, à signaler).** L'appel `_T('acme:email_proposition_corps', ['titre' => $titre], 'titre_article')` passe la chaîne `'titre_article'` comme options. Or la signature documentée est `_T(string $cle, array $args = [], array $options = [])`, où les options sont un tableau (`force`, `sanitize`). Je ne l'ai pas modifié puisque le corps ne devait pas changer. Le site tourne en SPIP 5.0 (le plugin `mots` est en version 5.0.0-dev) et ma documentation couvre SPIP 4.x : je ne peux donc pas confirmer qu'une chaîne y est encore acceptée à cet endroit. Vérifiez-le. Si seule la substitution de `@titre@` vous intéresse, il suffit d'écrire `_T('acme:email_proposition_corps', ['titre' => $titre])`.
+
+---
+
+## spip-lang, cas 12 — plugin 4.4 + 5.0
+
+Voici la modification de `inc/acme_notifications.php`. Le sujet est d'abord calculé dans la langue courante, celle du visiteur. Ensuite, on passe temporairement en anglais avec `lang_select('en')` pour recalculer la même chaîne, puis on revient à la langue précédente avec `lang_select()` sans argument. Le corps reste calculé comme avant, après la restauration, donc toujours dans la langue du visiteur.
+
+```php
+<?php
+
+if (!defined('_ECRIRE_INC_VERSION')) {
+	return;
+}
+
+/**
+ * Prévient le webmestre qu'un article vient d'être proposé à la publication.
+ *
+ * Le sujet est bilingue : langue du visiteur, puis « / », puis anglais.
+ */
+function acme_notifier_webmestre(int $id_article): void {
+	$titre = sql_getfetsel('titre', 'spip_articles', 'id_article=' . $id_article);
+
+	// Sujet dans la langue du visiteur (langue courante)
+	$sujet = _T('acme:email_proposition_sujet');
+
+	// Même sujet en anglais
+	lang_select('en');
+	$sujet_en = _T('acme:email_proposition_sujet');
+	lang_select(); // restaure la langue du visiteur (ne pas réutiliser la valeur de retour)
+
+	// Inutile de doubler si le visiteur est déjà en anglais
+	if ($sujet_en !== $sujet) {
+		$sujet .= ' / ' . $sujet_en;
+	}
+
+	$corps = _T('acme:email_proposition_corps', ['titre' => $titre], 'titre_article');
+
+	$envoyer_mail = charger_fonction('envoyer_mail', 'inc');
+	$envoyer_mail($GLOBALS['meta']['email_webmaster'], $sujet, $corps);
+}
+```
+
+Quelques remarques :
+
+- **Ne gardez pas la valeur de retour de `lang_select('en')` pour revenir en arrière.** Elle renvoie la langue passée en argument (`'en'`), pas la précédente. Pour restaurer la langue d'origine, il faut appeler `lang_select()` ou `lang_select(null)`.
+- **Le corps est calculé après la restauration**, il reste donc dans la langue du visiteur, sans changement.
+- **Si le visiteur navigue déjà en anglais**, les deux sujets sont identiques. Le test `$sujet_en !== $sujet` évite alors un sujet du type « X / X ». Si vous voulez toujours le format « X / X », supprimez ce test et concaténez directement.
+- **Il faut un fichier `lang/acme_en.php`** qui contient la clé `email_proposition_sujet`. Sans traduction anglaise, `_T()` ne signale rien : il se rabat sur la langue du site, puis sur `fr`. La partie « anglaise » serait alors en français.
+  ```php
+  <?php
+  // This is a SPIP language file  --  Ceci est un fichier langue de SPIP
+  return [
+    // E
+    'email_proposition_sujet' => 'Article submitted for publication',
+  ];
+  ```
+  Adaptez le texte à votre clé `fr`. Vérifiez aussi que le module de langue est bien déclaré dans `paquet.xml`. Le fichier actuel n'a pas de balise `<traduire>` : ajoutez `<traduire module="acme" reference="fr" />` si vos fichiers de langue ne sont pas encore pris en charge.
+- **Point hors demande, que je n'ai pas modifié :** l'appel du corps passe une chaîne (`'titre_article'`) en troisième argument de `_T()`. Or la signature documentée est `_T(string $cle, array $args = [], array $options = [])`, qui attend un tableau d'options. Comme le plugin vise aussi SPIP 5, il vaudrait la peine de vérifier ce troisième argument.
+
+---
+
+## spip-lang, cas 13 — plugin 4.x
+
+Voici la modification de `inc/acme_notifications.php`.
+
+Au moment où la fonction s'exécute, la langue active est celle du visiteur, donc le premier `_T()` la produit sans rien changer. Pour la version anglaise, on bascule temporairement en anglais avec `lang_select('en')`, on appelle `_T()`, puis on restaure la langue précédente avec `lang_select(null)`.
+
+```php
+<?php
+
+if (!defined('_ECRIRE_INC_VERSION')) {
+	return;
+}
+
+/**
+ * Prévient le webmestre qu'un article vient d'être proposé à la publication.
+ *
+ * Le sujet est bilingue : langue du visiteur, puis « / », puis anglais.
+ */
+function acme_notifier_webmestre(int $id_article): void {
+	$titre = sql_getfetsel('titre', 'spip_articles', 'id_article=' . $id_article);
+
+	// Sujet dans la langue courante (celle du visiteur)
+	$sujet = _T('acme:email_proposition_sujet');
+
+	// Même sujet en anglais : on bascule, puis on restaure la langue précédente
+	lang_select('en');
+	$sujet_en = _T('acme:email_proposition_sujet');
+	lang_select(null);
+
+	// Évite « Subject / Subject » si le visiteur est déjà en anglais
+	if ($sujet_en !== $sujet) {
+		$sujet .= ' / ' . $sujet_en;
+	}
+
+	$corps = _T('acme:email_proposition_corps', ['titre' => $titre], 'titre_article');
+
+	$envoyer_mail = charger_fonction('envoyer_mail', 'inc');
+	$envoyer_mail($GLOBALS['meta']['email_webmaster'], $sujet, $corps);
+}
+```
+
+Points importants :
+
+- **Restaurer avec `lang_select(null)`.** N'utilisez pas `$save = lang_select('en'); … lang_select($save);` : `lang_select()` renvoie la langue qu'on lui passe (`'en'`), pas la langue précédente. La langue ne serait donc jamais restaurée et le corps, calculé ensuite, partirait en anglais. Le corps est calculé après la restauration, il reste donc dans la langue du visiteur, comme avant.
+- **La chaîne anglaise doit exister.** Si `lang/acme_en.php` est absent ou ne contient pas `email_proposition_sujet`, `_T()` ne signale aucune erreur. Il se rabat sur la langue du site puis sur `fr`, et la seconde moitié du sujet sortirait en français. Le plugin que j'ai reçu ne contient pas de dossier `lang/`. Vérifiez que `lang/acme_en.php` contient bien la clé, par exemple :
+  ```php
+  'email_proposition_sujet' => 'New article submitted for publication',
+  ```
+  Autre point : `paquet.xml` ne déclare pas `<traduire module="acme" reference="fr" />`. Si les fichiers de langue d'acme se trouvent ailleurs, ajoutez cette déclaration.
+- **Le cas d'un visiteur déjà en anglais.** Le test `$sujet_en !== $sujet` évite un sujet du type « X / X ». Si vous voulez toujours les deux moitiés, retirez le `if` et gardez seulement `$sujet .= ' / ' . $sujet_en;`.
+
+Remarque hors du périmètre (je n'y ai pas touché, puisque le corps ne doit pas changer) : la ligne du corps passe `'titre_article'`, une chaîne, comme 3e argument de `_T()`. Or la signature documentée est `_T(string $cle, array $args = [], array $options = [])`, avec seulement les options `force` et `sanitize`. Ce 3e argument ne sert probablement à rien, et vous pouvez sans doute le supprimer. Je n'ai pas pu vérifier, à partir de la documentation dont je dispose, si une chaîne y est encore tolérée.
