@@ -6,7 +6,7 @@
 |---|---|---|---|
 | 1 | Plugin minimal | `paquet.xml` 5.0, `composer.json` PSR-4, `config/services.php`, listener `affichage_final`, warmup | nominal |
 | 2 | `pre_edition` | `PreEditionEvent`, `getSqlTable()`, `getSubject()` / `setSubject()` | piège (API de la doc fausse) |
-| 3 | Tâche quotidienne | `#[AsCronTask]`, `return 0`, `spip.cron.<name>.enabled`, bug de la file en 5.0.0-beta | piège |
+| 3 | Tâche quotidienne | `#[AsCronTask]` (`return 0`, `spip.cron.<name>.enabled`) ou contournement de la beta (`genie_` + listener, paramètre du plugin) : une seule forme | piège |
 | 4 | Logger et config injectés | `#[Autowire(service: …)]`, canal `spip.logger_registry`, `ConfigRepositoryInterface` | piège (pas d'alias) |
 | 5 | Règle Guard 429 | `GuardRuleInterface`, `#[AsGuard]`, `GuardVerdict::tooManyRequests()`, priorités | nominal |
 | 6 | Page privée et menu | `config/menus.php`, `prive/squelettes/contenu/` | nominal |

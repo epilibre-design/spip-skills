@@ -31,15 +31,15 @@
     {
       "id": 3,
       "prompt": "Mon plugin SPIP 5.0 (namespace Acme) doit synchroniser chaque jour un flux distant. La synchronisation peut échouer (réseau). Écris la tâche planifiée et explique comment la désactiver sur un site de développement.",
-      "expected_output": "Classe service avec #[AsCronTask(name: 'acme_synchro', periode: 86400)] (SpipLeague\\Bridge\\Pipeline\\Attribute\\AsCronTask), méthode __invoke(): int qui retourne 0 en cas de succès et une valeur > 0 en cas d'échec (replanifiée aussitôt). Pas de genie/ ni de taches_generales_cron. Désactivation par le paramètre de conteneur spip.cron.acme_synchro.enabled à false dans config/custom.php ; spip.cron.acme_synchro.period pour changer la période. Recompiler le conteneur. Sur 5.0.0-beta, la file n'exécute pas les services #[AsCronTask] (bug du cœur) : vérifier queue_genie_can_use_service_registry() ou utiliser le contournement genie_ + listener taches_generales_cron.",
+      "expected_output": "Deux réponses acceptées, à condition de dire laquelle est livrée et pourquoi. (A) Modèle natif : classe service avec #[AsCronTask(name: 'acme_synchro', periode: 86400)] (SpipLeague\\Bridge\\Pipeline\\Attribute\\AsCronTask), __invoke(): int qui retourne 0 en cas de succès et > 0 en cas d'échec (replanifiée aussitôt), sans genie/ ni taches_generales_cron ; désactivation par spip.cron.acme_synchro.enabled à false dans config/custom.php (spip.cron.acme_synchro.period pour la période), puis recompilation. (B) Contournement du bug de 5.0.0-beta (la file n'exécute pas les services #[AsCronTask]) : genie_acme_synchro_dist() en convention historique (>= 0 succès, < 0 échec) déclarée par un listener TachesGeneralesCronEvent::addTask('acme_synchro', 86400) ; désactivation par un paramètre du plugin testé dans le listener, car spip.cron.* n'agit pas sur ce contournement. Jamais les deux pour le même nom. Le bug de la beta est signalé avec sa vérification (queue_genie_can_use_service_registry()).",
       "files": [],
       "expectations": [
-        "Utilise #[AsCronTask] avec name et periode (86400) sur un service chargé par config/services.php",
-        "Retourne 0 pour un succès et une valeur > 0 pour un échec, en expliquant que > 0 déclenche une nouvelle tentative",
-        "N'utilise ni genie/ ni le pipeline taches_generales_cron",
-        "Désactive avec le paramètre spip.cron.acme_synchro.enabled = false dans config/custom.php",
+        "Livre une seule des deux formes pour acme_synchro (A : #[AsCronTask] ; B : genie_ + listener taches_generales_cron), dit laquelle et pourquoi, sans les cumuler",
+        "Si A : #[AsCronTask] avec name et periode 86400 sur un service chargé par config/services.php, retour 0 = succès et > 0 = échec avec nouvelle tentative, aucun fichier genie/ ni pipeline taches_generales_cron",
+        "Si B : genie_acme_synchro_dist() en convention historique (>= 0 succès, < 0 échec), déclarée par un listener TachesGeneralesCronEvent::addTask() et non par une fonction acme_taches_generales_cron ni <genie>",
+        "Désactivation en développement adaptée à la forme livrée : A → spip.cron.acme_synchro.enabled = false dans config/custom.php ; B → paramètre du plugin testé dans le listener (pas spip.cron.*)",
         "Ne met pas periode à 0 (tâche jamais planifiée)",
-        "Signale que sur SPIP 5.0.0-beta (c8e329575) la file n'exécute pas les tâches #[AsCronTask] et donne la vérification ou le contournement (fonction genie_ déclarée par un listener taches_generales_cron)"
+        "Signale que sur SPIP 5.0.0-beta (c8e329575) la file n'exécute pas les tâches #[AsCronTask] et donne la vérification queue_genie_can_use_service_registry()"
       ]
     },
     {
