@@ -173,7 +173,7 @@
         "Déduit SPIP 5.0 de plugins-dist/spip/ (ou du compatibilite de mots/paquet.xml) et cite ce marqueur",
         "Sujet anglais par lang_select('en') … lang_select() ou par l'option ['lang' => 'en'] ; pas de 'spip_lang' dans $args",
         "Le fichier livré ne passe plus de chaîne en 3e argument de _T() : ['class' => 'titre_article'] ou argument retiré (le signaler sans corriger échoue : TypeError en 5.0)",
-        "Le sujet est « sujet dans la langue du visiteur / sujet en anglais », et le corps reste dans la langue du visiteur"
+        "Pour un visiteur francophone, le sujet vaut « Article proposé à la publication / Article submitted for publication » (clés fr et en fournies par le projet) ; le corps reste dans la langue du visiteur"
       ]
     },
     {
@@ -189,7 +189,7 @@
         "Déduit du paquet.xml que le plugin vise 4.4 et 5.0, et cite ce marqueur",
         "Sujet anglais d'une façon qui marche dans les deux versions : lang_select('en') … lang_select(), ou ['spip_lang' => 'en'] ; pas l'option ['lang' => 'en'] seule (ignorée en 4.4)",
         "Le fichier livré ne passe plus de chaîne en 3e argument de _T() : ['class' => 'titre_article'] ou argument retiré (le signaler sans corriger échoue : TypeError en 5.0)",
-        "Le sujet est « sujet dans la langue du visiteur / sujet en anglais », et le corps reste dans la langue du visiteur"
+        "Pour un visiteur francophone, le sujet vaut « Article proposé à la publication / Article submitted for publication » (clés fr et en fournies par le projet) ; le corps reste dans la langue du visiteur"
       ]
     },
     {
@@ -204,7 +204,7 @@
       "expectations": [
         "Sujet anglais par lang_select('en') … lang_select() ou ['spip_lang' => 'en'] ; pas l'option ['lang' => 'en'] seule",
         "Aucune API propre à 5.0 dans le code",
-        "Le sujet est « sujet dans la langue du visiteur / sujet en anglais », et le corps reste dans la langue du visiteur"
+        "Pour un visiteur francophone, le sujet vaut « Article proposé à la publication / Article submitted for publication » (clés fr et en fournies par le projet) ; le corps reste dans la langue du visiteur"
       ]
     }
   ]

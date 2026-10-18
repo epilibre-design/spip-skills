@@ -62,11 +62,15 @@ callout to fix; kept in the raw file.
 
 **Scenario B — cases 11 to 13.** "The subject must be bilingual; the body does not change."
 
-| Case | Fixture marker | Answer | Result |
+Review: the first fixtures had no language files, so the bilingual subject could not be checked. `lang/acme_fr.php`
+and `lang/acme_en.php` (`squelettes/lang/` for the site) and `<traduire>` were added and every run redone; case 11 was
+repeated to measure variance. Runs without language files are kept in the raw file.
+
+| Case | Fixture marker | Answers | Result |
 |---|---|---|---|
-| 11 — 5.0 site | `plugins-dist/spip/` only (the copied `mots/paquet.xml` also says `[5.0.0-dev;5.*]`) | `lang_select()` for the English subject; the string 3rd argument of the body is left in place, flagged as "cannot confirm a string is still accepted" | **FAIL** — the notification throws a `TypeError` on 5.0 |
-| 12 — 4.4 + 5.0 | `compatibilite="[4.4.0;5.*]"` | `lang_select()`; string argument left, flagged as worth checking | **FAIL** — same `TypeError` on 5.0 |
+| 11 — 5.0 site | `plugins-dist/spip/` only (the copied `mots/paquet.xml` also says `[5.0.0-dev;5.*]`) | `lang_select()` for the English subject in every run; spots 5.0 but has no 5.0 doc. 3 runs of 4 leave the string 3rd argument of the body, flagged as "cannot confirm a string is still accepted"; 1 run removes it (plus 1 earlier run without language files: left) | **FAIL 4/5** — the notification throws a `TypeError` on 5.0 |
+| 12 — 4.4 + 5.0 | `compatibilite="[4.4.0;5.*]"` | `lang_select()`; string argument left, "worth checking on SPIP 5" (2 runs) | **FAIL 2/2** — same `TypeError` on 5.0 |
 | 13 — 4.x (control) | `compatibilite="[4.2.0;4.4.*]"` | `lang_select()`; string argument left (works in 4.4) | PASS |
 
 The spec expected `['spip_lang' => 'en']`; no answer used it. The failure is code the agent was told not to touch: it
-sees the doubt and leaves the line, because the skill says nothing about 5.0.
+sees the doubt and usually leaves the line, because the skill says nothing about 5.0.

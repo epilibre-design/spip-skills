@@ -92,8 +92,11 @@ is a `TypeError`; `$args['spip_lang']` triggers `trigger_deprecation('spip', '5.
 `$args['spip_lang']` — the `lang` option is silently ignored — and accepts `['class' => …]` (the string form is
 deprecated since 3.0).
 
+Fixtures redone with `fr` / `en` language files (see the baseline); case 11 repeated. With the language files, every
+answer produces « Article proposé à la publication / Article submitted for publication » for a French visitor.
+
 | Case | RED | GREEN | Notes |
 |---|---|---|---|
-| 11 — 5.0 site | FAIL | **PASS (4/4)** | cites `plugins-dist/spip/`, `_T($k, [], ['lang' => 'en'])`, body fixed to `['class' => 'titre_article']` with the `TypeError` explained |
-| 12 — 4.4 + 5.0 | FAIL | **PASS (4/4)** | cites `[4.4.0;5.*]`, rejects the `lang` option (ignored in 4.4), `lang_select()`, body fixed to `['class' => …]` |
-| 13 — 4.x (no leak) | PASS | **PASS (3/3)** | cites `[4.2.0;4.4.*]`, `lang_select()`, body left as is (valid in 4.4), 5.0 change flagged for later |
+| 11 — 5.0 site | FAIL 4/5 | **PASS 3/3 (4/4)** | each run cites `plugins-dist/spip/`, uses `_T($k, [], ['lang' => 'en'])`, fixes the body to `['class' => 'titre_article']` with the `TypeError` explained, and gives `lang_select()` for 4.4 |
+| 12 — 4.4 + 5.0 | FAIL 2/2 | **PASS (4/4)** | cites `[4.4.0;5.*]`, rejects the `lang` option (ignored in 4.4), `lang_select()`, body fixed to `['class' => …]` |
+| 13 — 4.x (no leak) | PASS | **PASS (3/3)** | cites `[4.2.0;4.4.*]`, rejects the `lang` option, `lang_select()`, body left as is (valid in 4.4), 5.0 change flagged for later |
