@@ -41,3 +41,27 @@ Every example was run on a disposable 5.0.0-beta instance (`ecrire` `c8e329575`)
 - menu: `acme_outils` listed under `menu_edition` for an administrator, page rendered with its language string;
 - `plugin_version_compatible()` on 5.0.0-beta: `[5.0.0;5.*]` false, `[5.0.0-dev;5.*]` true, `[4.4.0;5.*]` true;
 - meta mirror: after `Spip::configs()->set('acme_seuil', 30)`, API `30`, mirror and SQL `'[30]'`.
+
+---
+
+## Q3 re-scored with the revised expectations (2026-10-18)
+
+Case 3 now accepts either the native `#[AsCronTask]` task or the beta workaround, never both, the workaround being
+framed as temporary for a SPIP core bug. The first answer was not kept, so Q3 was re-run on the skill at `acfc29b`
+(raw answer: `spip5-plugins-green-q3-raw.md`).
+
+| Expectation | Result |
+|---|---|
+| One form for `acme_synchro`, says which and why; workaround framed as temporary for a core bug, `#[AsCronTask]` the target | ✅ delivers the workaround as active code, `SynchroTask` kept out of `src/` meanwhile; "bug du cœur", "à retirer ensuite", migration steps once fixed |
+| If A: `#[AsCronTask(name, periode: 86400)]` service, `0` / `> 0`, no `genie/` | ✅ (given as target code, correct) |
+| If B: `genie_acme_synchro_dist()` legacy convention, declared by a `TachesGeneralesCronEvent::addTask()` listener | ✅ `1` / `-1`, no `acme_taches_generales_cron`, no `<genie>` |
+| Dev disable matches the form | ✅ B: plugin parameter `acme.synchro.enabled` read by the listener, states `spip.cron.*` does not apply; A: `spip.cron.acme_synchro.enabled` |
+| `periode` not 0 | ✅ |
+| Beta bug flagged with `queue_genie_can_use_service_registry()` | ✅ plus `start (cron service)` in `queue.log` |
+
+**Q3: PASS (6/6).** GREEN stays 8/8.
+
+Gaps reported by the agent, not addressed here: `cron.md` says services are not reachable from `genie_*` while
+`services.md` lists `Spip::service()` for public services; the workaround listener is shown without its class;
+precedence of a site's `config/custom.php` over a plugin parameter; how to set `APP_ENV=dev` for web requests; retry
+behaviour after a failure (delay, limit) for both forms; HTTP client in 5.0 (`recuperer_url()` used from 4.x knowledge).
