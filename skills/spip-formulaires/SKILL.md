@@ -21,6 +21,8 @@ its `composer.json` requires `spip/framework`.
 - Code for 5.0 only, in `charger` / `verifier` / `traiter` as everywhere: `_request('x')` → `Spip::input('x')`,
   `set_request('x', $v)` → `Spip::setInput('x', $v)`. Both old functions are deprecated in 5.0, including in the
   examples of this skill's references. `Spip` is a global alias of `Spip\Framework\Spip`: no `use` needed.
+  One difference: on a site whose charset is not UTF-8, `_request()` converts UTF-8 values of an AJAX request to the
+  site charset (`importer_charset()`), `Spip::input()` does not. Migrating such a site: convert where needed.
 - `spip_sanitize_from_request($env, '*')` (whole environment) is removed → `spip_sanitize_env_from_request($env)`,
   which also exists in 4.4. The single-value form `spip_sanitize_from_request($value, 'key')` stays.
 - `autosave_clean_value()` is deprecated → `Spip\Pipeline\Listener\CvtAutoSaveListener::cleanValue()`.

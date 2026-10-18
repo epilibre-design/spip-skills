@@ -42,8 +42,17 @@ calls `trigger_deprecation()` and delegates to `Spip\Pipeline\Listener\CvtAutoSa
 language keys used by the answers (`info_obligatoire`, `info_email_invalide`, `form_email_non_valide`) exist in
 5.0.0-beta and 4.4.22.
 
-| Case | RED | GREEN | Notes |
+Two iterations:
+
+- **v1**: cases 5–7 pass.
+- **v2** (review): the callout adds that `_request()` converts UTF-8 values of an AJAX request to a non-UTF-8 site
+  charset (`importer_charset()`), which `Spip::input()` does not. Case 5 expectations tightened: the existing
+  `_request()` in `traiter()` must be migrated in the delivered file, or explicitly flagged. Cases 5 and 6 re-run (v1
+  case 5 also migrated `traiter()`, so it passes the tightened grid too); case 6 checks that the new sentence does
+  not push dual-compat code to `Spip::input()`.
+
+| Case | RED | GREEN (v2; v1 for case 7) | Notes |
 |---|---|---|---|
-| 5 — 5.0 site code | FAIL | **PASS (4/4)** | cites `VERSION = '5.0.0-beta'`, `Spip::input('email')`, no `use`; also moves `traiter()` to `Spip::input()` |
+| 5 — 5.0 site code | FAIL | **PASS (5/5)** | cites `VERSION = '5.0.0-beta'`, `Spip::input('email')`, no `use`; `traiter()` moved to `Spip::input()` too |
 | 6 — 4.4 + 5.0 | PARTIAL | **PASS (4/4)** | cites `[4.4.0;5.*]`, keeps `_request()`, explains why not `Spip::input()` |
 | 7 — 4.x (no leak) | PASS | **PASS (3/3)** | cites `[4.2.0;4.4.*]`, `_request()` only |

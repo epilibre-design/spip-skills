@@ -69,7 +69,7 @@
       "skill": "spip-formulaires",
       "variant": "5.0 (site, SpipVersion.php)",
       "prompt": "Le formulaire inscription_lettre accepte n'importe quoi dans le champ email. Ajoute dans verifier() un contrôle : email obligatoire et valide, avec un message d'erreur sur le champ. Donne le code modifié.",
-      "expected_output": "ecrire/src/SpipVersion.php déclare VERSION = '5.0.0-beta' : site SPIP 5.0, le code de squelettes/ ne tourne que sur ce site. verifier() lit le champ par Spip::input('email') (et non _request(), déprécié en 5.0), renvoie $erreurs['email'] si vide ou invalide (email_valide()). La réponse cite le marqueur ; elle peut signaler que traiter() utilise encore _request().",
+      "expected_output": "ecrire/src/SpipVersion.php déclare VERSION = '5.0.0-beta' : site SPIP 5.0, le code de squelettes/ ne tourne que sur ce site. verifier() lit le champ par Spip::input('email') (et non _request(), déprécié en 5.0), renvoie $erreurs['email'] si vide ou invalide (email_valide()). La réponse cite le marqueur. Le traiter() existant utilise _request() : le fichier livré passe aussi à Spip::input(), ou la réponse signale explicitement que traiter() doit être migré.",
       "files": [
         "evals/spip5-encadres/fixtures/form-site-spipversion/site/"
       ],
@@ -77,6 +77,7 @@
         "Déduit SPIP 5.0 de ecrire/src/SpipVersion.php (VERSION = '5.0.0-beta') et cite ce marqueur",
         "Le code ajouté lit le champ avec Spip::input('email')",
         "Le code ajouté n'utilise ni _request() ni set_request(), même accompagnés d'un avertissement",
+        "Le _request() existant de traiter() est remplacé par Spip::input() dans le fichier livré, ou la réponse signale explicitement qu'il doit l'être ; un fichier 5.0 livré avec _request() sans le dire échoue",
         "Erreur posée sur le champ : $erreurs['email'], pour un email vide comme pour un email invalide"
       ]
     },
