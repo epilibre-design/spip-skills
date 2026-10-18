@@ -143,3 +143,23 @@ deprecation; the post-review run 1 answer emits none. Both pass 5 tests, 17 asse
 | 17 — 5.0 only | FAIL 2/2 | FAIL 2/2 under the new grid (`set_request()`, deprecated) | **PASS 2/2 (5/5)** | both runs cite the markers, fix the bootstrap (`$spip5` guard, Kernel, `Request`), use `Spip::setInput()` only and explain why not `set_request()`, say the 4.4 install script must be replaced (run 1 rewrites it with `composer create-project` and stops while `config/connect.php` is missing). Run 1 executed on the instance: **5 tests, 17 assertions, OK**, no deprecation (RED run 1, same setup: fatal `_FILE_OPTIONS`) |
 | 18 — 4.4 + 5.0 | FAIL 2/2 | PASS 2/2 | **PASS (4/4)** | cites `[4.4.0;5.*]`, guarded bootstrap, keeps `set_request()` and rejects `Spip::setInput()` as 5.0-only; gives the 5.0 install for the second run |
 | 19 — 4.x (no leak) | PASS | PASS | **PASS (2/2)** | cites `[4.2.0;4.4.*]`, 4.x bootstrap kept, `set_request()`, no 5.0 code |
+
+## plugin-escal (2026-10-18)
+
+The callout is narrow, since RED mostly passed. It covers two points:
+- Escal 5.6.2 does not activate on 5.0: never force it, and here are the options;
+- the spip-cli recipes do not apply to 5.0, which has only `bin/spip config:lire` / `config:ecrire` and
+  `spip:cache:clear`, with a pretty-printed JSON.
+
+The absence test `grep -Eq '": ?null'` was checked on the 5.0 output (`null` matches, a set key does not) and on the
+compact form the skill documents for spip-cli.
+
+Refactor: with the first wording, 2 runs of 4 applied that test to the whole `escal` meta, where any `null` setting
+gives a false "not installed". The final callout limits it to the key `escal_base_version` and forbids the whole meta;
+cases 20 and 21 were rerun.
+
+| Case | RED | GREEN, first callout | GREEN, final callout | Notes |
+|---|---|---|---|---|
+| 20 — install on a 5.0 site | PASS 2/2 | PASS 2/2 (one run tests the whole meta) | **PASS (3/3)** | cites `bin/spip`, refuses with Escal 5.6.2's `[4.1.0;4.*]`, no forcing, three options; no spip-cli on 5.0; `bin/spip config:lire escal_base_version` for the single-key test |
+| 21 — upgraded site | PASS 1, PARTIAL 1 | PASS 2/2 (one run tests the whole meta) | **PASS 2/2 (3/3)** | cites `vendor/spip/framework/`, reads the copied `paquet.xml`, cause stated, no reactivation command presented as working; spip-cli only after a return to 4.4, `bin/spip spip:cache:clear` on 5.0 |
+| 22 — 4.4 site (no leak) | PASS | **PASS (2/2)** | — | 4.4.22 cited, full spip-cli recipe; notes the `SpipLeague\Kernel` it sees in 4.4's `inc_version.php` without changing course |

@@ -1,0 +1,53 @@
+<paquet
+	prefix="escal"
+	categorie="squelette"
+	version="5.6.2"
+	schema="1.0.17"
+	etat="stable"
+	compatibilite="[4.1.0;4.*]"
+	logo="escal.svg"
+	documentation="https://contrib.spip.net/Escal-4077"
+	demonstration="https://escal.edu.ac-lyon.fr/"
+>
+
+	<nom>Escal</nom>
+
+	<auteur>Jean-Christophe Villeneuve</auteur>
+	
+	<licence lien="http://www.gnu.org/licenses/gpl-3.0.html">GNU/GPL</licence>
+
+	<traduire module="escal" reference="fr" gestionnaire="salvatore" />
+
+	<utilise nom="palette" />
+	<utilise nom="spip_400" />
+	<utilise nom="orr" />
+	<utilise nom="Shoutbox" />
+	<utilise nom="reservation_evenement" />
+	<utilise nom="reservations_multiples" />
+
+	<necessite nom="agenda" compatibilite="[4.3.0;[" />
+	<necessite nom="fullcalendarcompat" compatibilite="[1.1.0;[" />
+	<necessite nom="svpstats" compatibilite="[0.3.2;[" />
+	<necessite nom="nospam" compatibilite="[2.2.1;[" />
+	<necessite nom="saisies" compatibilite="[3.54.1;[" />
+	<necessite nom="verifier" compatibilite="[2.1.0;[" />
+	<necessite nom="yaml" compatibilite="[2.0.18;[" />
+	<necessite nom="facteur" compatibilite="[5.0.5;[" />
+	<necessite nom="tri_par_rubrique" compatibilite="[1.5.0;[" />
+
+	<menu nom="escal" titre="escal:escal" parent="menu_squelette" icone="images/escal-16.png" action="configurer_escal" />
+
+	<pipeline nom="autoriser" inclure="inc/escal_autoriser.php" />
+	<pipeline nom="porte_plume_barre_pre_charger" inclure="inc/escal_pipelines.php" />
+	<pipeline nom="porte_plume_lien_classe_vers_icone" inclure="inc/escal_pipelines.php" />
+	<pipeline nom="ieconfig_metas" inclure="inc/escal_pipelines.php" />
+	<pipeline nom="header_prive_css" inclure="inc/escal_pipelines.php" />
+	<pipeline nom="inserer_modeles_lister_categories" inclure="inc/escal_pipelines.php" />
+
+	<!-- on utilise l'aide -->
+        <utilise nom="aide" compatibilite="[1.0.0;[" />
+        <pipeline nom="aide_index" inclure="inc/escal_pipelines.php" />
+
+	<style source="styles/prive_perso.css" type="prive" />
+
+</paquet>
