@@ -133,3 +133,18 @@ location / { try_files $uri $uri/ /spip.php?$args; }
 location ~ \.php$ { try_files $uri =404; include fastcgi_params;
   fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name; fastcgi_pass unix:/run/php/php8.4-fpm.sock; }
 ```
+
+## Fresh install
+
+| Step | Result | How |
+|---|---|---|
+| `composer create-project --repository=https://get.spip.net/composer spip/spip <dir> 5.0.x-dev` | creates the project with the **lock of `spip/spip` `c8e329575`**: `spip/ecrire` `2cd5843f`, not the current `26bfe470`; `spip/medias`, `porte-plume`, `sites`, `urls` behind (`composer outdated 'spip/*'`). Installs `require-dev` too (`phpunit/phpunit`, `symfony/var-dumper`) unless `--no-dev`. Creates `config/` (0755), `local/`, `tmp/`, `IMG/`, `tmp/cache/`, `tmp/log/` (0777); no `plugins/`, no `.env` (only `.env.dist`) | **run** (7 s, Composer cache warm) |
+| `composer update` (in the project) | `spip/ecrire` `2cd5843f` → `26bfe470`, the four plugins-dist and Symfony 8.1.x updated; `composer outdated 'spip/*'` empty | **run** |
+| Before install | public `/` 503, `ecrire/` 302 → `ecrire/?exec=install` | **run** |
+| Writable directories checked by the installer | `IMG/`, `tmp/`, `local/` (`$GLOBALS['test_dirs']`, `spip_initialisation_core()`) and `config/` during the install (`_DIR_CONNECT`, `_DIR_CHMOD`); `config/` may be made read-only afterwards (comment in `initialization.php`) | source read: `ecrire/install/etape_chmod.php` |
+| Web installer | `etape=chmod` → `1` (server: `mysql` or `sqlite3`) → `2` (database name, table prefix `spip`) → `3` / `3b` (webmaster name, e-mail, login, password) → `4` (installs the plugins-dist: Big Upload, Compagnon, Mots…) → `fin`. Files created: `config/connect.php`, `config/chmod.php` (renamed from `*.tmp.php` at `fin`), `config/cles.php`, `config/bases/spip.sqlite`, `var/state/plugins.php` (24 active paths, all `plugins-dist/spip/*`) | **run**: curl, SQLite, twice (built-in server, then Apache) |
+| After install | public 200, `ecrire/` 302 to login; `bin/spip spip:info` `5.0.0-beta`; `config:lire version_installee` `2026080300` | **run** |
+| Deny `.htaccess` at `fin` | `install_verifier_htaccess()` writes `tmp/.htaccess`, then checks it with an HTTP `HEAD` on `tmp/.ok` (expects 403), then `config/`, then `vendor/`, stopping at the first failure. **Apache** (`AllowOverride All`): all three written, install ends on `ecrire/?exec=accueil`. **PHP built-in server** (ignores `.htaccess`, same as nginx): only `tmp/.htaccess` written, page "htaccess inopérant", `config/` and `vendor/` left without one | **run** + `ecrire/install/etape_fin.php`, `verifier_htaccess()` in `ecrire/inc/acces.php` |
+| "htaccess inopérant" message | tells to set `_DIR_TMP` and `_DIR_CONNECT` in `mes_options.php`: obsolete in 5.0 (`_DIR_*` are defined by the kernel before `mes_options.php`); the 5.0 ways are `spip.dirs.tmp` + `SPIP_CACHE_DIR` and `SPIP_ETC_DIR` (see Directories) or web server rules | **run** + `environnement-kernel.md` |
+| Apache install, sensitive paths | `config/bases/spip.sqlite`, `config/connect.php`, `vendor/…`, `tmp/log/…` 403; `var/state/plugins.php` and `bin/spip` 200; `.env.dist`, `composer.json` 200 without the root `.htaccess`, 404 with `htaccess.txt` copied to `.htaccess` | **run** |
+| Install from the CLI | impossible: no `bin/spip` command (see `bin/spip`) | **run** |
