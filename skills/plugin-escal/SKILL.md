@@ -8,7 +8,7 @@ description: Use when working on a SPIP site that uses the Escal squelette — i
 ## Overview
 
 Escal is a **jeu de squelettes** (full theme) for SPIP, prefix `escal`, category `squelette`.
-Current release read here: **5.6.0**, schema `1.0.17`, GNU/GPL, compatible `[4.1.0;4.*]`.
+Current release read here: **5.6.2** (`de508fb`, 2026-10-15), schema `1.0.17`, GNU/GPL, compatible `[4.1.0;4.*]`.
 Author: Jean-Christophe Villeneuve. Docs: <https://contrib.spip.net/Escal-4077>.
 
 **The one thing to understand:** Escal is a *composition engine driven by one meta*.
@@ -122,7 +122,7 @@ spip plugins:lister --short          # every prefix above must appear
 spip cache:vider
 ```
 
-SVP unpacks one directory per version: `plugins/auto/escal/v5.6.0/`, not `plugins/auto/escal/`.
+SVP unpacks one directory per version: `plugins/auto/escal/v5.6.2/`, not `plugins/auto/escal/`.
 Step 2 also pulls **`calendriermini`** as a transitive dependency — expect 11 packages, not 10.
 
 ### ⚠ After a CLI install, the starter contents stay unpublished

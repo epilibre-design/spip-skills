@@ -1,6 +1,6 @@
 # Escal — catalogue des noisettes
 
-A **noisette** is a block squelette in `inclusions/inc-‹nom›.html`. 107 ship with Escal 5.6.0.
+A **noisette** is a block squelette in `inclusions/inc-‹nom›.html`. 107 ship with Escal 5.6.2 (same count as 5.6.0).
 A slot holds the **short name only** — `derniers_articles`, not `inc-derniers_articles.html`.
 
 ## 0. Slots are closed lists, not free text

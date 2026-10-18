@@ -64,9 +64,9 @@ Do not confuse this with the **forum du site** below — different feature, diff
 
 `contact.html` renders `#FORMULAIRE_CONTACT`, a **custom CVT** in `formulaires/contact.php` (`charger` / `verifier` / `traiter`) — it is not SPIP's built-in form.
 
-Fields: `nom`, `prenom`, `email`, `sujet`, `champsup1`, `champsup2`, `checkbox`, `fichier`, plus a `website_url` honeypot. Config screen keys: `contactmail` (recipient), `contactbienvenue` (intro text), `titrechampsup1` / `titrechampsup2` (labels for the two free fields, empty = hidden), `titrecheckbox` / `checkboxliste` / `checkboxoblig`, `fichierjoint` (allow an attachment).
+Fields: `nom`, `prenom`, `email`, `sujet`, `champsup1`, `champsup2`, `checkbox`, `fichier`, plus a `website_url` honeypot. Config screen keys: `destinataire` (recipient, sent along with `email_webmaster`), `contactmail` (show the visitor's e-mail field, `oui` by default), `contactbienvenue` (intro text), `titrechampsup1` / `titrechampsup2` (labels for the two free fields, empty = hidden), `titrecheckbox` / `checkboxliste` / `checkboxoblig`, `fichierjoint` (allow an attachment).
 
-Sending relies on **`facteur`**. `escal_options.php` registers the form with **`nospam`** via `$GLOBALS['formulaires_no_spam'][] = 'contact'`. Attachment validation rejects oversized files and disallowed MIME types with dedicated messages (`contact_fichier_trop_gros`, `contact_format_non_autorise`).
+Sending relies on **`facteur`**. Since 5.6.1 the message goes out **from** the webmaster address, with the visitor's address in `Reply-To` (it used to be the sender, and copied in `Cc`). `escal_options.php` registers the form with **`nospam`** via `$GLOBALS['formulaires_no_spam'][] = 'contact'`. Attachment validation rejects oversized files and disallowed MIME types with dedicated messages (`contact_fichier_trop_gros`, `contact_format_non_autorise`).
 
 A link to the page is added in the footer by `liencontact`.
 
