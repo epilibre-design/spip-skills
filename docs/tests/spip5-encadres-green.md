@@ -120,3 +120,16 @@ Two bullets do not answer an observed failure. They prevent the callout from cau
 | 14 — 5.0 site | PASS 3/3 | **PASS (4/4)** | cites `SpipVersion.php`, `[4.4.0;5.*]` with the `[5.0.0;5.*]` trap explained, `<pipeline>` + function, no hedging on 5.0 |
 | 15 — 4.4 + 5.0 | FAIL 3/3 | **PASS 2/2 (4/4)** | cites `[4.4.0;5.*]`, keeps `<pipeline>` + function (no listener), rewrites `acme_config()` with `lire_config()` and explains the JSON trap; one run also moves `acme_insert_head_css()` to `lire_config('acme/theme')` |
 | 16 — 4.x (no leak) | PASS | **PASS (3/3)** | cites `[4.2.0;4.4.*]`, `<pipeline>` + function, no `Spip::`, listener or `services.php`; switches to `lire_config()` (valid in 4.4) |
+
+## spip-testing (2026-10-18)
+
+Every callout fact was checked on the instances (see the baseline).
+- The callout's bootstrap snippet, copied as is, loads on 4.4.22 and on 5.0. On 5.0 the `set_request()` tests pass,
+  and only the deliberate `$_POST` test fails.
+- `composer create-project … spip/spip <dir> 5.0.x-dev` is taken from the 5.0 `README.md` and was not executed.
+
+| Case | RED | GREEN | Notes |
+|---|---|---|---|
+| 17 — 5.0 only | FAIL 2/2 | **PASS 2/2 (5/5)** | both runs cite the markers, fix the bootstrap (`$spip5` guard, Kernel, `Request`), use `set_request()` only, and say the 4.4 install script must be replaced: run 1 explains, run 2 rewrites it with `composer create-project` and states that the database install and plugin activation stay manual. Run 2's test and bootstrap, executed on the 5.0 instance: **5 tests, 17 assertions, OK** (RED run 1, same setup: fatal `_FILE_OPTIONS`) |
+| 18 — 4.4 + 5.0 | FAIL 2/2 | **PASS 2/2 (4/4)** | cite `[4.4.0;5.*]`, guarded bootstrap valid on both, `set_request()` only; keep the 4.4 install for the 4.4 run and give the 5.0 one |
+| 19 — 4.x (no leak) | PASS | **PASS (2/2)** | cites `[4.2.0;4.4.*]` and the absence of `spip/framework`, keeps the 4.x bootstrap, no Kernel / `Spip::`, `set_request()` |

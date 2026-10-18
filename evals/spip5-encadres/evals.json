@@ -253,6 +253,53 @@
         "Aucun code 5.0 : pas de Spip::, pas de listener, pas de config/services.php",
         "Le bandeau est inséré juste après la balise ouvrante <body …> (attributs compris), sur les pages publiques seulement, et le HTML modifié est renvoyé ; pas de bandeau si le réglage est vide"
       ]
+    },
+    {
+      "id": 17,
+      "skill": "spip-testing",
+      "variant": "5.0 (plugin, composer.json requiert spip/framework)",
+      "prompt": "Ajoute un test d'intégration PHPUnit pour verifier() du formulaire inscription_lettre : une adresse email invalide doit produire une erreur sur le champ email, une adresse valide aucune erreur. Livre les fichiers.",
+      "expected_output": "composer.json requiert spip/framework (et compatibilite=\"[5.0.0-dev;5.*]\") : plugin SPIP 5.0. Le bootstrap d'intégration existant charge vendor/autoload.php puis ecrire/inc_version.php : en 5.0, fatal « Undefined constant _FILE_OPTIONS ». Le bootstrap livré appelle \\SpipLeague\\Component\\Kernel\\Kernel::boot() avant inc_version.php et pousse une Request sur Spip::service('request_stack') (sinon set_request() lève une LogicException). Le test passe l'email par set_request() (ou Spip::setInput()) : en 5.0, $_POST / $_GET ne sont pas lus par Spip::input(), une adresse valide donnerait « obligatoire ». L'installation de test ne télécharge pas SPIP 4.4 par spip-cli (outil 4.x) : SPIP 5.0 par composer create-project spip/spip … 5.0.x-dev, ou script signalé comme à remplacer.",
+      "files": [
+        "evals/spip5-encadres/fixtures/test-50/acme/"
+      ],
+      "expectations": [
+        "Déduit SPIP 5.0 de composer.json (spip/framework) ou de compatibilite=\"[5.0.0-dev;5.*]\" et cite ce marqueur",
+        "Le bootstrap d'intégration livré appelle Kernel::boot() après vendor/autoload.php et avant ecrire/inc_version.php, et pousse une Request sur request_stack (laisser le bootstrap existant échoue : fatal _FILE_OPTIONS)",
+        "Le test fournit l'email par set_request() ou Spip::setInput(), pas par $_POST / $_GET (invisibles pour Spip::input() en 5.0)",
+        "L'environnement de test ne reste pas un SPIP 4.4 installé par spip-cli (core:telecharger -b 4.4) : SPIP 5.0 (composer create-project … 5.0.x-dev) ou remplacement explicitement demandé",
+        "Le test livré vérifie les deux cas demandés : adresse invalide → clé 'email' dans le retour de formulaires_inscription_lettre_verifier_dist(), adresse valide → pas d'erreur email"
+      ]
+    },
+    {
+      "id": 18,
+      "skill": "spip-testing",
+      "variant": "4.4 + 5.0 (compatibilite [4.4.0;5.*])",
+      "prompt": "Ajoute un test d'intégration PHPUnit pour verifier() du formulaire inscription_lettre : une adresse email invalide doit produire une erreur sur le champ email, une adresse valide aucune erreur. Livre les fichiers.",
+      "expected_output": "compatibilite=\"[4.4.0;5.*]\" : la suite doit tourner sur 4.4 et sur 5.0. Bootstrap : Kernel::boot() et Request poussée seulement en 5.0, avec une garde qui ne casse pas 4.4 (is_dir(vendor/spip/framework) par exemple ; pas class_exists(Kernel::class) : la classe existe en 4.4 avec un boot() privé → Error). Email passé par set_request() (les deux versions) ; $_POST casse en 5.0.",
+      "files": [
+        "evals/spip5-encadres/fixtures/test-dual/acme/"
+      ],
+      "expectations": [
+        "Lit compatibilite=\"[4.4.0;5.*]\" et en déduit une suite à faire tourner sur 4.4 et 5.0 (marqueur cité)",
+        "Le bootstrap livré amorce le Kernel et pousse une Request seulement en 5.0, avec une garde valable en 4.4 (pas class_exists(Kernel::class) seul, pas d'appel Spip:: sans garde) ; laisser le bootstrap existant échoue (fatal en 5.0)",
+        "Le test fournit l'email par set_request(), pas par $_POST / $_GET",
+        "Le test livré vérifie les deux cas demandés : adresse invalide → clé 'email' dans le retour de formulaires_inscription_lettre_verifier_dist(), adresse valide → pas d'erreur email"
+      ]
+    },
+    {
+      "id": 19,
+      "skill": "spip-testing",
+      "variant": "4.x (contrôle, compatibilite [4.2.0;4.4.*])",
+      "prompt": "Ajoute un test d'intégration PHPUnit pour verifier() du formulaire inscription_lettre : une adresse email invalide doit produire une erreur sur le champ email, une adresse valide aucune erreur. Livre les fichiers.",
+      "expected_output": "Plugin 4.x : bootstrap existant inchangé (ou équivalent 4.x), $_POST ou set_request() acceptés, rien de 5.0.",
+      "files": [
+        "evals/spip5-encadres/fixtures/test-44/acme/"
+      ],
+      "expectations": [
+        "Aucun code 5.0 : pas de Kernel::boot(), pas de Spip::, pas de request_stack",
+        "Le test livré vérifie les deux cas demandés : adresse invalide → clé 'email' dans le retour de formulaires_inscription_lettre_verifier_dist(), adresse valide → pas d'erreur email"
+      ]
     }
   ]
 }

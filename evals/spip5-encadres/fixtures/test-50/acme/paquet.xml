@@ -1,0 +1,11 @@
+<paquet
+	prefix="acme"
+	categorie="communication"
+	version="1.0.0"
+	etat="stable"
+	compatibilite="[5.0.0-dev;5.*]"
+>
+	<nom>Acme</nom>
+	<auteur>Acme</auteur>
+	<licence>GPL 3</licence>
+</paquet>

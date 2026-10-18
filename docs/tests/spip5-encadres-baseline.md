@@ -97,3 +97,39 @@ deprecation. The real failure is the same as in `spip-lang`: existing code, reus
 
 `compatibilite` checked with the core's `plugin_version_compatible()` against `5.0.0-beta`: `[4.2.0;4.*]`,
 `[5.0.0;5.*]` and `[5.0;5.*]` refuse the plugin; `[4.4.0;5.*]`, `[5.0.0-dev;5.*]` and `[5.0.0-beta;5.*]` accept it.
+
+## spip-testing (2026-10-18)
+
+SPIP 5.0 revisions: `spip/spip` `c8e329575`, `spip/ecrire` `26bfe470`, `spip/framework` `d0e8c97e` (upstream heads on
+2026-10-18); 4.4.22 for the 4.4 side.
+
+Same task on three fixtures: add a PHPUnit integration test for `verifier()` of `inscription_lettre`. Each plugin
+already carries the skill's test setup (`composer.json`, `phpunit.xml`, `tests/bootstrap_integration.php`,
+`scripts/install-spip-test.sh` with `core:telecharger -b 4.4`). `verifier()` reads the email with `Spip::input()` (5.0
+fixture) or `_request()`.
+
+Checked by running PHPUnit 13.4.3 on the 5.0 instance:
+- the skill's bootstrap stops at `Undefined constant "_FILE_OPTIONS"`;
+- with `Kernel::boot()` before `inc_version.php` and a `Request` pushed on `request_stack`, the tests pass;
+- without the `Request`, `set_request()` throws `LogicException: Cannot set request input without a current Request`;
+- `$_POST` / `$_GET` written by a test are not seen by `_request()` / `Spip::input()`: a valid address set through
+  `$_POST` gets « Cette information est obligatoire ».
+
+Checked on 4.4.22:
+- the same bootstrap guarded by `is_dir(vendor/spip/framework)` works;
+- `set_request()` and `$_POST` both work;
+- `SpipLeague\Component\Kernel\Kernel` exists, but `Kernel::boot()` throws `Call to private method`.
+
+Not executed:
+- spip-cli `e9043b8` loads `ecrire/inc_version.php` without booting the Kernel (read in `src/Loader/Spip.php`);
+- 5.0's `bin/spip list` has no install or plugin-activation command.
+
+| Case | Fixture marker | Answers | Result |
+|---|---|---|---|
+| 17 — 5.0 only | `compatibilite="[5.0.0-dev;5.*]"` + `composer.json` requires `spip/framework` | both runs cite the markers and see that the install script targets 4.4; neither knows what replaces it ("change the `-b` branch, to be checked"); bootstrap left as is; input through `$_POST` **and** `set_request()` "in case `Spip::input()` reads neither" | **FAIL 2/2** — fatal `_FILE_OPTIONS` at bootstrap (run 1's test, executed on the instance) |
+| 18 — 4.4 + 5.0 | `compatibilite="[4.4.0;5.*]"` | bootstrap left as is in both runs; run 1 sets `$_POST`, run 2 `set_request()`; both note the suite only runs on 4.4 | **FAIL 2/2** — the suite cannot run on 5.0 |
+| 19 — 4.x (control) | `compatibilite="[4.2.0;4.4.*]"` | `set_request()`, existing bootstrap | PASS |
+
+The spec expected cache clearing (`spip cache:vider` → `bin/spip spip:cache:clear`); the skill says nothing about
+clearing caches, and the real failure is earlier: the test environment does not boot on 5.0. As in `spip-logs`
+case 4, the agent detects 5.0 but has no 5.0 setup to apply.

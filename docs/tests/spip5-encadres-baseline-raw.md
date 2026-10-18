@@ -2155,3 +2155,670 @@ Quelques points sur ce code :
 - Comme `paquet.xml` déclare un nouveau pipeline, il faut **recharger la liste des plugins** pour que SPIP le prenne en compte : passez par la page « Gestion des plugins » de l'espace privé, ou videz le cache.
 - Le style (`.acme-bandeau { … }`) peut aller dans une feuille CSS du plugin chargée par `insert_head_css`, comme celle du thème sombre.
 - Il faudra peut-être ajouter dans `lang/acme_fr.php` la chaîne `label_texte_bandeau`, utilisée par le formulaire, si elle n'existe pas encore. Le dossier `lang/` ne fait pas partie des fichiers du plugin que j'ai consultés.
+
+---
+
+## spip-testing, cas 17 — plugin 5.0 (`composer.json` requiert `spip/framework`) — tirage 1
+
+### Test d'intégration de `verifier()` pour `inscription_lettre`
+
+Le plugin a déjà l'infrastructure d'intégration (`phpunit.xml` avec la suite `integration`, `tests/bootstrap_integration.php`, `scripts/install-spip-test.sh`, script Composer `tests-integration`). Il suffit donc d'ajouter **un seul fichier** de test dans `tests/integration/`.
+
+#### Fichier livré : `tests/integration/InscriptionLettreVerifierTest.php`
+
+```php
+<?php
+declare(strict_types=1);
+
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+
+/**
+ * Test d'intégration de formulaires_inscription_lettre_verifier_dist().
+ *
+ * Tourne contre le SPIP réel installé dans vendor/spip/spip/
+ * (bootstrap : tests/bootstrap_integration.php).
+ */
+final class InscriptionLettreVerifierTest extends TestCase
+{
+    public static function setUpBeforeClass(): void
+    {
+        parent::setUpBeforeClass();
+        // Le fichier fait `return` si _ECRIRE_INC_VERSION n'est pas défini :
+        // il ne se charge qu'une fois SPIP amorcé par le bootstrap d'intégration.
+        include_once dirname(__DIR__, 2) . '/formulaires/inscription_lettre.php';
+    }
+
+    protected function setUp(): void
+    {
+        $_POST = [];
+        $_GET = [];
+    }
+
+    protected function tearDown(): void
+    {
+        $_POST = [];
+        $_GET = [];
+        set_request('email', null);
+    }
+
+    /**
+     * Simule la saisie du champ email.
+     * On renseigne $_POST ET le cache de set_request() : voir la note SPIP 5 plus bas.
+     */
+    private function saisirEmail(string $email): void
+    {
+        $_POST['email'] = $email;
+        set_request('email', $email);
+    }
+
+    /**
+     * Garde-fou : vérifie que la valeur simulée atteint bien Spip::input(),
+     * la fonction que lit verifier(). Si ce test échoue, les autres ne prouvent rien.
+     */
+    public function testLaSaisieSimuleeAtteintSpipInput(): void
+    {
+        $this->saisirEmail('sonde@example.org');
+        $this->assertSame('sonde@example.org', Spip::input('email'));
+    }
+
+    #[DataProvider('emailsInvalides')]
+    public function testEmailInvalideProduitUneErreurSurLeChampEmail(string $email): void
+    {
+        $this->saisirEmail($email);
+
+        $erreurs = formulaires_inscription_lettre_verifier_dist();
+
+        $this->assertIsArray($erreurs);
+        $this->assertArrayHasKey('email', $erreurs);
+        $this->assertNotSame('', (string) $erreurs['email']);
+        // L'erreur ne porte que sur le champ email
+        $this->assertSame(['email'], array_keys($erreurs));
+    }
+
+    public static function emailsInvalides(): array
+    {
+        return [
+            'sans arobase'        => ['pas-une-adresse'],
+            'sans domaine'        => ['jean@'],
+            'sans partie locale'  => ['@example.org'],
+            'espace interne'      => ['jean dupont@example.org'],
+        ];
+    }
+
+    #[DataProvider('emailsValides')]
+    public function testEmailValideNeProduitAucuneErreur(string $email): void
+    {
+        $this->saisirEmail($email);
+
+        $erreurs = formulaires_inscription_lettre_verifier_dist();
+
+        $this->assertSame([], $erreurs);
+    }
+
+    public static function emailsValides(): array
+    {
+        return [
+            'simple'                  => ['jean@example.org'],
+            'avec point et sous-dom.' => ['jean.dupont@mail.example.org'],
+            'espaces autour (trim)'   => ['  jean@example.org  '],
+        ];
+    }
+}
+```
+
+Remarques sur les choix :
+
+- **Classe de base** : `PHPUnit\Framework\TestCase` (on appelle directement une fonction PHP, pas un squelette ; `SquelettesTestCase` serait inutile ici).
+- **Chargement du formulaire** : `include_once` du fichier du plugin. On pourrait aussi passer par `find_in_path('formulaires/inscription_lettre.php', '', true)` puisque le bootstrap ajoute la racine du plugin au chemin SPIP, mais l'inclusion directe n'a aucune dépendance au chemin.
+- **Fournisseurs de données** : PHPUnit 13 (celui du `composer.json`) ne lit plus les annotations `@dataProvider` ; on utilise l'attribut `#[DataProvider]`.
+- **Pas de nettoyage SQL** : `verifier()` n'écrit rien en base, donc pas de `tearDownAfterClass()`.
+- J'ai volontairement évité de tester la chaîne vide : c'est un autre cas (`info_obligatoire`) que vous n'avez pas demandé, mais il s'ajoute en une ligne dans `emailsInvalides()` si vous le voulez.
+
+#### Lancer le test
+
+```bash
+composer install              # si ce n'est pas déjà fait
+composer install-spip-test    # première fois : installe SPIP + active acme dans vendor/spip/spip/
+composer tests-integration
+# ou seulement ce test :
+vendor/bin/phpunit --colors --bootstrap tests/bootstrap_integration.php \
+  tests/integration/InscriptionLettreVerifierTest.php
+```
+
+#### Deux points d'attention : votre plugin cible SPIP 5.0
+
+Votre `paquet.xml` déclare `compatibilite="[5.0.0-dev;5.*]"` et le formulaire lit les saisies avec `Spip::input()`. La documentation de test dont je dispose est écrite pour SPIP 4.x : je n'ai pas pu y vérifier ces deux points, d'où les précautions ci-dessous.
+
+1. **Injection de la saisie.** La doc décrit la simulation d'un POST par `$_POST[...]` ou `set_request()`, qui alimentent `_request()`. Elle ne dit pas si `Spip::input()` (API SPIP 5) lit la même source. C'est pour ça que le test renseigne les deux et commence par `testLaSaisieSimuleeAtteintSpipInput()` : **si ce test-là échoue**, la saisie simulée n'arrive pas jusqu'à `verifier()`. Les tests « email valide » échoueraient alors eux aussi (champ vide, donc erreur `info_obligatoire`). Il faudra trouver le mécanisme d'injection propre à SPIP 5, par exemple en construisant ou en remplaçant la requête courante. Je ne l'invente pas ici faute de documentation.
+
+2. **Version de SPIP installée pour les tests.** `scripts/install-spip-test.sh` télécharge le cœur avec `core:telecharger ... -b 4.4`. Or votre plugin exige SPIP ≥ 5.0 : sur un SPIP 4.4, `plugins:activer acme` sera refusé (le script s'arrêtera sur `Failed: acme`), et `Spip::input()` n'existera pas. Avant de lancer les tests, changez la branche passée à `-b` pour celle de SPIP 5.0 (à vérifier selon l'état actuel du dépôt du cœur), puis supprimez `vendor/spip/spip/` pour forcer une réinstallation propre.
+
+Je n'ai pas exécuté le test : il n'y a pas d'environnement SPIP installé dans le plugin (`vendor/` absent). Le premier `composer tests-integration` montrera donc si le point 1 pose problème.
+
+---
+
+## spip-testing, cas 17 — tirage 2
+
+Voici le test d'intégration pour `formulaires_inscription_lettre_verifier_dist()`.
+
+#### Fichier livré
+
+##### `tests/integration/InscriptionLettreVerifierTest.php`
+
+```php
+<?php
+declare(strict_types=1);
+
+use PHPUnit\Framework\TestCase;
+
+/**
+ * Tests d'intégration de verifier() du formulaire inscription_lettre.
+ *
+ * Tier intégration : verifier() appelle include_spip('inc/filtres'),
+ * email_valide() et _T(), qui demandent un SPIP réel
+ * (bootstrap tests/bootstrap_integration.php).
+ */
+final class InscriptionLettreVerifierTest extends TestCase
+{
+    public static function setUpBeforeClass(): void
+    {
+        parent::setUpBeforeClass();
+        // Le formulaire est livré par le plugin (formulaires/ est dans le chemin SPIP
+        // grâce à _chemin() dans le bootstrap) : on le charge via find_in_path.
+        find_in_path('formulaires/inscription_lettre.php', '', true);
+    }
+
+    protected function setUp(): void
+    {
+        $_POST = [];
+    }
+
+    protected function tearDown(): void
+    {
+        $_POST = [];
+        set_request('email', null);
+    }
+
+    public function testFormulaireEstCharge(): void
+    {
+        $this->assertTrue(
+            function_exists('formulaires_inscription_lettre_verifier_dist'),
+            'formulaires/inscription_lettre.php non trouvé dans le chemin SPIP'
+        );
+    }
+
+    /**
+     * @dataProvider emailsInvalides
+     */
+    public function testEmailInvalideProduitUneErreurSurEmail(string $email): void
+    {
+        $_POST['email'] = $email;
+        set_request('email', $email);
+
+        $erreurs = formulaires_inscription_lettre_verifier_dist();
+
+        $this->assertIsArray($erreurs);
+        $this->assertArrayHasKey('email', $erreurs);
+        $this->assertNotSame('', (string) $erreurs['email']);
+    }
+
+    public static function emailsInvalides(): array
+    {
+        return [
+            'sans arobase'   => ['pas-une-adresse'],
+            'sans domaine'   => ['jean@'],
+            'sans partie locale' => ['@example.org'],
+        ];
+    }
+
+    public function testEmailValideNeProduitAucuneErreur(): void
+    {
+        $_POST['email'] = 'jean.dupont@example.org';
+        set_request('email', 'jean.dupont@example.org');
+
+        $erreurs = formulaires_inscription_lettre_verifier_dist();
+
+        $this->assertSame([], $erreurs);
+    }
+}
+```
+
+Le fichier se place dans `tests/integration/` avec le suffixe `Test.php` :
+la suite `integration` de `phpunit.xml` le trouve sans autre réglage.
+
+#### Lancer le test
+
+```bash
+composer install
+composer install-spip-test   # première fois seulement
+composer tests-integration
+# ou directement :
+vendor/bin/phpunit --colors --testsuite integration --bootstrap tests/bootstrap_integration.php \
+  --filter InscriptionLettreVerifierTest
+```
+
+#### Points d'attention avant de lancer le test
+
+1. **Version de SPIP installée pour les tests.** Le plugin vise SPIP 5.0
+   (`compatibilite="[5.0.0-dev;5.*]"` dans `paquet.xml`, `spip/framework: ^5.x-dev`
+   dans `composer.json`, et `verifier()` utilise `Spip::input()`). Or
+   `scripts/install-spip-test.sh` télécharge le cœur avec `core:telecharger ... -b 4.4`.
+   Sur une 4.4, le plugin ne s'active pas (compatibilité) et la classe `Spip`
+   n'existe pas : le test échouera avant toute assertion. Il faut faire pointer
+   le script vers une branche 5.0 du cœur. Je ne connais pas avec certitude le nom
+   de branche à passer à `-b` ; vérifiez-le avant de modifier le script.
+
+2. **Injection de la saisie.** La documentation dont je dispose (écrite pour
+   SPIP 4.x) montre comment simuler une saisie pour `_request()` : `$_POST` ou
+   `set_request()`. Le formulaire lit l'email avec `Spip::input('email')`, une API
+   SPIP 5.0 que cette documentation ne couvre pas. Le test renseigne donc les deux
+   (`$_POST` et `set_request()`), mais je ne peux pas garantir que `Spip::input()`
+   les lise en SPIP 5.0 (par exemple si la requête est figée au démarrage).
+   Si le cas « email valide » échoue avec une erreur `info_obligatoire`, c'est que
+   la valeur n'arrive pas à `Spip::input()` : il faudra alors injecter la saisie
+   par le mécanisme propre à SPIP 5.0.
+
+3. **Plugin actif.** Le bootstrap appelle `_chemin()` sur la racine du plugin :
+   `find_in_path('formulaires/inscription_lettre.php', '', true)` doit donc trouver
+   le formulaire. Le test `testFormulaireEstCharge()` sert de garde-fou : s'il
+   échoue, c'est un problème d'environnement, pas de `verifier()`.
+
+4. **Pas de nettoyage en base.** `verifier()` n'écrit rien. Je n'ai pas testé
+   `traiter()`, qui écrit dans `spip_inscrits` ; cette table n'est d'ailleurs déclarée
+   nulle part dans le plugin.
+
+Je n'ai pas exécuté ce test : je n'avais pas d'environnement SPIP installé
+(`vendor/` absent).
+
+---
+
+## spip-testing, cas 18 — plugin 4.4 + 5.0 — tirage 1
+
+Voici le test d'intégration pour `formulaires_inscription_lettre_verifier_dist()`.
+
+Il va dans le tier **intégration** : `verifier()` appelle `include_spip('inc/filtres')`, `email_valide()` et `_T()`, qui sont de vraies fonctions de SPIP. Le test tourne donc sur l'instance installée dans `vendor/spip/spip/` par `composer install-spip-test`, avec le `tests/bootstrap_integration.php` déjà présent dans le plugin. Je n'ai rien changé à la configuration : `phpunit.xml` déclare déjà la suite `integration` (`tests/integration`, suffixe `Test.php`) et `composer tests-integration` la lance avec le bon bootstrap.
+
+#### Fichier livré
+
+##### `tests/integration/InscriptionLettreVerifierTest.php`
+
+```php
+<?php
+declare(strict_types=1);
+
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+
+/**
+ * Test d'intégration de verifier() du formulaire CVT inscription_lettre.
+ *
+ * S'exécute sur le vrai SPIP (vendor/spip/spip/) : email_valide() et _T()
+ * sont les fonctions du cœur, pas des mocks.
+ */
+final class InscriptionLettreVerifierTest extends TestCase
+{
+    public static function setUpBeforeClass(): void
+    {
+        parent::setUpBeforeClass();
+        // Le fichier du plugin. _ECRIRE_INC_VERSION est défini par le bootstrap
+        // d'intégration, sinon le fichier ferait un return immédiat.
+        include_once dirname(__DIR__, 2) . '/formulaires/inscription_lettre.php';
+    }
+
+    protected function setUp(): void
+    {
+        $_GET = [];
+        $_POST = [];
+    }
+
+    protected function tearDown(): void
+    {
+        $_GET = [];
+        $_POST = [];
+    }
+
+    public static function emailsInvalides(): array
+    {
+        return [
+            'sans arobase'      => ['jean.dupont.example.org'],
+            'sans domaine'      => ['jean.dupont@'],
+            'sans partie locale'=> ['@example.org'],
+            'espace interne'    => ['jean dupont@example.org'],
+            'double arobase'    => ['jean@@example.org'],
+        ];
+    }
+
+    #[DataProvider('emailsInvalides')]
+    public function testEmailInvalideProduitUneErreurSurLeChampEmail(string $email): void
+    {
+        $_POST['nom'] = 'Jean Dupont';
+        $_POST['email'] = $email;
+
+        $erreurs = formulaires_inscription_lettre_verifier_dist();
+
+        $this->assertIsArray($erreurs);
+        $this->assertArrayHasKey('email', $erreurs, "« $email » aurait dû être refusée");
+        $this->assertIsString($erreurs['email']);
+        $this->assertNotSame('', trim($erreurs['email']), 'Le message d\'erreur est vide');
+        // Erreur sur le champ email uniquement
+        $this->assertSame(['email'], array_keys($erreurs));
+    }
+
+    public function testEmailValideNeProduitAucuneErreur(): void
+    {
+        $_POST['nom'] = 'Jean Dupont';
+        $_POST['email'] = 'jean.dupont@example.org';
+
+        $erreurs = formulaires_inscription_lettre_verifier_dist();
+
+        $this->assertSame([], $erreurs);
+    }
+
+    public function testEmailValideEntoureDEspacesEstAccepte(): void
+    {
+        // verifier() fait un trim() avant email_valide()
+        $_POST['email'] = '  jean.dupont@example.org  ';
+
+        $this->assertSame([], formulaires_inscription_lettre_verifier_dist());
+    }
+
+    public function testEmailVideProduitUneErreurSurLeChampEmail(): void
+    {
+        $_POST['email'] = '';
+
+        $erreurs = formulaires_inscription_lettre_verifier_dist();
+
+        $this->assertArrayHasKey('email', $erreurs);
+        $this->assertNotSame('', trim((string) $erreurs['email']));
+    }
+}
+```
+
+Choix faits :
+
+- **Données simulées par `$_POST`**, car `_request()` lit `$_GET` / `$_POST`. Les deux tableaux sont vidés dans `setUp()` et `tearDown()`, ce qui évite qu'un cas déborde sur le suivant.
+- **Chargement par `include_once`** du fichier du plugin. Le bootstrap ajoute bien la racine du plugin au chemin SPIP (`_chemin(dirname(__DIR__))`), donc `find_in_path('formulaires/inscription_lettre.php', '', true)` marcherait aussi. Le chemin direct garantit qu'on teste ce fichier-là et pas une surcharge trouvée ailleurs dans le path.
+- **Message d'erreur** : le test vérifie qu'il y a une erreur non vide sur `email`, sans comparer son texte. Le libellé vient de `_T('form_prop_indiquer_email')` et dépend de la langue et des chaînes du cœur. Si vous voulez figer le libellé, ajoutez `$this->assertSame(_T('form_prop_indiquer_email'), $erreurs['email']);`.
+- Le test vérifie aussi que l'erreur ne concerne que `email` (`array_keys($erreurs) === ['email']`), puisque `nom` n'est pas contrôlé.
+- J'ai ajouté deux cas proches de la demande : une adresse valide entourée d'espaces, qui doit passer grâce au `trim()`, et un champ vide, qui passe par la branche `info_obligatoire`.
+- Le data provider utilise l'attribut `#[DataProvider]`. C'est la syntaxe attendue par PHPUnit 13 (`^13.0` dans votre `composer.json`) : l'annotation `@dataProvider` n'est plus lue.
+
+#### Lancer le test
+
+```bash
+composer install              # si ce n'est pas déjà fait
+composer install-spip-test    # première fois : SPIP 4.4 + SQLite + activation d'acme
+composer tests-integration
+# ou seulement ce fichier :
+vendor/bin/phpunit --colors --bootstrap tests/bootstrap_integration.php \
+    tests/integration/InscriptionLettreVerifierTest.php
+```
+
+Résultat attendu : 8 tests (5 cas invalides du provider + 3 autres), tous verts.
+
+#### Points à noter
+
+1. **Exemples à vérifier en premier en cas d'échec.** Si un cas invalide passe, regardez d'abord l'exemple : j'ai choisi des adresses que `email_valide()` devrait refuser, mais le dernier mot revient à SPIP, et `jean@@example.org` ou l'espace interne sont les plus sensibles à son implémentation. Retirez un cas seulement si SPIP l'accepte volontairement. Sinon, c'est un vrai défaut de validation.
+2. **Version de SPIP testée.** `scripts/install-spip-test.sh` installe SPIP **4.4** (`-b 4.4`), alors que `paquet.xml` déclare `compatibilite="[4.4.0;5.*]"`. Ce test ne valide donc que la 4.4. Pour couvrir SPIP 5, il faut une seconde instance de test en 5.x. Ma documentation ne détaille pas les différences d'API de la 5.0 : je ne peux pas garantir que la simulation par `$_POST` / `_request()` y fonctionne de la même façon.
+3. **Tests unitaires.** `phpunit.xml` pointe vers `tests/bootstrap.php`, qui n'existe pas dans le plugin, donc `composer tests-unit` échouera. Ça ne gêne pas ce test : `tests-integration` passe `--bootstrap tests/bootstrap_integration.php`, qui remplace celui de `phpunit.xml`. Créez ce fichier de mocks seulement si vous ajoutez des tests dans `tests/unit/`.
+4. **`traiter()` n'est pas testé ici.** Il insère dans `spip_inscrits`, et le plugin n'a ni `base/` ni `_administrations.php` qui déclarerait cette table. Un test de `traiter()` échouerait donc tant que le schéma n'existe pas.
+
+---
+
+## spip-testing, cas 18 — tirage 2
+
+Voici le test d'intégration pour `verifier()` du formulaire `inscription_lettre`.
+
+#### Ce qui est déjà en place dans le plugin
+
+- `composer.json` contient les scripts `install-spip-test` et `tests-integration`.
+- `phpunit.xml` déclare la suite `integration`, qui exécute `tests/integration/*Test.php`.
+- `tests/bootstrap_integration.php` charge un vrai SPIP (`vendor/spip/spip/`), ajoute la racine du plugin au chemin SPIP et active les plugins.
+
+Il suffit donc d'ajouter **un seul fichier**. Aucun autre fichier n'est à modifier.
+
+#### Pourquoi un test d'intégration
+
+`verifier()` appelle `_request()`, `include_spip('inc/filtres')`, `email_valide()` et `_T()`. Ces fonctions viennent du cœur de SPIP. Le niveau intégration utilise les vraies fonctions, sans les simuler, et `TestCase` suffit puisqu'on appelle directement une fonction PHP. `SquelettesTestCase` ne sert que pour rendre des squelettes.
+
+#### Fichier à créer : `tests/integration/InscriptionLettreVerifierTest.php`
+
+```php
+<?php
+declare(strict_types=1);
+
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+
+/**
+ * Tests d'intégration de formulaires_inscription_lettre_verifier_dist().
+ *
+ * Exécutés sur un vrai SPIP (tests/bootstrap_integration.php) :
+ * _request(), email_valide() et _T() sont les fonctions du cœur.
+ */
+final class InscriptionLettreVerifierTest extends TestCase
+{
+    public static function setUpBeforeClass(): void
+    {
+        parent::setUpBeforeClass();
+        // Le formulaire est livré par le plugin : on le charge par son chemin réel.
+        include_once dirname(__DIR__, 2) . '/formulaires/inscription_lettre.php';
+    }
+
+    protected function setUp(): void
+    {
+        $this->viderRequete();
+    }
+
+    protected function tearDown(): void
+    {
+        $this->viderRequete();
+    }
+
+    private function viderRequete(): void
+    {
+        $_POST = [];
+        $_GET = [];
+        // set_request() avec null retire la valeur que _request() pourrait encore renvoyer
+        set_request('email', null);
+        set_request('nom', null);
+    }
+
+    public static function emailsInvalides(): array
+    {
+        return [
+            'sans arobase'       => ['jean.dupont.example.org'],
+            'sans domaine'       => ['jean@'],
+            'sans partie locale' => ['@example.org'],
+            'avec espace'        => ['jean dupont@example.org'],
+            'texte libre'        => ['pas un email'],
+        ];
+    }
+
+    #[DataProvider('emailsInvalides')]
+    public function testEmailInvalideProduitUneErreurSurLeChampEmail(string $email): void
+    {
+        set_request('nom', 'Jean Dupont');
+        set_request('email', $email);
+
+        $erreurs = formulaires_inscription_lettre_verifier_dist();
+
+        $this->assertIsArray($erreurs);
+        $this->assertArrayHasKey('email', $erreurs, "« $email » devrait être refusé");
+        $this->assertSame(_T('form_prop_indiquer_email'), $erreurs['email']);
+        // L'erreur ne concerne que le champ email
+        $this->assertSame(['email'], array_keys($erreurs));
+    }
+
+    public static function emailsValides(): array
+    {
+        return [
+            'simple'              => ['jean@example.org'],
+            'avec point et tiret' => ['jean.dupont-test@sous.example.org'],
+            'espaces autour'      => ['  jean@example.org  '], // verifier() applique trim()
+        ];
+    }
+
+    #[DataProvider('emailsValides')]
+    public function testEmailValideNeProduitAucuneErreur(string $email): void
+    {
+        set_request('nom', 'Jean Dupont');
+        set_request('email', $email);
+
+        $erreurs = formulaires_inscription_lettre_verifier_dist();
+
+        $this->assertSame([], $erreurs);
+    }
+}
+```
+
+##### Notes
+
+- **Chargement du formulaire** : `include_once` sur le fichier réel du plugin (`formulaires/inscription_lettre.php`), dont la garde `_ECRIRE_INC_VERSION` passe parce que le bootstrap d'intégration a chargé `ecrire/inc_version.php`. `find_in_path('formulaires/inscription_lettre.php', '', true)` fonctionnerait aussi, puisque le bootstrap ajoute la racine du plugin au chemin SPIP. `include_once` est plus direct.
+- **Données de requête** : `set_request()` est le moyen fourni par SPIP au niveau intégration pour alimenter `_request()`. `$_POST` et `$_GET` sont vidés avant et après chaque test pour qu'une valeur ne passe pas d'un cas à l'autre.
+- **Message attendu** : je compare le texte de l'erreur à `_T('form_prop_indiquer_email')`, la chaîne que retourne le code, plutôt qu'à un texte en dur, ce qui le rend indépendant de la langue. Si vous ne voulez vérifier que la présence d'une erreur sur le champ, retirez l'`assertSame` correspondant.
+- **Hors périmètre demandé** : le cas « email vide » (erreur `info_obligatoire`) n'est pas couvert. On peut l'ajouter comme troisième test si vous le souhaitez.
+
+#### Lancer le test
+
+```bash
+composer install            # PHPUnit, spip/tests, spip/spip-cli
+composer install-spip-test  # télécharge et installe SPIP dans vendor/spip/spip (SQLite3), active acme
+composer tests-integration  # exécute tests/integration/
+```
+
+Pour ne lancer que ce fichier :
+
+```bash
+vendor/bin/phpunit --colors --bootstrap tests/bootstrap_integration.php \
+  tests/integration/InscriptionLettreVerifierTest.php
+```
+
+Je n'ai pas exécuté ces commandes : le résultat (5 cas invalides et 3 valides, 8 tests au total) reste à confirmer sur votre poste.
+
+Remarque : `scripts/install-spip-test.sh` installe SPIP **4.4** (`core:telecharger -b 4.4`), alors que `paquet.xml` déclare `compatibilite="[4.4.0;5.*]"`. Ce test valide donc le formulaire sur SPIP 4.4. Pour tester aussi SPIP 5, il faut une seconde installation de test sur une branche 5.x.
+
+---
+
+## spip-testing, cas 19 — plugin 4.x
+
+Voici le test d'intégration pour `formulaires_inscription_lettre_verifier_dist()`.
+
+Le plugin est déjà équipé pour le niveau intégration : `composer.json` (scripts `install-spip-test` et `tests-integration`), `scripts/install-spip-test.sh` (SPIP 4.4 + SQLite3, préfixe `acme`) et `tests/bootstrap_integration.php`, qui ajoute la racine du plugin au chemin SPIP avec `_chemin()`. Il suffit donc d'ajouter **un seul fichier** dans `tests/integration/`.
+
+#### Fichier livré : `tests/integration/InscriptionLettreVerifierTest.php`
+
+```php
+<?php
+declare(strict_types=1);
+
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+
+/**
+ * Test d'intégration de verifier() du formulaire CVT inscription_lettre.
+ *
+ * Exécuté avec le vrai SPIP (tests/bootstrap_integration.php) : _request(),
+ * email_valide() et _T() sont les fonctions réelles du cœur, sans mock.
+ */
+final class InscriptionLettreVerifierTest extends TestCase
+{
+    public static function setUpBeforeClass(): void
+    {
+        parent::setUpBeforeClass();
+        // Charge le fichier du formulaire via le chemin SPIP
+        // (la racine du plugin y est ajoutée par le bootstrap d'intégration).
+        $fichier = find_in_path('formulaires/inscription_lettre.php', '', true);
+        self::assertNotEmpty($fichier, 'formulaires/inscription_lettre.php introuvable dans le chemin SPIP');
+        self::assertTrue(
+            function_exists('formulaires_inscription_lettre_verifier_dist'),
+            'formulaires_inscription_lettre_verifier_dist() non définie'
+        );
+    }
+
+    protected function setUp(): void
+    {
+        $_GET = [];
+        $_POST = [];
+    }
+
+    protected function tearDown(): void
+    {
+        $_GET = [];
+        $_POST = [];
+    }
+
+    public static function emailsInvalides(): array
+    {
+        return [
+            'sans arobase'       => ['pas-une-adresse'],
+            'sans domaine'       => ['jean@'],
+            'sans partie locale' => ['@example.org'],
+            'espace interne'     => ['jean dupont@example.org'],
+        ];
+    }
+
+    public static function emailsValides(): array
+    {
+        return [
+            'simple'                   => ['jean@example.org'],
+            'sous-domaine et point'    => ['jean.dupont@mail.example.org'],
+            'espaces autour (trim)'    => ['  jean@example.org  '],
+        ];
+    }
+
+    #[DataProvider('emailsInvalides')]
+    public function testEmailInvalideProduitUneErreurSurLeChampEmail(string $email): void
+    {
+        set_request('email', $email);
+
+        $erreurs = formulaires_inscription_lettre_verifier_dist();
+
+        $this->assertIsArray($erreurs);
+        $this->assertArrayHasKey('email', $erreurs, "Aucune erreur pour l'adresse invalide « $email »");
+        $this->assertNotSame('', trim((string) $erreurs['email']), 'Le message d\'erreur est vide');
+        // L'erreur porte uniquement sur le champ email, pas de message_erreur global
+        $this->assertSame(['email'], array_keys($erreurs));
+    }
+
+    #[DataProvider('emailsValides')]
+    public function testEmailValideNeProduitAucuneErreur(string $email): void
+    {
+        set_request('email', $email);
+
+        $erreurs = formulaires_inscription_lettre_verifier_dist();
+
+        $this->assertSame([], $erreurs, "Erreur inattendue pour l'adresse valide « $email »");
+    }
+}
+```
+
+##### Points de conception
+
+- **Niveau intégration, `TestCase` simple** : on appelle directement une fonction PHP ; `SquelettesTestCase` ne sert que pour le rendu de squelettes.
+- **Chargement par `find_in_path(..., true)`** plutôt que de compter sur un chargement automatique : le formulaire vit dans `formulaires/` du plugin, que le bootstrap rend accessible dans le chemin SPIP. Le garde `_ECRIRE_INC_VERSION` en tête du fichier est satisfait puisque SPIP est réellement chargé.
+- **Données de requête** : `set_request()` (helper SPIP) alimente ce que lit `_request('email')`. `$_GET`/`$_POST` sont vidés avant et après chaque test pour éviter toute fuite d'état entre cas.
+- **Pas d'assertion sur le texte exact du message** : il vient de `_T('form_prop_indiquer_email')` et dépend de la langue du site ; on vérifie la présence d'une erreur non vide sur la clé `email`.
+- **Pas de nettoyage SQL** : `verifier()` n'écrit rien en base (seul `traiter()` fait un `sql_insertq`).
+- Le cas « champ vide » (`_T('info_obligatoire')`) n'est pas demandé ; il s'ajoute en une ligne au fournisseur `emailsInvalides` (`'vide' => ['']`) si vous le souhaitez.
+
+#### Lancer le test
+
+```bash
+composer install              # PHPUnit, spip/tests, spip-cli
+composer install-spip-test    # première fois : SPIP 4.4 + SQLite3 dans vendor/spip/spip/, active acme
+composer tests-integration
+# ou ciblé :
+vendor/bin/phpunit --colors --testsuite integration \
+  --bootstrap tests/bootstrap_integration.php \
+  --filter InscriptionLettreVerifierTest
+```
+
+Résultat attendu : 7 tests (4 adresses invalides, 3 valides), tous verts.
+
+#### À noter (sans changer le livrable)
+
+- `phpunit.xml` déclare `bootstrap="tests/bootstrap.php"`, fichier absent du plugin. Ce n'est pas gênant ici, car `tests-integration` force `--bootstrap tests/bootstrap_integration.php`, mais `composer tests-unit` échouera tant que ce bootstrap de mocks n'existe pas.
+- Avant de conclure, vérifiez que l'environnement est réellement prêt plutôt que de vous fier au message final du script : `vendor/bin/spip plugins:lister | grep -E "^[[:space:]]*acme[[:space:]]"`.
+- Le test vise SPIP 4.4 (`compatibilite="[4.2.0;4.4.*]"` dans `paquet.xml`, `-b 4.4` dans le script). Il n'a pas été exécuté de mon côté : je n'ai pas d'instance SPIP installée pour ce plugin.

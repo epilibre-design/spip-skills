@@ -1,0 +1,40 @@
+{
+    "name": "acme/acme",
+    "type": "spip-plugin",
+    "require": {
+        "php": "^8.2"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^13.0",
+        "spip/spip-cli": "dev-master",
+        "spip/tests": "dev-master"
+    },
+    "repositories": [
+        {
+            "name": "spip",
+            "type": "composer",
+            "url": "https://get.spip.net/composer"
+        },
+        {
+            "name": "spip-cli",
+            "type": "vcs",
+            "url": "https://git.spip.net/spip/spip-cli.git"
+        },
+        {
+            "name": "spip-tests",
+            "type": "vcs",
+            "url": "https://git.spip.net/spip/tests.git"
+        }
+    ],
+    "scripts": {
+        "install-spip-test": "sh scripts/install-spip-test.sh",
+        "tests-unit": "vendor/bin/phpunit --colors --testsuite unit",
+        "tests-integration": [
+            "if [ ! -f vendor/spip/spip/config/connect.php ]; then echo 'SPIP local non installé.' >&2; if [ -t 0 ]; then printf 'Lancer composer install-spip-test ? [Y/n] ' >&2; read -r r; case \"$r\" in n|N) exit 1 ;; *) composer install-spip-test || exit 1 ;; esac; else echo 'Lancez: composer install-spip-test' >&2; exit 1; fi; fi",
+            "vendor/bin/phpunit --colors --testsuite integration --bootstrap tests/bootstrap_integration.php"
+        ]
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
