@@ -4,7 +4,7 @@ Date: 2026-10-17
 
 Fresh subagent, no tools, no skill: answers from training knowledge only, for the 8 prompts of
 `evals/spip5-plugins/evals.json`. Scored against the eval expectations, each one checked by running the code on a
-disposable SPIP 5.0.0-beta instance (`ecrire` `c8e329575`, PHP 8.4.25, SQLite).
+disposable SPIP 5.0.0-beta instance (`spip/spip` `c8e329575`, `ecrire` `2cd5843f`, PHP 8.4.25, SQLite).
 
 The agent said upfront that it did not know the 5.0 object API and fell back to the 4.x model everywhere.
 

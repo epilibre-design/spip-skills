@@ -27,7 +27,7 @@ baseline (`docs/tests/spip5-plugins-baseline.md`).
 
 ## Verification of the skill's examples
 
-Every example was run on a disposable 5.0.0-beta instance (`ecrire` `c8e329575`) with an `acme` plugin:
+Every example was run on a disposable 5.0.0-beta instance (`spip/spip` `c8e329575`, `ecrire` `2cd5843f`) with an `acme` plugin:
 
 - `<!-- acme -->` before `</body>` on a served page; `insert_head` output visible after `spip:cache:clear --all`;
 - `pre_edition`: `objet_modifier('article', 1, ['titre' => 'éléphant rose'])` stores `ÉLÉPHANT ROSE`;

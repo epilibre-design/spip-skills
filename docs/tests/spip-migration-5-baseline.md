@@ -4,7 +4,7 @@ Date: 2026-10-17
 
 Fresh subagent, no tools, no skill: answers from training knowledge only, for the 8 prompts of
 `evals/spip-migration-5/evals.json`. Scored against the eval expectations, checked in SPIP 5.0.0-beta
-(`ecrire` `c8e329575`) and SPIP 4.4.23.
+(`spip/spip` `c8e329575`, `ecrire` `2cd5843f`) and SPIP 4.4.23.
 
 ---
 
