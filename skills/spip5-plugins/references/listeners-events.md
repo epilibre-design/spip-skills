@@ -19,12 +19,20 @@ final class AffichageFinalListener
 	#[AsPipelineListener]                       // pipeline deduced from the event type
 	public function onAffichageFinal(AffichageFinalEvent $event): void
 	{
+		if (!$event->isHtmlPage()) {            // RSS, JSON, AJAX fragments
+			return;
+		}
 		$event->appendToBody('<!-- acme -->');  // before </body>
 	}
 }
 ```
 
 The method returns `void`: it changes the event, it does not return the flux.
+
+`affichage_final` sees every page, not only HTML. Without `</body>`, `appendToBody()` **appends at the end** of the
+output (verified: the comment lands after `</rss>` on `spip.php?page=backend`); `appendToHead()` does nothing
+without `</head>`. Test `isHtmlPage()` (true when the output contains `<html` or `<!doctype html`) before adding
+markup.
 
 `#[AsPipelineListener(?string $pipeline = null, string $position = 'normal', string $method = '__invoke')]`:
 

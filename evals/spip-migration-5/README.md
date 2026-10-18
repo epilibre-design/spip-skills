@@ -15,7 +15,7 @@
 
 ## Sources vérifiées
 
-SPIP 5.0.0-beta (`ecrire` `c8e329575`, 2026-09-22) et SPIP 4.4.23. Documentation `dev.spip.net` (dépôt `spip/docs`, `docs/fr/5.0/`).
+SPIP 5.0.0-beta (`spip/spip` `c8e329575`, `ecrire` `2cd5843f`, 2026-09-22) et SPIP 4.4.23. Documentation `dev.spip.net` (dépôt `spip/docs`, `docs/fr/5.0/`).
 
 ## Lancer les évaluations
 

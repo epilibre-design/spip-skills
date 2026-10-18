@@ -39,7 +39,7 @@
         "Si B : genie_acme_synchro_dist() en convention historique (>= 0 succès, < 0 échec), déclarée par un listener TachesGeneralesCronEvent::addTask() et non par une fonction acme_taches_generales_cron ni <genie>",
         "Désactivation en développement adaptée à la forme livrée : A → spip.cron.acme_synchro.enabled = false dans config/custom.php ; B → paramètre du plugin testé dans le listener (pas spip.cron.*)",
         "Ne met pas periode à 0 (tâche jamais planifiée)",
-        "Signale que sur SPIP 5.0.0-beta (c8e329575) la file n'exécute pas les tâches #[AsCronTask] et donne la vérification queue_genie_can_use_service_registry()"
+        "Signale que sur SPIP 5.0.0-beta (spip/spip c8e329575, ecrire 2cd5843f) la file n'exécute pas les tâches #[AsCronTask] et donne la vérification queue_genie_can_use_service_registry()"
       ]
     },
     {

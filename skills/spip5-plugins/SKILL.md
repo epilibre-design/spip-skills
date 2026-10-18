@@ -10,8 +10,9 @@ description: >-
 
 # SPIP 5.0 plugins
 
-Verified on SPIP **5.0.0-beta** (`ecrire` `c8e329575`) by running every example on an instance. SPIP 5 is still in
-development: when a symbol looks off, check the source and `bin/spip`.
+Verified on SPIP **5.0.0-beta** (`spip/spip` `c8e329575`, `ecrire` `2cd5843f`) by running every example on an
+instance; additions of 2026-10-18 on `ecrire` `26bfe470`. SPIP 5 is still in development: when a symbol looks off,
+check the source and `bin/spip`.
 
 ## The model in one screen
 
@@ -34,11 +35,11 @@ development: when a symbol looks off, check the source and `bin/spip`.
 | Create a plugin, files and activation | `references/squelette-plugin.md` |
 | Hook a pipeline, which event class, which methods | `references/listeners-events.md` |
 | Scheduled task | `references/cron.md` |
-| Logger, config, request, directories in a class | `references/services.md` |
+| Logger, config, request, directories, HTTP requests | `references/services.md` |
 | Plugin settings (metas, own store) | `references/config-plugin.md` |
 | Block or throttle requests | `references/guard.md` |
 | Private page, menu, tabs, CSS/JS | `references/espace-prive.md` |
-| Something is not called, console commands | `references/outils.md` |
+| Something is not called, console commands, `APP_ENV`, PHPStan / Rector | `references/outils.md` |
 
 ## Guardrails
 

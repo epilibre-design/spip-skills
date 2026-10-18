@@ -15,7 +15,7 @@
 
 ## Sources vérifiées
 
-Chaque attente a été vérifiée en exécutant le code sur une instance jetable SPIP 5.0.0-beta (`ecrire` `c8e329575`,
+Chaque attente a été vérifiée en exécutant le code sur une instance jetable SPIP 5.0.0-beta (`spip/spip` `c8e329575`, `ecrire` `2cd5843f`,
 PHP 8.4.25, SQLite) : plugin `acme` activé, listeners listés et observés sur une page servie, `pre_edition` sur un
 article, règle Guard (429 à la 31ᵉ requête), menu et page privée, injection, désactivation de tâche par
 `config/custom.php`, file de tâches.

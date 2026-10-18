@@ -33,10 +33,15 @@ function acme_affichage_final($html) {
 #[AsPipelineListener]
 public function onAffichageFinal(AffichageFinalEvent $event): void
 {
+	if (!$event->isHtmlPage()) {
+		return;
+	}
 	$event->appendToBody('<!-- acme -->');
 }
 ```
 
+- Not a strict equivalent: without `</body>` (RSS, JSON, AJAX fragment) the 4.x `str_replace()` changed nothing,
+  while `appendToBody()` appends at the end of the output. Hence the `isHtmlPage()` test.
 - The method returns `void` and changes the event. `$flux['data']` → `getSubject()` / `setSubject()`,
   `$flux['args']['x']` → `getArgument('x')` or the event's own getters (`getSqlTable()`, `getAction()`, …).
 - `pre_edition`: `$flux['args']['table']` → `getSqlTable()` — `PreEditionEvent` has no `getTable()` / `setField()`.
@@ -48,9 +53,13 @@ public function onAffichageFinal(AffichageFinalEvent $event): void
 
 - 4.x `genie_*()`: `>= 0` success, `< 0` failure. 5.0 `#[AsCronTask]` service: **`0` success, `> 0` failure**
   (re-planned immediately). Rewriting `return 1;` unchanged turns every success into a failure.
-- On **5.0.0-beta (`c8e329575`) the queue never runs `#[AsCronTask]` services** (core tasks included). Until fixed,
-  keep the legacy `genie/` function and declare it with a `taches_generales_cron` listener; `spip5-plugins`
-  `cron.md` has the check and the verified workaround.
+- `genie_x($t)` → `__invoke()`: the queue still passes `$t` (date of the previous run) as the first argument;
+  declare `__invoke(int $t = 0)` if the code uses it.
+- A failure is retried at the next cron hit, with no delay and no limit, in both conventions: `spip5-plugins`
+  `cron.md`, *When a task fails*, shows how to space retries.
+- On **5.0.0-beta the queue never runs `#[AsCronTask]` services** (core tasks included; `ecrire` `2cd5843f` and
+  `26bfe470`). Until fixed, keep the legacy `genie/` function and declare it with a `taches_generales_cron`
+  listener; `spip5-plugins` `cron.md` has the check and the verified workaround.
 
 ## Injection: aliases are missing
 
