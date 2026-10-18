@@ -196,6 +196,7 @@ sees; "Evidence" is where the cause shows.
 | `ecrire/mes_options.php` | ignored: `_MA_CONSTANTE` not defined | **run**: squelette `[(#EVAL{defined('_MA_CONSTANTE') ? _MA_CONSTANTE : 'non definie'})]` |
 | `config/mes_options.php` | read on every hit (`_FILE_OPTIONS` = its path in `spip:info`); a change applies without warmup | **run** |
 | `_DIR_*` in it | fatal, see above (`environnement-kernel.md`: constants frozen at boot) | **run** |
+| `_NOM_TEMPORAIRES_INACCESSIBLES` in it (4.x way to move `tmp/`) | HTTP 500, nothing created at the target: the kernel defines the `_NOM_*` and `_DIR_*` before `mes_options.php` (`ecrire/inc_version.php:72`) | **run** |
 
 ### Plugin activation from the back office
 
