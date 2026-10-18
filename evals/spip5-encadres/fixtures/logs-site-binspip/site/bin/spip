@@ -1,0 +1,22 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use SpipLeague\Component\Console\Application;
+use SpipLeague\Component\Kernel\Kernel;
+
+if (
+    !is_dir(dirname(__DIR__).'/vendor')
+    || !is_file(dirname(__DIR__).'/vendor/autoload_runtime.php')
+) {
+    throw new LogicException('Dependencies are missing. Try running "composer install".');
+}
+
+require_once dirname(__DIR__).'/vendor/autoload_runtime.php';
+
+return static function (array $context): Application {
+    $kernel = Kernel::boot();
+
+    return new Application($kernel, __DIR__ . '/../ecrire/inc_version.php');
+};

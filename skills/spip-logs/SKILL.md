@@ -20,16 +20,15 @@ plugins live in `plugins-dist/spip/`. A plugin targets 5.0 if its `paquet.xml` `
 its `composer.json` requires `spip/framework`.
 
 - Code for 5.0 only: `spip_log($msg, 'acme.' . _LOG_ERREUR)` → `Spip::logger('acme')->error($msg)` (file
-  `tmp/log/acme.log`). `spip_log()` is deprecated in 5.0. Inside a class, inject the logger instead.
+  `tmp/log/acme.log`). `spip_log()` is deprecated in 5.0. `Spip` is a global alias of `Spip\Framework\Spip`: no
+  `use` needed. Inside a class, inject the logger instead.
 - `spip_logger()` is deprecated in 5.0 **and** absent in 4.4: never use it.
-- Levels: `_LOG_HS` → `emergency()`, `_LOG_ALERTE_ROUGE` → `alert()`, `_LOG_CRITIQUE` → `critical()`,
-  `_LOG_ERREUR` → `error()`, `_LOG_AVERTISSEMENT` → `warning()`, `_LOG_INFO_IMPORTANTE` → `notice()`,
-  `_LOG_INFO` → `info()`, `_LOG_DEBUG` → `debug()`.
-- `_LOG_FILTRE_GRAVITE`, `_MAX_LOG`, `$nombre_de_logs`, `$taille_des_logs` have **no effect** in 5.0: set
-  `spip.logger.max_level` (default `notice`), `.max_log`, `.max_files`, `.max_size` in the site's `config/custom.php`.
+- Gravités become PSR-3 methods (`_LOG_INFO_IMPORTANTE` → `notice()`, …).
+- The gravité threshold and rotation settings of this skill (`_LOG_FILTRE_GRAVITE`, …) have **no effect** in 5.0.
 - Plugin for 4.4 **and** 5.0 (`compatibilite` from 4.x to `5.*`): keep `spip_log()`, the only API in both.
 
-Details: `spip-migration-5` (`references/catalogue.md`); injection: `spip5-plugins` (`references/services.md`).
+Details: `spip-migration-5` (`references/catalogue.md`: level table, `spip.logger.*` parameters); injection:
+`spip5-plugins` (`references/services.md`).
 
 ---
 

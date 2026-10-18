@@ -47,6 +47,22 @@
         "Aucun Spip::, spip_logger() ni autre API 5.0 dans le code proposé",
         "Le log va dans un fichier propre au plugin (tmp/log/acme.log)"
       ]
+    },
+    {
+      "id": 4,
+      "skill": "spip-logs",
+      "variant": "5.0 (site, bin/spip)",
+      "prompt": "Sur mon site, le filtre meteo_temperature (squelettes/mes_fonctions.php) renvoie une chaîne vide sans laisser de trace quand l'API météo est injoignable. Ajoute un log d'erreur, dans un fichier de log dédié. Donne le code modifié.",
+      "expected_output": "Le site a un bin/spip : c'est un site SPIP 5.0, et du code de site (squelettes/) ne tourne que sur ce site. Spip::logger('meteo')->error('…') (fichier tmp/log/meteo.log), et non spip_log() ni spip_logger(). La réponse cite bin/spip comme marqueur.",
+      "files": [
+        "evals/spip5-encadres/fixtures/logs-site-binspip/site/"
+      ],
+      "expectations": [
+        "Déduit SPIP 5.0 de la présence de bin/spip et cite ce marqueur",
+        "Utilise Spip::logger('<canal>')->error(...) pour l'erreur",
+        "N'utilise ni spip_log() ni spip_logger(), même accompagnés d'un avertissement",
+        "Le log va dans un fichier dédié (canal propre → tmp/log/<canal>.log)"
+      ]
     }
   ]
 }
