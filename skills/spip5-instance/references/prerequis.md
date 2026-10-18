@@ -12,7 +12,9 @@ Verified 2026-10-18, `spip/spip` `c8e329575`, `spip/ecrire` `26bfe470`.
 | Framework | Symfony 8.1 components, resolved by Composer | `composer show` |
 | Distribution | Composer only: `spip_loader.api` lists 4.4.28 (latest 4.4), 4.3.9, 4.2.17 as archives and 5.0 only as `dev` | `https://www.spip.net/spip_loader.api` |
 
-Check PHP for the web SAPI (PHP-FPM pool or Apache module), not only `php -v` in the shell.
+Check PHP for the web SAPI (PHP-FPM pool or Apache module), not only `php -v` in the shell. Not covered (not
+verified): distribution package names, and extensions beyond those Composer requires (e.g. `gd` for image filters,
+`curl`, `intl`); check them with the site's needs.
 
 ## Install
 

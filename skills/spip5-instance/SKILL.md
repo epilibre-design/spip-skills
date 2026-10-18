@@ -17,7 +17,7 @@ Verified on SPIP **5.0.0-beta** (`spip/spip` `c8e329575`, `spip/ecrire` `26bfe47
 
 ## Topology first
 
-Before any advice, establish: SPIP version (`bin/spip spip:info`, or `ecrire/inc_version.php` on 4.x), PHP version
+Before any advice, establish: SPIP version (`bin/spip spip:info`; on 4.x `grep spip_version_branche ecrire/inc_version.php`), PHP version
 of the **web** SAPI, web server (Apache with `.htaccess` applied, or nginx), database (MySQL/MariaDB or SQLite),
 document root, and whether the site is a farm. A 5.0 farm or a separate `public/` entry point is experimental
 upstream: say so and stop (`spip-mutualisation-maintenance` covers 4.x farms).

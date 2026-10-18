@@ -40,7 +40,9 @@ tar -czf /srv/backup/site-4.4.tgz --exclude='site/tmp/cache' -C /var/www site
 Test that the backup reads back before going on (`pragma integrity_check`, `tail -1 site.sql` → `-- Dump completed`,
 `tar -tzf … | head`). `--defaults-extra-file` must be the first option. Without `--no-tablespaces`, MySQL 8 prints
 "Access denied; you need (at least one of) the PROCESS privilege(s)" for a user limited to its database. Run with
-MySQL 8.0 `mysqldump`; on MariaDB the client is also called `mariadb-dump`.
+the MySQL 8.0 clients (`mysqldump`, `mysql`). MariaDB ships the same commands, also named `mariadb-dump` and
+`mariadb`; those were not run here. The empty database for a rehearsal is created by whoever administers the server
+(`CREATE DATABASE`, rights for the SPIP user).
 
 ## Upgrade, side by side
 
@@ -60,11 +62,22 @@ cp -a /var/www/site/squelettes squelettes           # if it exists
 bin/spip spip:cache:warmup --clear
 ```
 
-Do not copy `tmp/`, `local/` (rebuilt) or `ecran_securite.php`. With MySQL/MariaDB both directories use the **same
-database**: the first 5.0 hit on `ecrire/` changes it (see rollback).
+Do not copy `tmp/`, `local/` (rebuilt) or `ecran_securite.php`.
 
-Then point the vhost (or a staging vhost) at `/var/www/site5` and, as webmaster, open `ecrire/` and
-`ecrire/?exec=admin_plugin`:
+**MySQL/MariaDB: the copied `connect.php` points to the production database**, and the first 5.0 hit on `ecrire/`
+changes it (plugin schemas, metas rewritten as JSON). For the rehearsal, load the dump into a separate, empty database
+and point the rehearsal's `config/connect.php` (`spip_connect_db(…)`, 5th argument = database name) to it before any
+hit:
+
+```bash
+mysql --defaults-extra-file=/srv/backup/db.cnf <rehearsal_database> < /srv/backup/site.sql
+```
+
+On the production switch, the shared database is expected; the backup taken just before is the rollback. With
+SQLite, the copied `config/bases/` is already a separate copy.
+
+Then point a staging vhost (rehearsal) or the production vhost (switch) at `/var/www/site5` and, as webmaster, open
+`ecrire/` and `ecrire/?exec=admin_plugin`:
 
 - plugins stopping at 4 are refused: « Impossible d'activer le plugin ../plugins/<name> », « Nécessite SPIP en
   version ≤ 4.* minimum »; plugins declaring `5.*` stay active and appear in `var/state/plugins.php`;

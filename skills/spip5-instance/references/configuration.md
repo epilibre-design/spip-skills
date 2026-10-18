@@ -8,8 +8,21 @@ Verified 2026-10-18, `spip/spip` `c8e329575`, `spip/ecrire` `26bfe470`.
 |---|---|---|
 | Environment (`APP_ENV`), `SPIP_ETC_DIR`, `SPIP_CACHE_DIR` | `.env.local` at the project root (not versioned), or a real environment variable | `bin/spip spip:cache:warmup --clear` |
 | Container parameters `spip.*` (logs, directories, Guard, routes…) | `config/custom.php` | warmup |
-| Legacy constants (`define()`) other than `_DIR_*` / `_NOM_*` | `config/mes_options.php` | next hit, no warmup |
+| Legacy constants (`define()`) other than `_DIR_*` / `_NOM_*` | `config/mes_options.php` (see below) | next hit, no warmup |
 | Never | `ecrire/mes_options.php` (ignored), `config/spip/*.php` (core defaults, replaced on update), `.env.dist` (versioned by `spip/spip`, replaced on update), `_DIR_*` / `_NOM_*` in `mes_options.php` (HTTP 500 « Constant _DIR_TMP already defined ») | — |
+
+## `config/mes_options.php`
+
+```php
+<?php
+define('_MA_CONSTANTE', 'valeur');
+```
+
+`bin/spip spip:info` shows the file actually loaded (`_FILE_OPTIONS` = its absolute path; empty when there is none).
+To check a constant from a page, a test squelette `squelettes/test_constante.html` containing
+`[(#EVAL{defined('_MA_CONSTANTE') ? _MA_CONSTANTE : 'non definie'})]`, opened as `spip.php?page=test_constante`
+(delete it afterwards). If `squelettes/` did not exist, it is found only after `bin/spip spip:cache:clear --all`
+(the path cache still lists the old directories: the page renders as the default 404). Measured: `valeur` with the file in `config/`, `non definie` with the same file in `ecrire/`.
 
 ## `.env*` and `APP_ENV`
 
@@ -99,6 +112,8 @@ echo 'SPIP_CACHE_DIR=/var/www/site-tmp/cache/' >> .env.local
 bin/spip spip:cache:warmup --clear
 curl -s -o /dev/null -w '%{http_code}\n' https://site.example/          # 200
 curl -s -o /dev/null -w '%{http_code}\n' https://site.example/ecrire/   # 302
+bin/spip spip:info | grep _DIR_TMP                                       # ../site-tmp/
+bin/spip spip:config:dump | grep dirs.cache                              # '/var/www/site-tmp/cache/'
 ```
 
 Verified: project `tmp/` removed and not recreated; cache, logs, sessions and `cron.lock` written in `site-tmp/`;
