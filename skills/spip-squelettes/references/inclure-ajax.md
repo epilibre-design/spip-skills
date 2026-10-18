@@ -56,6 +56,22 @@ SPIP searches for the template in this order:
 
 This means you can override any default fond by creating a same-named file in `squelettes/`.
 
+### Gotcha: `fond` is relative to the path roots, not to the including file
+
+`fond` is looked up from each path root above, never from the directory of the squelette that includes it. A
+fragment stored in `prive/squelettes/inclure/` (plugin or `squelettes/`) needs its full path, in the private space as
+in public pages:
+
+```html
+<!-- WRONG — looks for inclure/liste_items.html at the path roots: "Aucun squelette inclure/liste_items" -->
+<INCLURE{fond=inclure/liste_items,env}>
+
+<!-- CORRECT -->
+<INCLURE{fond=prive/squelettes/inclure/liste_items,env}>
+```
+
+`fond=inclure/nom` works in the private space when the file is in `inclure/` at a path root.
+
 ### Gotcha: env is not inherited automatically
 
 Without `env` or explicit arguments, the included template starts with an empty environment. Always be explicit about what the fragment needs.

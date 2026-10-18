@@ -147,6 +147,10 @@ In squelettes and private-space HTML, use the SPIP balises instead of calling PH
 
 `#URL_ACTION_AUTEUR{action, arg, redirect}` wraps `generer_action_auteur()`.
 
+**Empty `arg`: write `''`, never an empty slot.** `#URL_ACTION_AUTEUR{mon_action,,#SELF}` (or `{mon_action,,}`)
+kills the page compilation: HTTP 500, `TypeError: Cannot assign null to property …Champ::$code` in
+`balise_URL_ACTION_AUTEUR_dist()`. `{mon_action,'',#SELF}` or `{mon_action,#ENV{vide},#SELF}` produce `arg=` and work.
+
 ---
 
 ## Checking authorisation inside an action
