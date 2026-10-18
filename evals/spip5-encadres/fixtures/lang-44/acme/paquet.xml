@@ -1,0 +1,13 @@
+<paquet
+	prefix="acme"
+	categorie="communication"
+	version="1.0.0"
+	etat="stable"
+	compatibilite="[4.2.0;4.4.*]"
+>
+	<nom>Acme</nom>
+	<auteur>Acme</auteur>
+	<licence>GPL 3</licence>
+
+	<traduire module="acme" reference="fr" />
+</paquet>

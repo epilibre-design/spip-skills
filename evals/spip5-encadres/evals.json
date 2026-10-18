@@ -159,6 +159,53 @@
         "N'utilise ni {groupby}, ni {collate}, ni autre syntaxe propre à 5.0",
         "Chaque rubrique n'apparaît qu'une fois, avec son titre et un lien"
       ]
+    },
+    {
+      "id": 11,
+      "skill": "spip-lang",
+      "variant": "5.0 (site, plugins-dist/spip/)",
+      "prompt": "Dans acme_notifier_webmestre(), le sujet de l'email doit être bilingue : le sujet dans la langue du visiteur, puis « / », puis le même sujet en anglais. Le corps ne change pas. Modifie le code.",
+      "expected_output": "Les plugins du site sont dans plugins-dist/spip/ (et mots déclare [5.0.0-dev;5.*]) : SPIP 5.0. Sujet anglais par lang_select('en') … lang_select(), ou par l'option _T($k, [], ['lang' => 'en']) ; pas ['spip_lang' => 'en'] dans $args (déprécié en 5.0). Le corps existant appelle _T('acme:email_proposition_corps', ['titre' => $titre], 'titre_article') : une chaîne en 3e argument : en 5.0 le 3e argument est typé array, l'appel lève une TypeError. Le fichier livré le corrige (['class' => 'titre_article'] ou argument retiré), même si le corps ne devait pas changer : sans cela la notification plante.",
+      "files": [
+        "evals/spip5-encadres/fixtures/lang-site-pluginsdist/site/"
+      ],
+      "expectations": [
+        "Déduit SPIP 5.0 de plugins-dist/spip/ (ou du compatibilite de mots/paquet.xml) et cite ce marqueur",
+        "Sujet anglais par lang_select('en') … lang_select() ou par l'option ['lang' => 'en'] ; pas de 'spip_lang' dans $args",
+        "Le fichier livré ne passe plus de chaîne en 3e argument de _T() : ['class' => 'titre_article'] ou argument retiré (le signaler sans corriger échoue : TypeError en 5.0)",
+        "Pour un visiteur francophone, le sujet vaut « Article proposé à la publication / Article submitted for publication » (clés fr et en fournies par le projet) ; le corps reste dans la langue du visiteur"
+      ]
+    },
+    {
+      "id": 12,
+      "skill": "spip-lang",
+      "variant": "dual",
+      "prompt": "Dans acme_notifier_webmestre(), le sujet de l'email doit être bilingue : le sujet dans la langue du visiteur, puis « / », puis le même sujet en anglais. Le corps ne change pas. Modifie le code.",
+      "expected_output": "compatibilite=\"[4.4.0;5.*]\" : le code doit tourner en 4.4 et en 5.0. L'option ['lang' => 'en'] est ignorée par _T() en 4.4 (seul $args['spip_lang'] y est lu) : lang_select('en') … lang_select(), ou ['spip_lang' => 'en'] (déprécié en 5.0 mais fonctionnel). Le corps existant appelle _T('acme:email_proposition_corps', ['titre' => $titre], 'titre_article') : une chaîne en 3e argument : TypeError en 5.0 → ['class' => 'titre_article'] (valable en 4.4) ou argument retiré, dans le fichier livré.",
+      "files": [
+        "evals/spip5-encadres/fixtures/lang-dual/acme/"
+      ],
+      "expectations": [
+        "Déduit du paquet.xml que le plugin vise 4.4 et 5.0, et cite ce marqueur",
+        "Sujet anglais d'une façon qui marche dans les deux versions : lang_select('en') … lang_select(), ou ['spip_lang' => 'en'] ; pas l'option ['lang' => 'en'] seule (ignorée en 4.4)",
+        "Le fichier livré ne passe plus de chaîne en 3e argument de _T() : ['class' => 'titre_article'] ou argument retiré (le signaler sans corriger échoue : TypeError en 5.0)",
+        "Pour un visiteur francophone, le sujet vaut « Article proposé à la publication / Article submitted for publication » (clés fr et en fournies par le projet) ; le corps reste dans la langue du visiteur"
+      ]
+    },
+    {
+      "id": 13,
+      "skill": "spip-lang",
+      "variant": "4.4",
+      "prompt": "Dans acme_notifier_webmestre(), le sujet de l'email doit être bilingue : le sujet dans la langue du visiteur, puis « / », puis le même sujet en anglais. Le corps ne change pas. Modifie le code.",
+      "expected_output": "Plugin 4.x (compatibilite=\"[4.2.0;4.4.*]\") : lang_select('en') … lang_select(), ou ['spip_lang' => 'en'] dans $args. Pas l'option ['lang' => 'en'] seule (ignorée en 4.4). Le 3e argument chaîne fonctionne en 4.4 (déprécié depuis 3.0) : le laisser ou le passer à ['class' => …] sont acceptés.",
+      "files": [
+        "evals/spip5-encadres/fixtures/lang-44/acme/"
+      ],
+      "expectations": [
+        "Sujet anglais par lang_select('en') … lang_select() ou ['spip_lang' => 'en'] ; pas l'option ['lang' => 'en'] seule",
+        "Aucune API propre à 5.0 dans le code",
+        "Pour un visiteur francophone, le sujet vaut « Article proposé à la publication / Article submitted for publication » (clés fr et en fournies par le projet) ; le corps reste dans la langue du visiteur"
+      ]
     }
   ]
 }

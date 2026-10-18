@@ -1179,3 +1179,471 @@ Comme dans toutes les boucles SPIP publiques, seuls les articles et rubriques **
   - `[(#LOGO_MOT|right)]` par `[(#LOGO_MOT{right})]`.
 
   Les deux dernières formes fonctionnent déjà en 4.4. On peut donc les changer dès maintenant si on le souhaite.
+
+---
+
+# spip-lang — premier passage, projets sans fichiers de langue (remplacé)
+
+---
+
+## spip-lang, cas 11 — site avec `plugins-dist/spip/`
+
+#### Version de SPIP
+
+Le site tourne sous **SPIP 5.0**. Je me suis fié à ce repère : les plugins sont rangés dans `plugins-dist/spip/` (par exemple `plugins-dist/spip/mots/paquet.xml`, en `version="5.0.0-dev"` avec `compatibilite="[5.0.0-dev;5.*]"`). Ça a deux effets sur le code :
+
+1. **Pour obtenir une chaîne en anglais dans un seul appel**, SPIP 5.0 utilise l'option `lang` dans le 3e argument de `_T()` : `_T($cle, [], ['lang' => 'en'])`. L'ancienne forme `['spip_lang' => 'en']` dans les arguments est dépréciée. Le site n'a pas besoin de rester compatible avec la 4.4, l'option `lang` convient donc. (En 4.4, cette option serait ignorée sans erreur. Il faudrait alors passer par `lang_select('en')` … `lang_select()`.)
+2. **Le corps contenait un bug bloquant.** `_T('acme:email_proposition_corps', ['titre' => $titre], 'titre_article')` passe une chaîne en 3e argument. En SPIP 5.0, ce paramètre est typé `array`, et cet appel déclenche une `TypeError` : aucun email ne part. Le texte du corps ne change pas, mais il faut corriger l'appel sous la forme `['class' => 'titre_article']`. Cette forme est déjà valide en 4.4.
+
+#### Code modifié (`squelettes/mes_fonctions.php`)
+
+```php
+<?php
+
+if (!defined('_ECRIRE_INC_VERSION')) {
+	return;
+}
+
+/**
+ * Prévient le webmestre qu'un article vient d'être proposé à la publication.
+ *
+ * Sujet bilingue : langue du visiteur, puis « / », puis anglais.
+ */
+function acme_notifier_webmestre(int $id_article): void {
+	$titre = sql_getfetsel('titre', 'spip_articles', 'id_article=' . $id_article);
+
+	// Sujet dans la langue courante (celle du visiteur)
+	$sujet_local = _T('acme:email_proposition_sujet');
+	// Même sujet forcé en anglais (option `lang`, SPIP 5.0)
+	$sujet_en = _T('acme:email_proposition_sujet', [], ['lang' => 'en']);
+	$sujet = $sujet_local . ' / ' . $sujet_en;
+
+	// Corps inchangé ; 3e argument passé en tableau (une chaîne lève une TypeError en SPIP 5.0)
+	$corps = _T('acme:email_proposition_corps', ['titre' => $titre], ['class' => 'titre_article']);
+
+	$envoyer_mail = charger_fonction('envoyer_mail', 'inc');
+	$envoyer_mail($GLOBALS['meta']['email_webmaster'], $sujet, $corps);
+}
+```
+
+#### Remarques
+
+- **Il faut le fichier de langue anglais.** La clé `email_proposition_sujet` doit exister dans `lang/acme_en.php`. Sinon `_T()` ne signale aucune erreur : il prend la langue du site, puis `fr`. Le sujet afficherait alors deux fois le même texte français. Exemple :
+
+  ```php
+  <?php
+  // This is a SPIP language file  --  Ceci est un fichier langue de SPIP
+  return [
+    // E
+    'email_proposition_sujet' => 'An article has been submitted for publication',
+  ];
+  ```
+
+- **Si le visiteur navigue déjà en anglais**, le sujet affichera « X / X ». Pour l'éviter, testez `$GLOBALS['spip_lang'] === 'en'` et n'envoyez alors que la version anglaise. Je n'ai pas fait ce changement parce que vous ne l'avez pas demandé.
+
+---
+
+## spip-lang, cas 12 — plugin 4.4 + 5.0
+
+#### Version ciblée
+
+Le `paquet.xml` déclare `compatibilite="[4.4.0;5.*]"` : le plugin doit fonctionner **à la fois sous SPIP 4.4 et sous SPIP 5.0**. Ça a deux conséquences directes :
+
+1. **Pour obtenir le sujet en anglais, on ne peut pas utiliser l'option `lang` de `_T()`** (`_T($k, [], ['lang' => 'en'])`). Elle n'existe qu'en 5.0 : SPIP 4.4 l'ignore sans rien signaler et renverrait le sujet dans la langue du visiteur. L'ancienne forme `['spip_lang' => 'en']` est dépréciée en 5.0. La solution qui marche sur les deux versions est `lang_select('en')` … `lang_select()`.
+2. **Le 3ᵉ argument de `_T()` sur la ligne du corps doit être corrigé**, même si vous ne m'avez pas demandé de toucher au corps. En 5.0, cet argument est typé `array`. La forme chaîne actuelle (`'titre_article'`) y déclenche une `TypeError`, donc la fonction planterait avant même l'envoi du mail. La forme `['class' => 'titre_article']` est déjà valide en 4.4. Le texte du corps reste le même.
+
+#### Code modifié — `inc/acme_notifications.php`
+
+```php
+<?php
+
+if (!defined('_ECRIRE_INC_VERSION')) {
+	return;
+}
+
+/**
+ * Prévient le webmestre qu'un article vient d'être proposé à la publication.
+ *
+ * Sujet bilingue : langue du visiteur, puis « / », puis anglais.
+ */
+function acme_notifier_webmestre(int $id_article): void {
+	$titre = sql_getfetsel('titre', 'spip_articles', 'id_article=' . $id_article);
+
+	// Sujet dans la langue courante (celle du visiteur)
+	$sujet = _T('acme:email_proposition_sujet');
+
+	// Même sujet en anglais : lang_select() fonctionne en SPIP 4.4 et 5.0
+	lang_select('en');
+	$sujet_en = _T('acme:email_proposition_sujet');
+	lang_select(); // restaure la langue précédente (ne pas réutiliser la valeur de retour)
+
+	$sujet = $sujet . ' / ' . $sujet_en;
+
+	// Corps inchangé ; 3e argument passé en tableau (obligatoire en SPIP 5.0, valide en 4.4)
+	$corps = _T('acme:email_proposition_corps', ['titre' => $titre], ['class' => 'titre_article']);
+
+	$envoyer_mail = charger_fonction('envoyer_mail', 'inc');
+	$envoyer_mail($GLOBALS['meta']['email_webmaster'], $sujet, $corps);
+}
+```
+
+#### Points d'attention
+
+- **Où placer `lang_select()`** : `lang_select('en')` est appelé seulement autour du sujet anglais. Le corps est calculé après le retour à la langue du visiteur, donc il n'est pas affecté. Pour revenir à la langue précédente, j'appelle `lang_select()` sans argument. Il ne faut pas réutiliser la valeur de retour de `lang_select('en')` : elle vaut `'en'`, pas l'ancienne langue.
+- **La traduction anglaise doit exister** : il faut que `lang/acme_en.php` contienne la clé `email_proposition_sujet`. Sinon, `_T()` ne signale aucune erreur : il retombe sur la langue du site puis sur `fr`. Vous auriez alors deux fois la même phrase de part et d'autre du « / ». Le dossier fourni ne contient ni `lang/` ni de `<traduire module="acme" reference="fr" />` dans `paquet.xml`. Si le module de langue `acme` n'est pas déclaré et ses fichiers absents, ajoutez-les, par exemple :
+
+  ```php
+  // lang/acme_en.php
+  <?php
+  // This is a SPIP language file  --  Ceci est un fichier langue de SPIP
+  return [
+    // E
+    'email_proposition_corps' => 'The article "@titre@" has been submitted for publication.',
+    'email_proposition_sujet' => 'Article submitted for publication',
+  ];
+  ```
+
+  Et dans `paquet.xml` :
+
+  ```xml
+  <traduire module="acme" reference="fr" />
+  ```
+
+- **Visiteur déjà en anglais** : le sujet donnera « Article submitted for publication / Article submitted for publication ». Si vous voulez éviter ce doublon, n'ajoutez la partie anglaise que lorsqu'elle diffère :
+
+  ```php
+  $sujet = ($sujet_en !== $sujet) ? $sujet . ' / ' . $sujet_en : $sujet;
+  ```
+
+---
+
+## spip-lang, cas 13 — plugin 4.x
+
+**Version ciblée :** le `paquet.xml` du plugin déclare `compatibilite="[4.2.0;4.4.*]"`. C'est donc du SPIP 4.x, et c'est ce repère qui guide le choix ci-dessous.
+
+Pour obtenir le sujet en anglais, il faut changer de langue le temps d'un appel à `_T()` avec `lang_select('en')`, puis revenir à la langue précédente avec `lang_select()` (sans argument). En 4.x, `_T()` ne fournit pas d'option fiable pour forcer la langue d'un seul appel. L'option `lang` de SPIP 5 est **ignorée** en 4.4. `lang_select()` fonctionne en 4.x et en 5.0.
+
+##### Code modifié : `inc/acme_notifications.php`
+
+```php
+<?php
+
+if (!defined('_ECRIRE_INC_VERSION')) {
+	return;
+}
+
+/**
+ * Prévient le webmestre qu'un article vient d'être proposé à la publication.
+ *
+ * Le sujet est bilingue : langue du visiteur, puis « / », puis anglais.
+ */
+function acme_notifier_webmestre(int $id_article): void {
+	$titre = sql_getfetsel('titre', 'spip_articles', 'id_article=' . $id_article);
+
+	// Sujet dans la langue courante (celle du visiteur)
+	$sujet = _T('acme:email_proposition_sujet');
+
+	// Même sujet en anglais : on bascule temporairement la langue
+	lang_select('en');
+	$sujet_en = _T('acme:email_proposition_sujet');
+	lang_select(); // restaure la langue précédente (ne pas réutiliser la valeur de retour de lang_select('en'))
+
+	$sujet = $sujet . ' / ' . $sujet_en;
+
+	$corps = _T('acme:email_proposition_corps', ['titre' => $titre], 'titre_article');
+
+	$envoyer_mail = charger_fonction('envoyer_mail', 'inc');
+	$envoyer_mail($GLOBALS['meta']['email_webmaster'], $sujet, $corps);
+}
+```
+
+Le corps n'a pas changé : il est toujours calculé dans la langue du visiteur, car l'appel a lieu après le retour à la langue d'origine.
+
+##### Points à vérifier
+
+- **La traduction anglaise doit exister.** Ajoutez la clé `email_proposition_sujet` dans `lang/acme_en.php`. Je ne vois pas de dossier `lang/` dans le plugin fourni. Sans cette traduction, `_T()` ne signale aucune erreur : il reprend la langue du site puis le `fr`. Le sujet afficherait alors deux fois le texte français, par exemple `Article proposé / Article proposé`. Exemple :
+  ```php
+  <?php
+  // This is a SPIP language file  --  Ceci est un fichier langue de SPIP
+  return [
+    // E
+    'email_proposition_sujet' => 'Article submitted for publication',
+  ];
+  ```
+  Le module doit aussi être déclaré dans `paquet.xml` avec `<traduire module="acme" reference="fr" />`.
+- **Visiteur anglophone :** si le visiteur navigue déjà en anglais, le sujet contiendra deux fois le texte anglais (`X / X`). Si vous préférez un sujet simple dans ce cas, ajoutez un test : `if ($sujet_en !== $sujet) { $sujet .= ' / ' . $sujet_en; }`.
+- **Pour un futur passage à SPIP 5.0 (pas nécessaire ici) :** la ligne du corps transmet un 3e argument chaîne à `_T()` (`'titre_article'`). En 5.0, ce code provoque une `TypeError`, et il faudra écrire `['class' => 'titre_article']`, forme déjà acceptée en 4.4. Comme vous avez demandé de ne pas toucher au corps et que le plugin vise 4.2–4.4, je l'ai laissée telle quelle.
+
+---
+
+# spip-lang — avec les fichiers de langue fr/en dans les projets
+
+---
+
+## spip-lang, cas 11 — tirage 1
+
+#### Version de SPIP
+
+Le site tourne sous **SPIP 5.0**. Je l'ai vu à deux indices : les plugins sont rangés dans `plugins-dist/spip/` (par exemple `plugins-dist/spip/mots/`), et `plugins-dist/spip/mots/paquet.xml` indique `version="5.0.0-dev"` et `compatibilite="[5.0.0-dev;5.*]"`.
+
+Deux conséquences pour `_T()` en 5.0 :
+
+- **Pour obtenir une chaîne dans une autre langue**, on écrit `_T($cle, [], ['lang' => 'en'])`. L'ancienne forme `['spip_lang' => 'en']` passée dans les arguments est dépréciée. L'option `lang` est ignorée en 4.4, mais ce site est en 5.0, donc on peut s'en servir.
+- **Le 3e argument de `_T()` doit être un tableau.** La ligne actuelle du corps, `_T('acme:email_proposition_corps', ['titre' => $titre], 'titre_article')`, passe une chaîne et provoque une `TypeError` en 5.0. La fonction plante donc avant même d'envoyer le mail. Je corrige cette ligne aussi, en écrivant la même classe sous la forme `['class' => 'titre_article']`. Le texte du corps ne change pas.
+
+#### Code modifié : `squelettes/mes_fonctions.php`
+
+```php
+<?php
+
+if (!defined('_ECRIRE_INC_VERSION')) {
+	return;
+}
+
+/**
+ * Prévient le webmestre qu'un article vient d'être proposé à la publication.
+ *
+ * Sujet bilingue : langue du visiteur, puis « / », puis anglais.
+ */
+function acme_notifier_webmestre(int $id_article): void {
+	$titre = sql_getfetsel('titre', 'spip_articles', 'id_article=' . $id_article);
+
+	$sujet_visiteur = _T('acme:email_proposition_sujet');
+	$sujet_en = _T('acme:email_proposition_sujet', [], ['lang' => 'en']);
+	$sujet = $sujet_visiteur . ' / ' . $sujet_en;
+
+	$corps = _T('acme:email_proposition_corps', ['titre' => $titre], ['class' => 'titre_article']);
+
+	$envoyer_mail = charger_fonction('envoyer_mail', 'inc');
+	$envoyer_mail($GLOBALS['meta']['email_webmaster'], $sujet, $corps);
+}
+```
+
+#### Détails
+
+- Le premier `_T()`, appelé sans option, renvoie le texte dans la langue courante, c'est-à-dire celle du visiteur. Le second force l'anglais avec l'option `lang` et ne touche pas à la langue courante. Il n'y a donc rien à rétablir après, alors qu'avec `lang_select()` il faudrait appeler `lang_select()` une seconde fois pour revenir à la langue d'origine.
+- Les fichiers de langue ne changent pas : la clé `email_proposition_sujet` existe déjà dans `squelettes/lang/acme_fr.php` et dans `squelettes/lang/acme_en.php`.
+- Résultat pour un visiteur francophone : `Article proposé à la publication / Article submitted for publication`.
+- Pour un visiteur anglophone, le sujet apparaît deux fois en anglais (`Article submitted for publication / Article submitted for publication`). C'est bien ce que demande la consigne. Si vous préférez dans ce cas n'afficher qu'une seule fois le sujet, ajoutez `if ($sujet_visiteur !== $sujet_en)` avant la concaténation.
+
+---
+
+## spip-lang, cas 11 — tirage 2
+
+J'ai modifié `squelettes/mes_fonctions.php`. Le sujet est maintenant au format « sujet dans la langue du visiteur / sujet en anglais ». Le texte du corps reste le même, mais j'ai dû corriger son appel `_T()`, qui planterait sur ce site.
+
+**Version de SPIP.** Le site tourne en SPIP 5.0 : les plugins sont rangés dans `plugins-dist/spip/`, et `plugins-dist/spip/mots/paquet.xml` déclare `version="5.0.0-dev"` et `compatibilite="[5.0.0-dev;5.*]"`. Ce point compte pour le choix de l'appel `_T()`.
+
+```php
+<?php
+
+if (!defined('_ECRIRE_INC_VERSION')) {
+	return;
+}
+
+/**
+ * Prévient le webmestre qu'un article vient d'être proposé à la publication.
+ */
+function acme_notifier_webmestre(int $id_article): void {
+	$titre = sql_getfetsel('titre', 'spip_articles', 'id_article=' . $id_article);
+	// Sujet bilingue : langue du visiteur, puis la même chaîne en anglais
+	$sujet = _T('acme:email_proposition_sujet')
+		. ' / '
+		. _T('acme:email_proposition_sujet', [], ['lang' => 'en']);
+	$corps = _T('acme:email_proposition_corps', ['titre' => $titre], ['class' => 'titre_article']);
+
+	$envoyer_mail = charger_fonction('envoyer_mail', 'inc');
+	$envoyer_mail($GLOBALS['meta']['email_webmaster'], $sujet, $corps);
+}
+```
+
+Avec un visiteur francophone, le sujet devient :
+`Article proposé à la publication / Article submitted for publication`
+
+Les deux chaînes existent déjà dans `squelettes/lang/acme_fr.php` et `squelettes/lang/acme_en.php`. Aucun fichier de langue n'est à modifier.
+
+**Ce qui a changé :**
+
+1. **Sujet en anglais :** j'utilise l'option `['lang' => 'en']`, en 3e argument de `_T()`. C'est la bonne écriture en SPIP 5.0. L'ancienne forme `_T($cle, ['spip_lang' => 'en'])` y est dépréciée. Le premier `_T()` n'a pas d'option, il reste donc dans la langue du visiteur.
+2. **Correction obligatoire sur la ligne du corps :** l'appel passait `'titre_article'` sous forme de chaîne en 3e argument. En SPIP 5.0, ce paramètre doit être un tableau, et une chaîne provoque une `TypeError`. L'envoi de l'email planterait donc. Je l'ai remplacé par `['class' => 'titre_article']`. Le texte du corps envoyé ne change pas.
+
+**Si ce code doit aussi tourner en SPIP 4.4** (par exemple un plugin partagé) : en 4.4, `_T()` ignore l'option `lang` sans rien signaler, et la seconde moitié du sujet resterait en français. Il faut alors utiliser `lang_select()`, qui fonctionne sur les deux versions :
+
+```php
+	$sujet = _T('acme:email_proposition_sujet');
+	lang_select('en');
+	$sujet .= ' / ' . _T('acme:email_proposition_sujet');
+	lang_select(); // revient à la langue du visiteur
+```
+
+Pour ce site, qui est en 5.0, la version avec `['lang' => 'en']` suffit.
+
+---
+
+## spip-lang, cas 11 — tirage 3
+
+#### Version du site
+
+Le site est en **SPIP 5.0** : les plugins-dist sont rangés dans `plugins-dist/spip/` (par ex. `plugins-dist/spip/mots/paquet.xml`, `compatibilite="[5.0.0-dev;5.*]"`). Je m'appuie sur ce repère.
+
+Conséquences en 5.0 :
+- pour obtenir une chaîne dans une autre langue en un seul appel, on écrit `_T($cle, [], ['lang' => 'en'])` (l'ancienne forme `['spip_lang' => 'en']` dans les arguments est dépréciée) ;
+- le 3e argument de `_T()` est typé `array` : la ligne actuelle du corps, `_T(..., ['titre' => $titre], 'titre_article')`, lève une `TypeError` en 5.0. Je la corrige donc aussi en `['class' => 'titre_article']`, même si on ne m'a pas demandé de toucher au corps. Le texte du corps ne change pas.
+
+#### Code modifié — `squelettes/mes_fonctions.php`
+
+```php
+<?php
+
+if (!defined('_ECRIRE_INC_VERSION')) {
+	return;
+}
+
+/**
+ * Prévient le webmestre qu'un article vient d'être proposé à la publication.
+ */
+function acme_notifier_webmestre(int $id_article): void {
+	$titre = sql_getfetsel('titre', 'spip_articles', 'id_article=' . $id_article);
+
+	// Sujet bilingue : langue du visiteur (langue courante), puis anglais
+	$sujet = _T('acme:email_proposition_sujet')
+		. ' / '
+		. _T('acme:email_proposition_sujet', [], ['lang' => 'en']);
+
+	$corps = _T('acme:email_proposition_corps', ['titre' => $titre], ['class' => 'titre_article']);
+
+	$envoyer_mail = charger_fonction('envoyer_mail', 'inc');
+	$envoyer_mail($GLOBALS['meta']['email_webmaster'], $sujet, $corps);
+}
+```
+
+#### Remarques
+
+- Aucun fichier de langue à modifier : `acme_fr.php` et `acme_en.php` contiennent déjà `email_proposition_sujet`. Un visiteur francophone produira :
+  `Article proposé à la publication / Article submitted for publication`.
+- Si le visiteur navigue déjà en anglais, le sujet sera répété (`Article submitted for publication / Article submitted for publication`). Comme vous avez demandé « le même sujet en anglais », j'ai gardé ce comportement. Si vous préférez éviter le doublon, ajoutez un test sur `$GLOBALS['spip_lang'] !== 'en'`.
+- Attention : l'option `lang` est **ignorée** par `_T()` en SPIP 4.4. Si ce code devait aussi tourner en 4.4, il faudrait encadrer l'appel anglais par `lang_select('en')` … `lang_select()` (valable dans les deux versions) :
+
+  ```php
+  $sujet_visiteur = _T('acme:email_proposition_sujet');
+  lang_select('en');
+  $sujet_en = _T('acme:email_proposition_sujet');
+  lang_select(); // restaure la langue précédente
+  $sujet = $sujet_visiteur . ' / ' . $sujet_en;
+  ```
+
+---
+
+## spip-lang, cas 12
+
+#### Version ciblée
+
+Le `paquet.xml` déclare `compatibilite="[4.4.0;5.*]"` : le plugin doit fonctionner **à la fois sur SPIP 4.4 et sur SPIP 5.0**. C'est ce qui oriente la façon d'obtenir la version anglaise :
+
+- `_T($cle, [], ['lang' => 'en'])` est la forme 5.0, mais SPIP 4.4 **ignore** l'option `lang` (on aurait le sujet deux fois dans la langue du visiteur, sans erreur).
+- `_T($cle, ['spip_lang' => 'en'])` marche en 4.4 mais est déprécié en 5.0.
+- `lang_select('en')` … `lang_select()` marche dans les deux versions : c'est ce que j'utilise.
+
+#### Code modifié — `inc/acme_notifications.php`
+
+```php
+<?php
+
+if (!defined('_ECRIRE_INC_VERSION')) {
+	return;
+}
+
+/**
+ * Prévient le webmestre qu'un article vient d'être proposé à la publication.
+ *
+ * Le sujet est bilingue : langue du visiteur, puis « / », puis anglais.
+ */
+function acme_notifier_webmestre(int $id_article): void {
+	$titre = sql_getfetsel('titre', 'spip_articles', 'id_article=' . $id_article);
+
+	// Sujet dans la langue courante (celle du visiteur)
+	$sujet_visiteur = _T('acme:email_proposition_sujet');
+
+	// Même sujet en anglais (compatible SPIP 4.4 et 5.0)
+	lang_select('en');
+	$sujet_en = _T('acme:email_proposition_sujet');
+	lang_select(); // restaure la langue précédente
+
+	$sujet = $sujet_visiteur . ' / ' . $sujet_en;
+
+	$corps = _T('acme:email_proposition_corps', ['titre' => $titre], ['class' => 'titre_article']);
+
+	$envoyer_mail = charger_fonction('envoyer_mail', 'inc');
+	$envoyer_mail($GLOBALS['meta']['email_webmaster'], $sujet, $corps);
+}
+```
+
+Avec un visiteur francophone, le sujet devient :
+`Article proposé à la publication / Article submitted for publication`
+
+#### Points à noter
+
+- **Le corps est inchangé** (même clé, même langue, mêmes arguments). Seule l'écriture du 3ᵉ argument a été corrigée : `'titre_article'` (chaîne) devient `['class' => 'titre_article']`. En SPIP 5.0, ce 3ᵉ argument est typé `array` et l'ancienne forme chaîne lève une `TypeError` ; la forme tableau est déjà valide en 4.4, le comportement est donc identique, mais la fonction ne plante plus sous SPIP 5.
+- `lang_select()` est appelé **sans argument** pour restaurer la langue : il ne faut pas stocker la valeur de retour de `lang_select('en')` (elle renvoie `'en'`, pas la langue précédente).
+- Aucun fichier de langue à modifier : la clé `email_proposition_sujet` existe déjà dans `lang/acme_fr.php` et `lang/acme_en.php`.
+- Si le visiteur est lui-même anglophone, le sujet sera `Article submitted for publication / Article submitted for publication`. Si vous préférez dans ce cas un sujet simple, il suffit de remplacer la ligne de concaténation par :
+
+  ```php
+  $sujet = ($sujet_visiteur === $sujet_en) ? $sujet_en : $sujet_visiteur . ' / ' . $sujet_en;
+  ```
+
+---
+
+## spip-lang, cas 13
+
+#### Sujet bilingue dans `acme_notifier_webmestre()`
+
+**Version ciblée :** le `paquet.xml` déclare `compatibilite="[4.2.0;4.4.*]"`. Le plugin vise donc SPIP 4.x, pas 5.0.
+
+Pour le sujet en anglais, je n'ai pas utilisé `_T('acme:email_proposition_sujet', [], ['lang' => 'en'])`. En 4.4, `_T()` ignore cette option sans rien signaler, et on obtiendrait deux fois le sujet dans la langue du visiteur. La méthode qui marche en 4.x (et aussi en 5.0) est d'encadrer l'appel par `lang_select('en')` puis `lang_select()`. Le premier appel bascule en anglais, le second rétablit la langue d'avant. Il ne faut pas garder la valeur de retour de `lang_select('en')` pour la restaurer : elle vaut `'en'`, pas l'ancienne langue.
+
+Les deux traductions existent déjà (`lang/acme_fr.php` et `lang/acme_en.php`), donc aucun fichier de langue ne change.
+
+##### `inc/acme_notifications.php`
+
+```php
+<?php
+
+if (!defined('_ECRIRE_INC_VERSION')) {
+	return;
+}
+
+/**
+ * Prévient le webmestre qu'un article vient d'être proposé à la publication.
+ *
+ * Sujet bilingue : langue du visiteur, puis « / », puis anglais.
+ */
+function acme_notifier_webmestre(int $id_article): void {
+	$titre = sql_getfetsel('titre', 'spip_articles', 'id_article=' . $id_article);
+
+	// Sujet dans la langue courante (celle du visiteur)
+	$sujet = _T('acme:email_proposition_sujet');
+
+	// Même sujet en anglais : on bascule temporairement la langue
+	lang_select('en');
+	$sujet_en = _T('acme:email_proposition_sujet');
+	lang_select(); // restaure la langue précédente (celle du visiteur)
+
+	$sujet .= ' / ' . $sujet_en;
+
+	$corps = _T('acme:email_proposition_corps', ['titre' => $titre], 'titre_article');
+
+	$envoyer_mail = charger_fonction('envoyer_mail', 'inc');
+	$envoyer_mail($GLOBALS['meta']['email_webmaster'], $sujet, $corps);
+}
+```
+
+Exemple pour un visiteur francophone :
+`Article proposé à la publication / Article submitted for publication`
+
+Si le visiteur est déjà anglophone, le sujet sera `Article submitted for publication / Article submitted for publication`. C'est ce que demande la consigne à la lettre. Si vous préférez ne pas répéter le sujet dans ce cas, il suffit d'ajouter `if ($sujet_en !== $sujet)` avant la concaténation.
+
+##### Ce que je n'ai pas changé
+
+- **Le corps de l'email** : sa ligne est identique, comme demandé.
+- **La chaîne `'titre_article'` passée en 3ᵉ argument de `_T()` pour le corps** : ça fonctionne en 4.x. En revanche, si le plugin passe un jour en SPIP 5.0, ce 3ᵉ argument doit être un tableau, sinon on obtient un `TypeError`. Il faudra alors écrire `['class' => 'titre_article']`, une forme déjà acceptée en 4.4. Comme le plugin est encore compatible 4.2, je l'ai laissée telle quelle.

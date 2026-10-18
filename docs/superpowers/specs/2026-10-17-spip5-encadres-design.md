@@ -69,7 +69,7 @@ Rules:
 |---|---|---|
 | `spip-logs` | `spip_log($m, 'x.' . _LOG_ERREUR)` → `Spip::logger('x')->error($m)` (deprecated, still works; `Spip` is a global alias); `spip_logger()` deprecated and absent in 4.4; gravités → PSR-3 methods (one example, table left in the catalogue); the 4.x threshold and rotation settings have no effect; dual compat keeps `spip_log()` | `catalogue.md` (levels table, `spip.logger.*`), `spip5-plugins` `services.md` |
 | `spip-squelettes` | fix every squelette touched, not only the added code; removed: `</INCLURE>`, `.php` inclusions, logo pseudo-filters `\|right` … `\|fichier` (new forms already in 4.4); `{fusion}` / `{collecte}` → `{groupby}` / `{collate}` (old names deprecated; new ones absent in 4.4); `POUR`, `\|foreach`, `#EMBED_DOCUMENT`, `#LARGEUR_ECRAN` → `#LAYOUT_PRIVE{…}`, `_DIR_RESTREINT_ABS` → `#PARAM{spip.routes.back_office}`; CSS bracket trap; case-sensitive language items | `squelettes.md` |
-| `spip-lang` | `_T($k, ['spip_lang' => 'en'])` → `_T($k, [], ['lang' => 'en'])`; string 3rd argument of `_T()` / `_L()` removed → `['class' => …]`; language files unchanged | `catalogue.md` |
+| `spip-lang` | string 3rd argument of `_T()` / `_L()` → `TypeError` in 5.0 → `['class' => …]` (fix it in every file touched); `_T($k, ['spip_lang' => 'en'])` deprecated → `_T($k, [], ['lang' => 'en'])`, but 4.4 ignores the `lang` option: dual compat uses `lang_select()` or keeps `spip_lang`; language files, `<traduire>`, `lang_select()` unchanged | `catalogue.md` |
 | `spip-formulaires` | `_request()` / `set_request()` → `Spip::input()` / `Spip::setInput()` in `charger/verifier/traiter`; whole-environment form `spip_sanitize_from_request($env, '*')` removed → `spip_sanitize_env_from_request()` (single-value form stays); `autosave_clean_value()` deprecated | `catalogue.md` |
 | `spip-plugins` | pipeline functions still run but the native model is listeners in `config/services.php`; `genie/` → `#[AsCronTask]`; `$GLOBALS['meta']` is a raw mirror → `lire_config()` / `Spip::config()`; `$GLOBALS['spip_pipeline']` in `options.php` ignored | `plugin-modele-5.md`, `config-metas.md`, `spip5-plugins` |
 | `spip-testing` | spip-cli is a 4.x tool; on 5.0 use `bin/spip` (`spip:cache:warmup --clear`, `config:lire`); PHP 8.4 for the 5.0 test instance; a test suite for both versions runs twice | `audit-outils.md` |
@@ -101,7 +101,7 @@ valid on both versions, per `spip-migration-5` `double-compat.md`.
 |---|---|---|---|
 | `spip-logs` | log an error in a 5.0 plugin | `spip_log(…, _LOG_ERREUR)` | `Spip::logger('x')->error()` (dual-compat variant: `spip_log()`) |
 | `spip-squelettes` | group articles by year on a 5.0 site | `{fusion}` | `{groupby}` (dual-compat variant: `{fusion}`) |
-| `spip-lang` | translate a string in English from PHP | `['spip_lang' => 'en']` | `['lang' => 'en']` as 3rd argument |
+| `spip-lang` | bilingual email subject, body left as is (its `_T()` has a string 3rd argument) | string argument left in place | fixed to `['class' => …]` (dual-compat variant: `lang_select()`, not the `lang` option) |
 | `spip-formulaires` | read a posted field in `verifier` | `_request()` | `Spip::input()` (dual-compat variant: `_request()`) |
 | `spip-plugins` | add an `affichage_final` hook on a 5.0 plugin | `_pipelines.php` only | listener + `config/services.php` (dual-compat variant: pipeline function) |
 | `spip-testing` | clear caches before integration tests on 5.0 | `spip cache:vider` | `bin/spip spip:cache:clear` |
