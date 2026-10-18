@@ -259,14 +259,14 @@
       "skill": "spip-testing",
       "variant": "5.0 (plugin, composer.json requiert spip/framework)",
       "prompt": "Ajoute un test d'intégration PHPUnit pour verifier() du formulaire inscription_lettre : une adresse email invalide doit produire une erreur sur le champ email, une adresse valide aucune erreur. Livre les fichiers.",
-      "expected_output": "composer.json requiert spip/framework (et compatibilite=\"[5.0.0-dev;5.*]\") : plugin SPIP 5.0. Le bootstrap d'intégration existant charge vendor/autoload.php puis ecrire/inc_version.php : en 5.0, fatal « Undefined constant _FILE_OPTIONS ». Le bootstrap livré appelle \\SpipLeague\\Component\\Kernel\\Kernel::boot() avant inc_version.php et pousse une Request sur Spip::service('request_stack') (sinon set_request() lève une LogicException). Le test passe l'email par set_request() (ou Spip::setInput()) : en 5.0, $_POST / $_GET ne sont pas lus par Spip::input(), une adresse valide donnerait « obligatoire ». L'installation de test ne télécharge pas SPIP 4.4 par spip-cli (outil 4.x) : SPIP 5.0 par composer create-project spip/spip … 5.0.x-dev, ou script signalé comme à remplacer.",
+      "expected_output": "composer.json requiert spip/framework (et compatibilite=\"[5.0.0-dev;5.*]\") : plugin SPIP 5.0. Le bootstrap d'intégration existant charge vendor/autoload.php puis ecrire/inc_version.php : en 5.0, fatal « Undefined constant _FILE_OPTIONS ». Le bootstrap livré appelle \\SpipLeague\\Component\\Kernel\\Kernel::boot() avant inc_version.php et pousse une Request sur Spip::service('request_stack') (sinon set_request() lève une LogicException). Le test passe l'email par Spip::setInput() : set_request() est déprécié en 5.0 (trigger_deprecation, « use Spip::setInput() »), et $_POST / $_GET ne sont pas lus par Spip::input() (une adresse valide donnerait « obligatoire »). L'installation de test ne télécharge pas SPIP 4.4 par spip-cli (outil 4.x) : SPIP 5.0 par composer create-project spip/spip … 5.0.x-dev, ou script signalé comme à remplacer.",
       "files": [
         "evals/spip5-encadres/fixtures/test-50/acme/"
       ],
       "expectations": [
         "Déduit SPIP 5.0 de composer.json (spip/framework) ou de compatibilite=\"[5.0.0-dev;5.*]\" et cite ce marqueur",
         "Le bootstrap d'intégration livré appelle Kernel::boot() après vendor/autoload.php et avant ecrire/inc_version.php, et pousse une Request sur request_stack (laisser le bootstrap existant échoue : fatal _FILE_OPTIONS)",
-        "Le test fournit l'email par set_request() ou Spip::setInput(), pas par $_POST / $_GET (invisibles pour Spip::input() en 5.0)",
+        "Le test fournit l'email par Spip::setInput(), pas par set_request() (déprécié en 5.0) ni par $_POST / $_GET (invisibles pour Spip::input() en 5.0)",
         "L'environnement de test ne reste pas un SPIP 4.4 installé par spip-cli (core:telecharger -b 4.4) : SPIP 5.0 (composer create-project … 5.0.x-dev) ou remplacement explicitement demandé",
         "Le test livré vérifie les deux cas demandés : adresse invalide → clé 'email' dans le retour de formulaires_inscription_lettre_verifier_dist(), adresse valide → pas d'erreur email"
       ]

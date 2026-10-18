@@ -124,12 +124,22 @@ Two bullets do not answer an observed failure. They prevent the callout from cau
 ## spip-testing (2026-10-18)
 
 Every callout fact was checked on the instances (see the baseline).
-- The callout's bootstrap snippet, copied as is, loads on 4.4.22 and on 5.0. On 5.0 the `set_request()` tests pass,
-  and only the deliberate `$_POST` test fails.
+- The callout's bootstrap snippet, copied as is, loads on 4.4.22 and on 5.0. On 5.0 the input tests pass, and only the
+  deliberate `$_POST` test fails.
 - `composer create-project … spip/spip <dir> 5.0.x-dev` is taken from the 5.0 `README.md` and was not executed.
 
-| Case | RED | GREEN | Notes |
-|---|---|---|---|
-| 17 — 5.0 only | FAIL 2/2 | **PASS 2/2 (5/5)** | both runs cite the markers, fix the bootstrap (`$spip5` guard, Kernel, `Request`), use `set_request()` only, and say the 4.4 install script must be replaced: run 1 explains, run 2 rewrites it with `composer create-project` and states that the database install and plugin activation stay manual. Run 2's test and bootstrap, executed on the 5.0 instance: **5 tests, 17 assertions, OK** (RED run 1, same setup: fatal `_FILE_OPTIONS`) |
-| 18 — 4.4 + 5.0 | FAIL 2/2 | **PASS 2/2 (4/4)** | cite `[4.4.0;5.*]`, guarded bootstrap valid on both, `set_request()` only; keep the 4.4 install for the 4.4 run and give the 5.0 one |
-| 19 — 4.x (no leak) | PASS | **PASS (2/2)** | cites `[4.2.0;4.4.*]` and the absence of `spip/framework`, keeps the 4.x bootstrap, no Kernel / `Spip::`, `set_request()` |
+Review: the first callout recommended `set_request()` for every target. It runs on 5.0 but triggers
+`trigger_deprecation('spip', '5.0', … use "Spip::setInput()" instead.)`, so a 5.0-only answer using it fails the
+spec's GREEN rule. The callout now gives `Spip::setInput()` (`null` clears it) for 5.0 only and keeps `set_request()`
+for 4.4 + 5.0. The case 17 grid now requires `Spip::setInput()`. `Spip::setInput()` checked on the instance: 4 tests
+pass with the callout's bootstrap.
+
+Deprecations checked by capturing `E_USER_DEPRECATED` after the bootstrap (PHPUnit hides the silenced
+`trigger_deprecation()` even with `--display-deprecations`). The first-round run 2 answer emits the `set_request()`
+deprecation; the post-review run 1 answer emits none. Both pass 5 tests, 17 assertions on the 5.0 instance.
+
+| Case | RED | GREEN, first callout | GREEN, after review | Notes |
+|---|---|---|---|---|
+| 17 — 5.0 only | FAIL 2/2 | FAIL 2/2 under the new grid (`set_request()`, deprecated) | **PASS 2/2 (5/5)** | both runs cite the markers, fix the bootstrap (`$spip5` guard, Kernel, `Request`), use `Spip::setInput()` only and explain why not `set_request()`, say the 4.4 install script must be replaced (run 1 rewrites it with `composer create-project` and stops while `config/connect.php` is missing). Run 1 executed on the instance: **5 tests, 17 assertions, OK**, no deprecation (RED run 1, same setup: fatal `_FILE_OPTIONS`) |
+| 18 — 4.4 + 5.0 | FAIL 2/2 | PASS 2/2 | **PASS (4/4)** | cites `[4.4.0;5.*]`, guarded bootstrap, keeps `set_request()` and rejects `Spip::setInput()` as 5.0-only; gives the 5.0 install for the second run |
+| 19 — 4.x (no leak) | PASS | PASS | **PASS (2/2)** | cites `[4.2.0;4.4.*]`, 4.x bootstrap kept, `set_request()`, no 5.0 code |

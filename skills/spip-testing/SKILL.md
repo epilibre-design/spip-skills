@@ -16,7 +16,7 @@ its `composer.json` requires `spip/framework`.
 
 - The integration bootstrap of this skill dies on 5.0 (`Undefined constant "_FILE_OPTIONS"`). Fix the existing
   `tests/bootstrap_integration.php`: boot the Kernel between `vendor/autoload.php` and `ecrire/inc_version.php`, then
-  push a `Request` (without it `set_request()` throws a `LogicException`):
+  push a `Request` (without it `Spip::setInput()` and `set_request()` throw a `LogicException`):
 
   ```php
   $spip5 = is_dir($spipRoot . '/vendor/spip/framework');
@@ -31,8 +31,9 @@ its `composer.json` requires `spip/framework`.
 
   Keep the `$spip5` guard for a plugin tested on 4.4 **and** 5.0. Never guard with `class_exists(Kernel::class)`:
   4.4 has that class, with a private `boot()`.
-- Form inputs: in 5.0 `_request()` / `Spip::input()` never see `$_POST` / `$_GET` set by a test. Use
-  `set_request('email', $v)`, valid in both versions.
+- Form inputs: in 5.0 `_request()` / `Spip::input()` never see `$_POST` / `$_GET` set by a test. Plugin for 5.0
+  only: `Spip::setInput('email', $v)` (`null` clears it); `set_request()` is deprecated in 5.0. Plugin for 4.4
+  **and** 5.0: `set_request('email', $v)`, the only API in both.
 - The test SPIP: spip-cli (`core:telecharger`, `plugins:activer`, …) is a 4.x tool, and 5.0's `bin/spip` has no
   install or plugin-activation command. A 5.0 test site comes from `composer create-project
   --repository=https://get.spip.net/composer spip/spip <dir> 5.0.x-dev` (PHP 8.4); say that the 4.4 install script
