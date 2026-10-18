@@ -25,6 +25,7 @@ Skill names are prefixed by scope: `spip-*` for SPIP core (`spip5-*` for SPIP 5.
 - `spip-testing`: PHPUnit testing of plugins and squelettes (setup, unit tests with mocks, integration tests against a real SPIP)
 - `spip-migration-5`: migrating SPIP 4.x plugins and squelettes to SPIP 5.0 (listeners, `#[AsCronTask]`, façade `Spip::`, config/metas, 4.4+5.0 dual compatibility, `bin/spip`) — requires `spip5-plugins`
 - `spip5-plugins`: writing SPIP 5.0 plugins (`config/services.php`, `#[AsPipelineListener]` and event classes, `#[AsCronTask]`, injected logger/config, Guard rules, private pages and menus)
+- `spip5-instance`: running one SPIP 5.0 site (requirements, Composer install and web installer, 4.4 → 5.0 upgrade and rollback, `.env*` / `config/custom.php` / `spip.*` parameters, `bin/spip`, caches and logs, web server rules, diagnostics)
 - `spip-mutualisation-maintenance`: SPIP farm inventory, shared updates, backups/rollback, and incident investigation
 - `plugin-escal`: the Escal squelette (noisettes, `escal/config` settings, special pages, layouts, technical mots-clés, spip-cli install)
 
@@ -128,6 +129,7 @@ You should see these folders:
 - `~/.claude/skills/spip-testing`
 - `~/.claude/skills/spip-migration-5`
 - `~/.claude/skills/spip5-plugins`
+- `~/.claude/skills/spip5-instance`
 - `~/.claude/skills/spip-mutualisation-maintenance`
 
 Plus one folder per `plugin-*` skill you chose to install, for example `~/.claude/skills/plugin-escal`.
@@ -144,6 +146,7 @@ test -f ~/.claude/skills/spip-logs/SKILL.md && echo "spip-logs OK"
 test -f ~/.claude/skills/spip-testing/SKILL.md && echo "spip-testing OK"
 test -f ~/.claude/skills/spip-migration-5/SKILL.md && echo "spip-migration-5 OK"
 test -f ~/.claude/skills/spip5-plugins/SKILL.md && echo "spip5-plugins OK"
+test -f ~/.claude/skills/spip5-instance/SKILL.md && echo "spip5-instance OK"
 test -f ~/.claude/skills/spip-mutualisation-maintenance/SKILL.md && echo "spip-mutualisation-maintenance OK"
 ```
 
@@ -159,6 +162,7 @@ Test-Path "$HOME/.claude/skills/spip-logs/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-testing/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-migration-5/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip5-plugins/SKILL.md"
+Test-Path "$HOME/.claude/skills/spip5-instance/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-mutualisation-maintenance/SKILL.md"
 ```
 

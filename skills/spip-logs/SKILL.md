@@ -28,7 +28,8 @@ its `composer.json` requires `spip/framework`.
 - Plugin for 4.4 **and** 5.0 (`compatibilite` from 4.x to `5.*`): keep `spip_log()`, the only API in both.
 
 Details: `spip-migration-5` (`references/catalogue.md`: level table, `spip.logger.*` parameters); injection:
-`spip5-plugins` (`references/services.md`).
+`spip5-plugins` (`references/services.md`); setting the level per environment on a site: `spip5-instance`
+(`references/caches-logs.md`).
 
 ---
 

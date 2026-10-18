@@ -36,3 +36,10 @@ Re-run after the first four changes (cases 2, 4, 7, 8, fresh subagents): **4/4 P
 and 8 now load the dump into a separate database for the rehearsal and point `connect.php` back to production at the
 switch; case 4 gives `_DIR_TMP` `../site-tmp/` as the check; case 7 uses the test squelette. The last three changes
 are wording fixes on points the re-runs exposed; they were not re-run.
+
+## `spip5-plugins` after the shared-topics reduction
+
+`skills/spip5-plugins/references/outils.md` reduced to the developer commands, with pointers to `spip5-instance`
+(`bin-spip.md`, `configuration.md`, `caches-logs.md`). `spip5-plugins` GREEN cases 1 and 7 re-run on it (fresh
+subagents, that skill only): **PASS 6/6 and 5/5** — `[5.0.0-dev;5.*]`, PSR-4, `services.php`, `AffichageFinalEvent`
++ `appendToBody()`, warmup + `spip:pipeline:listeners`; full checklist, no spip-cli.

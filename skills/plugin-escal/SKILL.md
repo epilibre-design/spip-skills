@@ -48,7 +48,8 @@ exists, plugins live in `plugins-dist/spip/`.
   whether Escal was ever installed, read the one key `escal_base_version` and match `grep -Eq '": ?null'` (not
   `':null}'`). Never run that test on the whole `escal` meta, where any `null` setting would match.
 
-Details: `spip-migration-5` (`references/audit-outils.md`: `bin/spip` commands).
+Details: `spip-migration-5` (`references/audit-outils.md`: `bin/spip` commands); 4.4 → 5.0 upgrade and rollback of
+the site: `spip5-instance` (`references/upgrade-4-4.md`).
 
 ## Vocabulary traps — verify before answering
 

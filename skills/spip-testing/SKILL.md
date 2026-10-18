@@ -39,7 +39,8 @@ its `composer.json` requires `spip/framework`.
   --repository=https://get.spip.net/composer spip/spip <dir> 5.0.x-dev` (PHP 8.4); say that the 4.4 install script
   must be replaced, never point it at another `-b` branch.
 
-Details: `spip-migration-5` (`references/audit-outils.md`: `bin/spip` commands).
+Details: `spip-migration-5` (`references/audit-outils.md`: `bin/spip` commands); installing the 5.0 test site
+(web installer, `composer create-project`): `spip5-instance` (`references/prerequis.md`).
 
 ## Quick-start
 
