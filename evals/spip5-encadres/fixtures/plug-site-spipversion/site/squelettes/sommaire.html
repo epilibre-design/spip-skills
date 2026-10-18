@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html dir="#LANG_DIR" lang="#LANG" class="[(#LANG_DIR)][ (#LANG)] no-js">
+<head>
+	<title>[(#NOM_SITE_SPIP|textebrut)]</title>
+	<INCLURE{fond=inclure/head} />
+</head>
+<body class="page_sommaire">
+	<div class="page">
+		<INCLURE{fond=inclure/header, env} />
+		<main class="main">
+			<B_articles>
+			<ul class="liste-articles">
+				<BOUCLE_articles(ARTICLES){par date}{inverse}{0,10}>
+				<li><a href="#URL_ARTICLE">#TITRE</a></li>
+				</BOUCLE_articles>
+			</ul>
+			</B_articles>
+		</main>
+		<INCLURE{fond=inclure/footer, env} />
+	</div>
+</body>
+</html>

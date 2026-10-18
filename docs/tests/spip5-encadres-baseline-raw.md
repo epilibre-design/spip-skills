@@ -1466,3 +1466,692 @@ Deux remarques :
   $sujet = ($sujet_visiteur === $sujet_en) ? $sujet_en : $sujet_visiteur . ' / ' . $sujet_en;
   ```
 - **Corps (non modifié, comme demandé)** : l'appel au corps passe une chaîne `'titre_article'` en troisième argument de `_T()`. Or la signature documentée est `_T(string $cle, array $args = [], array $options = [])`, où le troisième argument est un tableau d'options (`force`, `sanitize`). Je n'y ai pas touché pour rester dans le périmètre demandé, mais cet argument mérite d'être vérifié : il n'a pas la forme attendue.
+
+---
+
+## spip-plugins, cas 14 — site avec `ecrire/src/SpipVersion.php` — tirage 1
+
+#### Plugin `acme_bandeau`
+
+##### Point d'attention : ce site est en SPIP 5.0
+
+Le fichier `ecrire/src/SpipVersion.php` du site indique `VERSION = '5.0.0-beta'` (PHP 8.4 minimum). Le squelette d'exemple habituel, avec `compatibilite="[4.2.0;4.*]"`, **ne s'activerait pas** sur ce site : la borne `4.*` exclut 5.0. J'ai donc déclaré une compatibilité qui inclut la branche 5 (pré-versions comprises, puisque le site est en beta).
+
+Réserve : ma documentation de référence décrit l'API des plugins de SPIP 4.4. Je n'ai pas de source qui confirme que le pipeline `affichage_final` et la globale `$GLOBALS['html']` fonctionnent à l'identique en 5.0. Ce sont des mécanismes historiques du cœur et il est probable qu'ils n'aient pas changé, mais il faudra tester sur le site (voir « Vérification » plus bas).
+
+##### Arborescence
+
+```
+plugins/acme_bandeau/
+├── paquet.xml
+└── acme_bandeau_pipelines.php
+```
+
+Pas de table SQL, donc ni attribut `schema` ni `acme_bandeau_administrations.php`. Pas de fichier de langue non plus : le texte du bandeau est fixe, comme demandé.
+
+##### `plugins/acme_bandeau/paquet.xml`
+
+```xml
+<paquet
+	prefix="acme_bandeau"
+	categorie="communication"
+	version="1.0.0"
+	etat="stable"
+	compatibilite="[4.2.0;5.*]"
+>
+	<nom>Acme bandeau</nom>
+	<!-- Insère un bandeau d'annonce en haut de chaque page publique -->
+
+	<auteur>Acme</auteur>
+	<licence lien="http://www.gnu.org/licenses/gpl-3.0.html">GPL</licence>
+
+	<pipeline nom="affichage_final" inclure="acme_bandeau_pipelines.php" />
+</paquet>
+```
+
+- `compatibilite="[4.2.0;5.*]"` : de 4.2.0 inclus jusqu'à toute la branche 5.x, ce qui couvre la 5.0.0-beta du site. Si vous ne visez que ce site, `compatibilite="[5.0.0-dev;5.*]"` convient aussi : c'est la forme qui part explicitement des pré-versions de la 5.0.
+- Sans attribut `action`, SPIP appelle la fonction `acme_bandeau_affichage_final()` (convention `[prefix]_[pipeline]`) dans le fichier indiqué par `inclure`.
+
+##### `plugins/acme_bandeau/acme_bandeau_pipelines.php`
+
+```php
+<?php
+
+/**
+ * Pipelines du plugin Acme bandeau.
+ */
+
+if (!defined('_ECRIRE_INC_VERSION')) {
+	return;
+}
+
+/**
+ * Insère le bandeau de maintenance juste après la balise <body>.
+ *
+ * affichage_final reçoit la page publique complète juste avant l'envoi
+ * au navigateur (l'espace privé a son propre pipeline, affichage_final_prive).
+ *
+ * @param string $texte HTML complet de la page
+ * @return string HTML modifié
+ */
+function acme_bandeau_affichage_final($texte) {
+	// Ne rien faire si la réponse n'est pas une page HTML (flux RSS, JSON, CSS...)
+	if (empty($GLOBALS['html'])) {
+		return $texte;
+	}
+
+	// Ne pas insérer le bandeau deux fois
+	if (str_contains($texte, 'class="acme-bandeau"')) {
+		return $texte;
+	}
+
+	$bandeau = '<div class="acme-bandeau">Maintenance prévue le 3 novembre</div>';
+
+	// <body> porte des attributs dans les squelettes du site
+	// (ex. <body class="page_sommaire">) : on cible la balise ouvrante complète.
+	return preg_replace(
+		'/<body\b[^>]*>/i',
+		'$0' . $bandeau,
+		$texte,
+		1
+	);
+}
+```
+
+Points clés :
+
+- **Toutes les pages publiques, sans toucher aux squelettes** : `affichage_final` reçoit le HTML final de chaque page publique. Vos squelettes (`squelettes/sommaire.html`, etc.) n'ont pas besoin d'être modifiés.
+- **`<body>` avec attributs** : `squelettes/sommaire.html` contient `<body class="page_sommaire">`. Un simple `str_replace('<body>', ...)` ne fonctionnerait pas ; l'expression régulière `/<body\b[^>]*>/i` couvre `<body>` et `<body ...>`, et `$0` réinsère la balise d'origine avant le bandeau.
+- **Une seule insertion** : la limite `1` de `preg_replace()` et le test `str_contains()` évitent les doublons.
+- **Pages non HTML** : `$GLOBALS['html']` ne vaut vrai que pour les réponses `text/html`. Les flux RSS, le JSON, etc. ne sont pas touchés.
+
+##### Installation et vérification
+
+1. Copiez le dossier dans `plugins/acme_bandeau/`.
+2. Dans l'espace privé, ouvrez **Configuration → Gestion des plugins** et activez « Acme bandeau ». S'il apparaît comme incompatible, ajustez `compatibilite` comme indiqué plus haut.
+3. Videz le cache (**Maintenance → Vider le cache**) ou chargez une page avec `?var_mode=recalcul`.
+4. Affichez la source d'une page publique (sommaire, article, rubrique) : le `<div class="acme-bandeau">` doit suivre immédiatement la balise `<body ...>`.
+
+Pour la mise en forme, ajoutez une règle `.acme-bandeau { ... }` dans la feuille de style de votre squelette. Si vous préférez que le plugin la fournisse, il faut ajouter un fichier `css/acme_bandeau.css` et le pipeline `insert_head_css` ; dites-le-moi et je l'ajoute.
+
+Pour retirer le bandeau après le 3 novembre, il suffit de désactiver le plugin.
+
+---
+
+## spip-plugins, cas 14 — tirage 2
+
+### Plugin `acme_bandeau`
+
+#### Point d'attention : la version de SPIP du site
+
+Le site tourne sous **SPIP 5.0.0-beta** (`ecrire/src/SpipVersion.php` : `VERSION = '5.0.0-beta'`, PHP 8.4 minimum).
+Les exemples de ma documentation sont écrits pour SPIP 4.4 et utilisent `compatibilite="[4.2.0;4.*]"` :
+avec cette borne, le plugin **ne serait pas activable** sur ce site. J'ai donc déclaré une
+compatibilité SPIP 5 (`[5.0.0-dev;5.*]`, la forme `-dev` couvrant aussi les pré-versions beta).
+
+Ma documentation ne décrit pas les éventuels changements de SPIP 5.0 sur les pipelines. Le
+pipeline `affichage_final` et la globale `$GLOBALS['html']` sont documentés pour SPIP 4.4 ; je n'ai
+pas pu vérifier qu'ils fonctionnent à l'identique en 5.0 beta. Testez le plugin sur le site avant la mise en production
+(voir « Vérification » plus bas).
+
+#### Approche
+
+- Pipeline **`affichage_final`** : il reçoit la page HTML complète juste avant l'envoi au
+  navigateur, et seulement dans l'espace public (l'espace privé a son propre pipeline,
+  `affichage_final_prive`). C'est donc « chaque page publique », quel que soit le squelette.
+- On ne traite que les réponses HTML (`$GLOBALS['html']`) pour ne pas toucher aux flux RSS, au JSON, etc.
+- La balise `<body>` des squelettes porte des attributs (`<body class="page_sommaire">` dans
+  `squelettes/sommaire.html`), donc un simple `str_replace('<body>', …)` ne marcherait pas : on cherche
+  `<body …>` par une expression régulière, et on ne remplace que la première occurrence.
+- Comme `affichage_final` s'exécute après le cache des squelettes, le bandeau apparaît dès
+  l'activation du plugin, sans vider le cache, et disparaît dès sa désactivation.
+
+#### Arborescence
+
+```
+plugins/acme_bandeau/
+├── paquet.xml
+└── acme_bandeau_pipelines.php
+```
+
+Pas de table SQL, donc pas d'attribut `schema` ni de fichier `acme_bandeau_administrations.php`.
+Le texte du bandeau est imposé en français, donc le plugin ne déclare pas de module de langue.
+
+#### `plugins/acme_bandeau/paquet.xml`
+
+```xml
+<paquet
+	prefix="acme_bandeau"
+	categorie="communication"
+	version="1.0.0"
+	etat="stable"
+	compatibilite="[5.0.0-dev;5.*]"
+>
+	<nom>Acme Bandeau</nom>
+	<!-- Insère un bandeau d'information en haut de chaque page publique -->
+	<auteur>Acme</auteur>
+	<licence>GNU/GPL</licence>
+
+	<pipeline nom="affichage_final" inclure="acme_bandeau_pipelines.php" />
+</paquet>
+```
+
+#### `plugins/acme_bandeau/acme_bandeau_pipelines.php`
+
+```php
+<?php
+
+if (!defined('_ECRIRE_INC_VERSION')) {
+	return;
+}
+
+/**
+ * Insère le bandeau de maintenance juste après la balise <body> des pages publiques.
+ *
+ * @pipeline affichage_final
+ * @param string $texte Page HTML complète
+ * @return string
+ */
+function acme_bandeau_affichage_final($texte) {
+	// Ne traiter que les pages HTML (pas les flux RSS, JSON, etc.)
+	if (empty($GLOBALS['html'])) {
+		return $texte;
+	}
+
+	$bandeau = '<div class="acme-bandeau">Maintenance prévue le 3 novembre</div>';
+
+	// <body> peut porter des attributs (class, id…) : on cible la première balise ouvrante
+	return preg_replace('/<body\b[^>]*>/i', '$0' . $bandeau, $texte, 1);
+}
+```
+
+Remarques :
+- `$0` reprend la balise `<body …>` d'origine telle quelle, le bandeau est placé juste derrière.
+- Le texte du bandeau ne contient ni `$` ni `\`, il peut donc servir sans échappement dans le motif de remplacement.
+- S'il n'y a pas de `<body>` (fragment AJAX, page HTML partielle), `preg_replace` ne change rien.
+- Si le fichier est enregistré en UTF-8 (cas standard de SPIP), « prévue » s'affiche correctement.
+
+#### Installation
+
+1. Copier le dossier dans `plugins/acme_bandeau/`.
+2. Dans l'espace privé : **Configuration → Gestion des plugins**, activer « Acme Bandeau ».
+
+#### Vérification
+
+- Ouvrir la page d'accueil (`squelettes/sommaire.html`), afficher le code source et vérifier
+  `<body class="page_sommaire"><div class="acme-bandeau">Maintenance prévue le 3 novembre</div>`.
+- Vérifier qu'aucun bandeau n'apparaît dans l'espace privé ni dans un flux RSS (`spip.php?page=backend`).
+- Si le plugin refuse de s'activer ou si le bandeau n'apparaît pas, c'est probablement que SPIP 5.0 beta
+  diffère de SPIP 4.4 (borne de compatibilité, signature ou déclenchement de `affichage_final`,
+  `$GLOBALS['html']`). Ma documentation ne couvre que SPIP 4.4 : il faut alors vérifier dans les sources
+  du cœur installé (`ecrire/`).
+
+Pour retirer le bandeau après la maintenance, il suffit de désactiver le plugin.
+
+---
+
+## spip-plugins, cas 14 — tirage 3
+
+### Plugin `acme_bandeau`
+
+#### Point d'attention : ce site tourne sous SPIP 5.0 (beta)
+
+Avant d'écrire le plugin, j'ai regardé la version du site : `ecrire/src/SpipVersion.php`
+déclare `VERSION = '5.0.0-beta'` (PHP 8.4 minimum). Ma documentation porte sur
+**SPIP 4.4** (exemples tirés des sources 4.4.15) et ne dit rien des changements de
+SPIP 5.0. Il faut donc en tenir compte :
+
+- l'intervalle `compatibilite` doit inclure la branche 5, sinon le plugin ne
+  pourra pas être activé ; l'exemple type de la doc (`[4.2.0;4.*]`) l'exclurait ;
+- le pipeline `affichage_final` et `$GLOBALS['html']` sont documentés pour SPIP 4.x.
+  Je n'ai aucune source qui confirme qu'ils sont inchangés en 5.0. Le code
+  ci-dessous se protège aussi avec un test sur la présence de `<body` dans le HTML,
+  mais il faut **vérifier sur le site** que le bandeau s'affiche bien après activation.
+
+#### Choix technique
+
+- Pipeline **`affichage_final`** : il reçoit la page HTML complète juste avant son
+  envoi, et seulement côté public (le privé a `affichage_final_prive`). Il couvre donc
+  *toutes* les pages publiques, sans toucher aux squelettes (`squelettes/sommaire.html`,
+  `inclure/header`…).
+- Il s'exécute à chaque affichage, même quand la page vient du cache : le bandeau
+  apparaît tout de suite après l'activation et disparaît dès qu'on désactive le plugin.
+- La balise `<body>` du site a des attributs (`<body class="page_sommaire">`). On ne
+  peut donc pas faire un `str_replace('<body>')`. Une expression régulière repère la
+  première balise `<body …>` et insère le bandeau juste après.
+- Les réponses non HTML (flux RSS, JSON, fichiers…) ne sont pas modifiées.
+- Pas de base de données, donc ni `schema` ni `_administrations.php`.
+
+#### Arborescence
+
+```
+plugins/acme_bandeau/
+├── paquet.xml
+└── acme_bandeau_pipelines.php
+```
+
+#### `plugins/acme_bandeau/paquet.xml`
+
+```xml
+<paquet
+	prefix="acme_bandeau"
+	categorie="communication"
+	version="1.0.0"
+	etat="stable"
+	compatibilite="[4.2.0;5.*]"
+>
+	<nom>Acme bandeau</nom>
+	<!-- Affiche un bandeau d'information en haut de chaque page publique -->
+
+	<auteur>Acme</auteur>
+
+	<licence lien="http://www.gnu.org/licenses/gpl-3.0.html">GNU/GPL</licence>
+
+	<pipeline nom="affichage_final" inclure="acme_bandeau_pipelines.php" />
+</paquet>
+```
+
+Sans attribut `action`, SPIP appelle la fonction `acme_bandeau_affichage_final()`
+(préfixe + nom du pipeline), qu'il trouve dans le fichier indiqué par `inclure`.
+
+#### `plugins/acme_bandeau/acme_bandeau_pipelines.php`
+
+```php
+<?php
+
+if (!defined('_ECRIRE_INC_VERSION')) {
+	return;
+}
+
+/**
+ * Insère le bandeau de maintenance juste après la balise <body> des pages publiques.
+ *
+ * @param string $texte Page HTML complète
+ * @return string Page HTML modifiée
+ */
+function acme_bandeau_affichage_final($texte) {
+	// Pages HTML uniquement (pas de RSS, JSON, fichiers…)
+	if (empty($GLOBALS['html']) || !is_string($texte) || stripos($texte, '<body') === false) {
+		return $texte;
+	}
+
+	// Ne pas insérer le bandeau deux fois
+	if (str_contains($texte, 'class="acme-bandeau"')) {
+		return $texte;
+	}
+
+	$bandeau = '<div class="acme-bandeau">Maintenance prévue le 3 novembre</div>';
+
+	// Première balise <body …> (avec ou sans attributs) : on insère le bandeau juste après
+	return preg_replace('/<body\b[^>]*>/i', '$0' . $bandeau, $texte, 1);
+}
+```
+
+Le pipeline doit toujours renvoyer la valeur reçue, modifiée ou non. Renvoyer `null`
+casserait l'affichage de la page et les traitements des autres plugins.
+
+#### Mise en place
+
+1. Déposez le dossier `acme_bandeau/` dans `plugins/` (le dossier est vide pour l'instant).
+2. Dans l'espace privé, ouvrez **Configuration → Gestion des plugins**, activez
+   « Acme bandeau ».
+3. Affichez une page publique et vérifiez dans le code source que
+   `<div class="acme-bandeau">…</div>` suit bien `<body class="…">`. C'est le test
+   indispensable, puisque la compatibilité avec SPIP 5.0 n'est pas documentée (voir plus haut).
+
+#### Remarques
+
+- **Style** : rien n'est imposé. Pour mettre le bandeau en forme, ajoutez une règle
+  `.acme-bandeau { … }` à la CSS du site. On peut aussi en livrer une avec le plugin via
+  le pipeline `insert_head_css`, si vous le souhaitez.
+- **Retrait après le 3 novembre** : il suffit de désactiver le plugin. Le texte est en
+  dur, comme demandé. Si l'annonce doit changer souvent, on pourra la rendre
+  configurable (page de configuration) ou traduisible (fichier de langue).
+
+---
+
+## spip-plugins, cas 15 — plugin 4.4 + 5.0 — tirage 1
+
+Voici les modifications pour ajouter le bandeau à acme.
+
+#### Approche
+
+Le bandeau doit apparaître sur **toutes les pages publiques**, quel que soit le squelette utilisé. Il faut donc agir sur le HTML final plutôt que sur un squelette. Le pipeline `affichage_final` reçoit la page complète juste avant son envoi au navigateur. Il est appelé côté public seulement ; l'espace privé a son propre pipeline, `affichage_final_prive`.
+
+- On sort tout de suite si la réponse n'est pas du HTML (`$GLOBALS['html']`) : flux RSS, JSON, fichiers servis, etc.
+- On lit le réglage `texte_bandeau` dans la meta `acme`, avec la fonction `acme_config()` déjà présente. Le formulaire enregistre ses champs dans le casier `acme` (`_meta_casier`), donc `lire_config('acme/texte_bandeau')` lirait la même valeur.
+- Si le réglage est vide, ou ne contient que des espaces, on renvoie la page sans la modifier.
+- On insère le `<div>` **juste après** la balise ouvrante `<body …>`. Une expression régulière gère une balise `body` qui porte des attributs (`<body class="page_article">`). Elle ne remplace que la première occurrence, et ne fait rien s'il n'y a pas de `<body>`.
+- Le texte est échappé avec `htmlspecialchars()` avant l'insertion. Un réglage contenant `<`, `&` ou des guillemets ne casse donc pas la page et ne peut pas injecter de HTML.
+
+#### 1. `paquet.xml` : déclarer le pipeline
+
+```xml
+<paquet
+	prefix="acme"
+	categorie="communication"
+	version="1.3.0"
+	etat="stable"
+	compatibilite="[4.4.0;5.*]"
+>
+	<nom>Acme</nom>
+	<auteur>Acme</auteur>
+	<licence>GPL 3</licence>
+
+	<pipeline nom="insert_head_css" inclure="acme_pipelines.php" />
+	<pipeline nom="affichage_final" inclure="acme_pipelines.php" />
+</paquet>
+```
+
+J'ai monté la version à `1.3.0` (nouvelle fonctionnalité). Pas besoin d'attribut `schema` : on ne touche pas à la base.
+
+#### 2. `acme_pipelines.php` : ajouter le gestionnaire
+
+Ajoutez cette fonction à la fin du fichier. Le reste ne change pas.
+
+```php
+/**
+ * Insère le bandeau acme juste après la balise <body> des pages publiques.
+ *
+ * Le texte vient du réglage texte_bandeau (formulaire configurer_acme).
+ * Rien n'est inséré si ce réglage est vide.
+ *
+ * @param string $texte Page HTML complète
+ * @return string
+ */
+function acme_affichage_final($texte) {
+	if (empty($GLOBALS['html'])) {
+		return $texte;
+	}
+
+	$config = acme_config();
+	$bandeau = trim((string) ($config['texte_bandeau'] ?? ''));
+	if ($bandeau === '') {
+		return $texte;
+	}
+
+	$html = '<div class="acme-bandeau">'
+		. htmlspecialchars($bandeau, ENT_QUOTES, $GLOBALS['meta']['charset'] ?? 'UTF-8')
+		. '</div>';
+
+	// Première balise <body …> seulement, attributs éventuels compris
+	$resultat = preg_replace_callback(
+		'/<body\b[^>]*>/i',
+		static fn(array $m): string => $m[0] . "\n" . $html,
+		$texte,
+		1
+	);
+
+	return $resultat ?? $texte;
+}
+```
+
+Détails :
+
+- Le callback réinjecte la balise `<body …>` d'origine (`$m[0]`), avec ses attributs, puis place le bandeau juste derrière. Avec `preg_replace_callback`, le texte du bandeau n'est jamais interprété : il reste affiché tel quel, même s'il contient `$1` ou `\0`.
+- `?? $texte` : si l'expression régulière échoue (`null`), on renvoie la page intacte.
+- On renvoie toujours la valeur reçue, même sans modification, pour ne pas casser la chaîne des autres plugins branchés sur ce pipeline.
+
+#### 3. Rien à changer dans le formulaire
+
+`formulaires/configurer_acme.html` contient déjà le champ `texte_bandeau`, et `_meta_casier` vaut `acme`. Le réglage est donc déjà enregistré dans la meta `acme` au même endroit que `theme`.
+
+#### Après la modification
+
+- **Recharger la liste des plugins** : un nouveau pipeline déclaré dans `paquet.xml` n'est pris en compte qu'après une nouvelle lecture des plugins. Passez par la page de gestion des plugins dans l'espace privé, ou videz le cache.
+- **Cache** : `affichage_final` s'exécute à chaque envoi de page, y compris pour une page servie depuis le cache. Une modification du texte dans la configuration s'affiche donc dès la page suivante, sans vider le cache des squelettes.
+- **Style** : le `<div>` n'a pas de style. Si vous voulez un rendu par défaut, ajoutez une règle `.acme-bandeau { … }` dans une feuille CSS du plugin. Vous pouvez l'injecter comme `css/acme_sombre.css` via `acme_insert_head_css`, mais sans condition sur le thème.
+- **SPIP 5** : le plugin se déclare compatible `[4.4.0;5.*]`. La documentation dont je dispose décrit SPIP 4.4 et ne parle pas de SPIP 5. Je n'ai donc pas pu vérifier que `affichage_final` et `$GLOBALS['html']` se comportent de la même façon en 5.x. Testez le bandeau sur un site SPIP 5 avant de publier cette version.
+
+---
+
+## spip-plugins, cas 15 — tirage 2
+
+### Bandeau Acme après `<body>`
+
+Le bandeau doit apparaître dans **toutes** les pages publiques, quel que soit le squelette. Le point d'accroche le plus adapté est donc le pipeline `affichage_final`. Il reçoit la page HTML complète juste avant son envoi au navigateur. Le pipeline `insert_head` ne convient pas ici, car il n'écrit que dans le `<head>`.
+
+Le réglage `texte_bandeau` est déjà enregistré par `formulaires/configurer_acme.html` dans le casier `acme` (`_meta_casier`). Le plugin le lit déjà avec son helper `acme_config()`, que je réutilise.
+
+#### 1. `paquet.xml` : déclarer le pipeline
+
+```xml
+<paquet
+	prefix="acme"
+	categorie="communication"
+	version="1.3.0"
+	etat="stable"
+	compatibilite="[4.4.0;5.*]"
+>
+	<nom>Acme</nom>
+	<auteur>Acme</auteur>
+	<licence>GPL 3</licence>
+
+	<pipeline nom="insert_head_css" inclure="acme_pipelines.php" />
+	<pipeline nom="affichage_final" inclure="acme_pipelines.php" />
+</paquet>
+```
+
+J'ai monté la version à 1.3.0 parce que la fonctionnalité est nouvelle. Ce changement est facultatif. En revanche, après la modification de `paquet.xml`, il faut **recharger les plugins** (page « Gestion des plugins » ou vidage du cache) pour que SPIP prenne en compte le nouveau pipeline.
+
+#### 2. `acme_pipelines.php` : ajouter le handler
+
+Ajoutez cette fonction à la fin du fichier existant :
+
+```php
+/**
+ * Insère le bandeau Acme juste après la balise <body> des pages publiques.
+ *
+ * Le texte vient du réglage texte_bandeau (formulaire configurer_acme).
+ * Aucun bandeau n'est inséré si ce réglage est vide.
+ */
+function acme_affichage_final($texte) {
+	// Seules les réponses HTML sont concernées (pas les flux RSS, JSON, etc.)
+	if (empty($GLOBALS['html'])) {
+		return $texte;
+	}
+
+	$config = acme_config();
+	$bandeau = trim((string) ($config['texte_bandeau'] ?? ''));
+	if ($bandeau === '') {
+		return $texte;
+	}
+
+	// Le réglage est saisi en texte brut : on l'échappe avant de l'insérer dans le HTML
+	$html = '<div class="acme-bandeau">' . spip_htmlspecialchars($bandeau) . '</div>';
+
+	// Insertion juste après la balise ouvrante <body …>, même si elle porte des attributs
+	// (class, dir, etc.), sur la première occurrence seulement
+	return preg_replace('/<body\b[^>]*>/i', '$0' . "\n" . addcslashes($html, '\\$'), $texte, 1);
+}
+```
+
+Points à noter :
+
+- **`$GLOBALS['html']`** vaut `true` uniquement si la réponse est de type `text/html`. Ce test laisse intacts les flux RSS, JSON et autres contenus non HTML qui passent aussi par `affichage_final`.
+- **Échappement** : le champ du formulaire est un simple `<input type="text">`, donc le texte est inséré tel quel, sans balises. `spip_htmlspecialchars()` empêche un `<` ou un `&` de casser la page ou d'injecter du HTML. Si vous voulez plus tard autoriser des raccourcis typographiques SPIP, remplacez-le par `typo($bandeau)`.
+- **`addcslashes($html, '\\$')`** protège les `$` et les `\` éventuels du texte, que `preg_replace` interpréterait sinon comme des références de capture.
+- **Balise `<body>` avec attributs** : les squelettes Z ou Dist produisent par exemple `<body class="page_article">`. Un simple `str_replace('<body>', …)` ne trouverait pas la balise, d'où la regex `<body\b[^>]*>`. Si la page n'a pas de `<body>` (fragment AJAX, par exemple), rien n'est inséré.
+- **Cache** : `affichage_final` s'exécute à chaque affichage, après le cache des squelettes. Une modification du texte dans le formulaire de configuration est donc visible tout de suite, sans vider le cache.
+- **Espace privé** : `affichage_final` agit sur les pages publiques. Le bandeau n'apparaît donc pas dans l'espace privé.
+
+#### 3. (Optionnel) Un peu de style
+
+Pour donner une apparence au bandeau, ajoutez une feuille `css/acme.css` et chargez-la toujours, pas seulement pour le thème sombre, dans le `acme_insert_head_css()` existant :
+
+```php
+function acme_insert_head_css($flux) {
+	$flux .= '<link rel="stylesheet" href="' . find_in_path('css/acme.css') . '" type="text/css" />' . "\n";
+
+	$config = acme_config();
+	if (($config['theme'] ?? '') === 'sombre') {
+		$flux .= '<link rel="stylesheet" href="' . find_in_path('css/acme_sombre.css') . '" type="text/css" />' . "\n";
+	}
+
+	return $flux;
+}
+```
+
+```css
+/* css/acme.css */
+.acme-bandeau { padding: .5em 1em; background: #ffd; border-bottom: 1px solid #cc9; text-align: center; }
+```
+
+#### Remarque sur la compatibilité
+
+Votre `paquet.xml` déclare `compatibilite="[4.4.0;5.*]"`. Le code ci-dessus suit l'API SPIP 4.4 : pipeline `affichage_final`, `$GLOBALS['html']` et `spip_htmlspecialchars()`. Ma documentation porte sur SPIP 4.4 et ne décrit pas les éventuelles différences de SPIP 5. Avant de garder la borne `5.*`, testez donc le bandeau sur une instance SPIP 5, surtout la présence de `$GLOBALS['html']` et le comportement de `affichage_final`. Si vous ne pouvez pas faire ce test, restreignez la compatibilité à `[4.4.0;4.*]`.
+
+---
+
+## spip-plugins, cas 15 — tirage 3
+
+Pour insérer du HTML juste après `<body>` sur toutes les pages publiques, le point d'accroche est le pipeline **`affichage_final`**. Il reçoit la page HTML complète juste avant son envoi au navigateur. Il ne s'exécute que côté public : l'espace privé a son propre pipeline, `affichage_final_prive`, donc le bandeau n'y apparaîtra pas.
+
+Le réglage `texte_bandeau` est enregistré par `formulaire configurer_acme` dans le casier `acme` (champ caché `_meta_casier`), comme `theme`. Le plugin dispose déjà d'`acme_config()` pour lire ce casier. On la réutilise pour rester cohérent avec `acme_insert_head_css()`.
+
+#### 1. `paquet.xml` : déclarer le pipeline
+
+```xml
+<paquet
+	prefix="acme"
+	categorie="communication"
+	version="1.3.0"
+	etat="stable"
+	compatibilite="[4.4.0;5.*]"
+>
+	<nom>Acme</nom>
+	<auteur>Acme</auteur>
+	<licence>GPL 3</licence>
+
+	<pipeline nom="insert_head_css" inclure="acme_pipelines.php" />
+	<pipeline nom="affichage_final" inclure="acme_pipelines.php" />
+</paquet>
+```
+
+(J'ai aussi passé la version à 1.3.0 parce qu'il s'agit d'une nouvelle fonctionnalité. Ce n'est pas obligatoire, mais SPIP ne relit les pipelines déclarés dans `paquet.xml` qu'au recalcul du cache des plugins. Après la modification, il faut donc repasser par la page d'administration des plugins ou vider le cache.)
+
+#### 2. `acme_pipelines.php` : ajouter la fonction
+
+À ajouter à la fin du fichier, après `acme_insert_head_css()` :
+
+```php
+/**
+ * Insère le bandeau Acme juste après la balise <body> des pages publiques.
+ *
+ * Le texte vient du réglage « texte_bandeau » (formulaire configurer_acme).
+ * Aucun bandeau si le réglage est vide.
+ *
+ * @param string $texte Page HTML complète
+ * @return string
+ */
+function acme_affichage_final($texte) {
+	// Ne traiter que les réponses HTML (pas le CSS, le JS, les flux RSS…)
+	if (empty($GLOBALS['html'])) {
+		return $texte;
+	}
+
+	$config = acme_config();
+	$bandeau = trim((string) ($config['texte_bandeau'] ?? ''));
+	if ($bandeau === '') {
+		return $texte;
+	}
+
+	$html = '<div class="acme-bandeau">'
+		. htmlspecialchars($bandeau, ENT_QUOTES, 'UTF-8')
+		. '</div>';
+
+	// Insertion juste après la première balise <body …> (attributs éventuels compris)
+	return preg_replace('/<body\b[^>]*>/i', '$0' . "\n" . $html, $texte, 1);
+}
+```
+
+##### Points importants
+
+- **`$GLOBALS['html']`** n'est vrai que pour une réponse `text/html`. Sans ce test, le pipeline modifierait aussi les squelettes qui produisent du CSS, du JS, du XML ou du JSON. Dans ce cas, `preg_replace` ne trouverait en général pas de `<body>`, mais le test évite aussi de lire la configuration pour rien.
+- **Toujours renvoyer `$texte`**, même quand on ne le modifie pas. Renvoyer `null` casserait la chaîne pour les plugins suivants.
+- **`<body>` avec attributs** : la plupart des squelettes ont `<body class="page_article …">` ou une balise du même genre. Un `str_replace('<body>', …)` échouerait dans ce cas, d'où l'expression régulière `<body\b[^>]*>`. Le `$0` réinsère la balise trouvée, et la limite `1` évite de toucher un éventuel second `<body` (par exemple dans un `<iframe srcdoc>`).
+- **Échappement** : le texte vient d'un champ libre du formulaire de configuration. `htmlspecialchars()` l'insère tel quel, sans laisser passer de HTML. Si vous voulez autoriser du HTML ou des raccourcis SPIP dans le bandeau, il faudra un autre traitement, à décider explicitement.
+- **Cache** : `affichage_final` s'exécute à chaque affichage, après le cache des squelettes. Une modification de `texte_bandeau` est donc visible tout de suite, sans vider le cache des pages. Lire la configuration ne coûte presque rien : les metas sont déjà en mémoire.
+
+#### Style (facultatif)
+
+Le plugin charge déjà une CSS via `insert_head_css`. Pour mettre en forme le bandeau, vous pouvez ajouter une règle `.acme-bandeau { … }` dans une feuille chargée de la même façon, par exemple une `css/acme.css` incluse sans condition à côté de `acme_sombre.css`.
+
+#### Réserve sur la compatibilité
+
+Le `paquet.xml` déclare `compatibilite="[4.4.0;5.*]"`. Ma documentation de référence ne couvre que SPIP 4.x (elle a été écrite à partir de SPIP 4.4). Le code ci-dessus est valide pour SPIP 4.4. Je n'ai pas de documentation qui confirme que `affichage_final` et `$GLOBALS['html']` se comportent de la même façon sous SPIP 5. Il faut le vérifier sur un site SPIP 5 avant de considérer cette compatibilité comme acquise.
+
+---
+
+## spip-plugins, cas 16 — plugin 4.x
+
+Pour insérer du HTML juste après `<body>` sur toutes les pages publiques, le point d'accroche adapté est le pipeline **`affichage_final`**. Il reçoit la page HTML complète juste avant l'envoi au navigateur. Il ne s'exécute que côté public : l'espace privé passe par `affichage_final_prive`. Il est aussi appelé à chaque affichage, après le cache des squelettes. Une modification du réglage `texte_bandeau` est donc visible tout de suite, sans vider le cache.
+
+Le réglage est enregistré par `formulaires/configurer_acme.html` dans la meta `acme` (`_meta_casier` = `acme`). Je réutilise le helper `acme_config()` qui existe déjà dans le plugin. On pourrait aussi utiliser `lire_config('acme/texte_bandeau')`.
+
+#### 1. `paquet.xml` : déclarer le pipeline
+
+```xml
+<paquet
+	prefix="acme"
+	categorie="communication"
+	version="1.3.0"
+	etat="stable"
+	compatibilite="[4.2.0;4.4.*]"
+>
+	<nom>Acme</nom>
+	<auteur>Acme</auteur>
+	<licence>GPL 3</licence>
+
+	<pipeline nom="insert_head_css" inclure="acme_pipelines.php" />
+	<pipeline nom="affichage_final" inclure="acme_pipelines.php" />
+</paquet>
+```
+
+(J'ai passé la version à 1.3.0 parce que la fonctionnalité est nouvelle. Ce n'est pas obligatoire.)
+
+#### 2. `acme_pipelines.php` : ajouter le handler
+
+À ajouter à la fin du fichier, sans toucher à `acme_config()` ni à `acme_insert_head_css()` :
+
+```php
+/**
+ * Insère le bandeau Acme juste après la balise <body> des pages publiques.
+ *
+ * Le texte vient du réglage « texte_bandeau » (formulaire configurer_acme).
+ * Rien n'est inséré si le réglage est vide.
+ */
+function acme_affichage_final($texte) {
+	// Ne traiter que les pages HTML (pas le CSS, le JS, les flux RSS…)
+	if (empty($GLOBALS['html'])) {
+		return $texte;
+	}
+
+	$config = acme_config();
+	$texte_bandeau = trim((string) ($config['texte_bandeau'] ?? ''));
+	if ($texte_bandeau === '') {
+		return $texte;
+	}
+
+	$bandeau = '<div class="acme-bandeau">'
+		. htmlspecialchars($texte_bandeau, ENT_QUOTES, 'UTF-8')
+		. '</div>';
+
+	// Insertion juste après la balise ouvrante <body ...> (attributs éventuels inclus),
+	// une seule fois
+	return preg_replace('/<body\b[^>]*>/i', '$0' . "\n" . $bandeau, $texte, 1);
+}
+```
+
+Quelques points sur ce code :
+
+- **`$GLOBALS['html']`** vaut `true` seulement quand la réponse est en `text/html`. Le test évite d'injecter le bandeau dans une feuille de style ou un flux XML produits par un squelette.
+- **Expression régulière plutôt que `str_replace('<body>', …)`** : dans la plupart des squelettes, la balise a des attributs (`<body class="page_article">`, `dir="#LANG_DIR"`…). Un remplacement exact de `<body>` ne trouverait rien. `$0` reprend la balise d'origine telle quelle, et la limite à `1` empêche une double insertion.
+- **Échappement** : le texte est saisi en back-office mais affiché tel quel sur toutes les pages publiques. `htmlspecialchars` évite qu'un caractère `<` ou `&` casse la page ou injecte du HTML. Si vous voulez autoriser du HTML ou des raccourcis typographiques SPIP dans le bandeau, remplacez-le par `typo($texte_bandeau)` et dites-le-moi.
+- **Réglage vide** : on renvoie `$texte` sans le modifier. Un pipeline doit toujours renvoyer sa valeur d'entrée, sinon la chaîne des autres plugins est cassée.
+
+#### Après la modification
+
+- Comme `paquet.xml` déclare un nouveau pipeline, il faut **recharger la liste des plugins** pour que SPIP le prenne en compte : passez par la page « Gestion des plugins » de l'espace privé, ou videz le cache.
+- Le style (`.acme-bandeau { … }`) peut aller dans une feuille CSS du plugin chargée par `insert_head_css`, comme celle du thème sombre.
+- Il faudra peut-être ajouter dans `lang/acme_fr.php` la chaîne `label_texte_bandeau`, utilisée par le formulaire, si elle n'existe pas encore. Le dossier `lang/` ne fait pas partie des fichiers du plugin que j'ai consultés.

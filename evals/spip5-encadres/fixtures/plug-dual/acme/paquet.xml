@@ -1,0 +1,13 @@
+<paquet
+	prefix="acme"
+	categorie="communication"
+	version="1.2.0"
+	etat="stable"
+	compatibilite="[4.4.0;5.*]"
+>
+	<nom>Acme</nom>
+	<auteur>Acme</auteur>
+	<licence>GPL 3</licence>
+
+	<pipeline nom="insert_head_css" inclure="acme_pipelines.php" />
+</paquet>

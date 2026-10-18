@@ -100,3 +100,23 @@ answer produces « Article proposé à la publication / Article submitted for pu
 | 11 — 5.0 site | FAIL 4/5 | **PASS 3/3 (4/4)** | each run cites `plugins-dist/spip/`, uses `_T($k, [], ['lang' => 'en'])`, fixes the body to `['class' => 'titre_article']` with the `TypeError` explained, and gives `lang_select()` for 4.4 |
 | 12 — 4.4 + 5.0 | FAIL 2/2 | **PASS (4/4)** | cites `[4.4.0;5.*]`, rejects the `lang` option (ignored in 4.4), `lang_select()`, body fixed to `['class' => …]` |
 | 13 — 4.x (no leak) | PASS | **PASS (3/3)** | cites `[4.2.0;4.4.*]`, rejects the `lang` option, `lang_select()`, body left as is (valid in 4.4), 5.0 change flagged for later |
+
+## spip-plugins (2026-10-18)
+
+Callout facts checked on the local 5.0.0-beta instance (`spip/ecrire` `26bfe470`, `spip/framework` `d0e8c97e`):
+- `PluginPipelineCollector::populate()` still registers `<pipeline>` functions and `<genie>` tasks from `paquet.xml`;
+- `ecrire/public.php` declares `global $html`, so `$GLOBALS['html']` is still set;
+- `affichage_final` is still fired (`AffichageFinalEvent`);
+- `lire_config()` is deprecated only for `lire_config(,, false)` and the `/<store>/` prefix;
+- `$GLOBALS['spip_pipeline']` is ignored with a deprecation (`ecrire/inc_version.php`);
+- the meta storage and `compatibilite` results are those of the baseline.
+
+Two bullets do not answer an observed failure. They prevent the callout from causing one:
+- `[5.0.0;5.*]` refuses the plugin on the beta;
+- a listener needs the setup described in `spip5-plugins`, which a GREEN agent would not have.
+
+| Case | RED | GREEN | Notes |
+|---|---|---|---|
+| 14 — 5.0 site | PASS 3/3 | **PASS (4/4)** | cites `SpipVersion.php`, `[4.4.0;5.*]` with the `[5.0.0;5.*]` trap explained, `<pipeline>` + function, no hedging on 5.0 |
+| 15 — 4.4 + 5.0 | FAIL 3/3 | **PASS 2/2 (4/4)** | cites `[4.4.0;5.*]`, keeps `<pipeline>` + function (no listener), rewrites `acme_config()` with `lire_config()` and explains the JSON trap; one run also moves `acme_insert_head_css()` to `lire_config('acme/theme')` |
+| 16 — 4.x (no leak) | PASS | **PASS (3/3)** | cites `[4.2.0;4.4.*]`, `<pipeline>` + function, no `Spip::`, listener or `services.php`; switches to `lire_config()` (valid in 4.4) |
