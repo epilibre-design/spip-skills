@@ -402,7 +402,9 @@ if (is_file($spipRoot . '/vendor/autoload.php')) {
 require_once $spipRoot . '/ecrire/inc_version.php';
 
 include_spip('inc/plugin');
-_chemin(dirname(__DIR__));   // add plugin root to SPIP path
+// Add the plugin root to the SPIP path, RELATIVE to the cwd (vendor/spip/spip): find_in_path() prefixes every
+// entry with the cwd, so an absolute path is never found and recuperer_fond() returns ''.
+_chemin('../../../');
 actualise_plugins_actifs();  // activate the plugin chain
 
 // DO NOT require tests/bootstrap.php here: its mocks (sql_countsel, autoriser…)
