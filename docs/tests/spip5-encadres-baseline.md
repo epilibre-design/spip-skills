@@ -13,6 +13,12 @@ Raw answers: `spip5-encadres-baseline-raw.md`.
 | 1 — 5.0 only | `compatibilite="[5.0.0-dev;5.*]"` | `spip_log(…, 'acme.' . _LOG_ERREUR)`; advises `define('_LOG_FILTRE_GRAVITE', _LOG_DEBUG)` in `mes_options.php` (no effect in 5.0) | **FAIL** — never reads `compatibilite` |
 | 2 — 4.4 + 5.0 | `compatibilite="[4.4.0;5.*]"` | `spip_log(…, 'acme.' . _LOG_ERREUR)` | **PARTIAL** — right code by default, no marker cited |
 | 3 — 4.x (control) | `compatibilite="[4.2.0;4.4.*]"` | `spip_log(…, 'acme.' . _LOG_ERREUR)` | PASS |
-| 4 — 5.0 site code | `bin/spip` only (no `paquet.xml`), filter in `squelettes/mes_fonctions.php` | `spip_log(…, 'meteo.' . _LOG_ERREUR)` | **FAIL** — `bin/spip` ignored |
+| 4 — 5.0 site code | `bin/spip` only (no `paquet.xml`), filter in `squelettes/mes_fonctions.php` | `spip_log(…, 'meteo.' . _LOG_ERREUR)`; a closing note spots `bin/spip`, suspects SPIP 5 and asks the user to check that `spip_log()` still exists | **FAIL** — version detected, but no 5.0 API to apply: the code stays 4.x |
 
-Failure pattern: the agent never checks the version; the skill gives it no reason to.
+Two failure patterns:
+
+- cases 1–2: the agent never checks the version; the skill gives it no reason to;
+- case 4: the agent notices `bin/spip` and suspects SPIP 5, but the skill has no 5.0 API to offer, so it writes 4.x
+  code and hands the check back to the user.
+
+The callout addresses both: it tells the agent to check the version, then tells it which API to use.
