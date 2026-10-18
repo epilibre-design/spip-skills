@@ -80,5 +80,26 @@ dropped unless the site sets `spip.logger.max_level` in `config/custom.php`.
 | back/front office | `Spip::isBackOffice()`, `Spip::isFrontOffice()` |
 
 `Spip` is `Spip\Framework\Spip` (global alias `Spip`). `Spip::param('spip.x')` and `Spip::service('id')` exist for
-procedural code (only public services); in a class, inject the parameter (`#[Autowire(param: 'spip.x')]`) or the
-service. The global helpers `SpipLeague\Component\Kernel\param()` / `service()` are deprecated.
+procedural code; in a class, inject the parameter (`#[Autowire(param: 'spip.x')]`) or the service. The global
+helpers `SpipLeague\Component\Kernel\param()` / `service()` are deprecated.
+
+Verified on 5.0.0-beta (`ecrire` `26bfe470`):
+
+- `Spip::service()` reaches **public** services only. Classes loaded by `load()` are private: declare the one you need
+  `->public()` in `config/services.php` (`$services->set(Importeur::class)->public();`), otherwise "service … has been
+  removed or inlined".
+- `Spip::logger('acme')` creates the `acme` channel on first use (`tmp/log/acme.log`): no declaration needed in
+  procedural code. The `spip.acme.logger` service above is only for injection.
+- `Spip::param('spip.dirs.tmp')` is the raw setting, `tmp/`, relative to the site directory. For a usable path:
+  `Spip::directories()->getTmpDir()` (absolute, trailing slash) or `Spip::directories()->relative()->getTmpDir()`
+  (relative to the current directory, like `_DIR_TMP`). The `spip.dirs.*` parameters do not share one format
+  (`spip.dirs.project`, `spip.dirs.etc`, `spip.dirs.cache` are absolute): use the `Spip::directories()` getters
+  rather than the raw parameters.
+
+## HTTP requests
+
+`recuperer_url()` (`include_spip('inc/distant')`) still exists in 5.0 and is not deprecated: verified, it returns
+`status`, `headers`, `page`, … as in 4.x. Symfony HttpClient is **not** installed (neither `symfony/http-client`
+nor a PSR-18 client in `vendor/`), so there is nothing HTTP to inject. Call `recuperer_url()` from the class, or
+require a client in the site's root `composer.json` — a plugin's own `require` is not installed when the plugin is
+activated through the back office (`squelette-plugin.md`).

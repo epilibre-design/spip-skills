@@ -58,6 +58,9 @@ A plugin activated through the back office (SVP) is **not** installed by Compose
 are not installed — embed a `vendor/` or install the plugin through the site's root `composer.json`. A PSR-4 prefix
 already known to Composer is skipped.
 
+Keep `"spip/framework": "^5.x-dev"`: it is what every 5.0 plugins-dist declares. It is ignored when the plugin is
+activated through SVP, and constrains the core version when the plugin is installed through Composer.
+
 ## `config/services.php`
 
 ```php
@@ -86,7 +89,9 @@ return static function (ContainerConfigurator $container): void {
 
 Collected automatically for every **active** plugin: nothing to declare in `paquet.xml`. Without `autoconfigure()`
 and a `load()` that covers the class, attributes are never read. Plugin parameters:
-`$container->parameters()->set('acme.xxx', …)`, prefixed with the plugin name.
+`$container->parameters()->set('acme.xxx', …)`, prefixed with the plugin name, read with
+`#[Autowire(param: 'acme.xxx')]`. The site's `config/custom.php` is loaded after the plugins and overrides them.
+`$container->env()` is `null` in this file: environment-dependent values belong in `config/custom.php`.
 
 A listener, Guard rule or public service that cannot be autowired (e.g. a plain `LoggerInterface` argument) makes
 the **whole** container fail to compile, for every page of the site. An unused private service with the same error
