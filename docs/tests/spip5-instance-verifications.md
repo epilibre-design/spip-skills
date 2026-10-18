@@ -94,6 +94,7 @@ command.
 | Question | Result | How |
 |---|---|---|
 | Levels | default `notice`: notice and above are written; a `notice` line is labelled `!INFO` (legacy label), `warning` `WARNING`. With `debug`: `debug` and `info` lines too. With `warning`: only `WARNING` | **run**: squelette with one `#EVAL{spip_logger('bsk')->…}` per level, `tmp/log/bsk.log` |
+| `_LOG_FILTRE_GRAVITE` (4.x) | `define('_LOG_FILTRE_GRAVITE', 7)` in `config/mes_options.php`, level `notice`: still no `debug` / `info` line; `ecrire/inc_version.php` defines it from `spip.logger.max_level` when absent | **run** |
 | Files | `tmp/log/<channel>.log` (`spip.log`, `serializer.log`, `distant.log`, `flock.log`…) | **run** |
 | A copied or moved site | `tmp/cache/` keeps the source's absolute paths (`boot/options.php`, `boot/fonctions.php`, `paths/`, `calcul/`): purge `tmp/cache/` and warmup after copying | **run** (see top) |
 
@@ -147,6 +148,7 @@ location ~ \.php$ { try_files $uri =404; include fastcgi_params;
 | Deny `.htaccess` at `fin` | `install_verifier_htaccess()` writes `tmp/.htaccess`, then checks it with an HTTP `HEAD` on `tmp/.ok` (expects 403), then `config/`, then `vendor/`, stopping at the first failure. **Apache** (`AllowOverride All`): all three written, install ends on `ecrire/?exec=accueil`. **PHP built-in server** (ignores `.htaccess`, same as nginx): only `tmp/.htaccess` written, page "htaccess inopérant", `config/` and `vendor/` left without one | **run** + `ecrire/install/etape_fin.php`, `verifier_htaccess()` in `ecrire/inc/acces.php` |
 | "htaccess inopérant" message | tells to set `_DIR_TMP` and `_DIR_CONNECT` in `mes_options.php`: obsolete in 5.0 (`_DIR_*` are defined by the kernel before `mes_options.php`); the 5.0 ways are `spip.dirs.tmp` + `SPIP_CACHE_DIR` and `SPIP_ETC_DIR` (see Directories) or web server rules | **run** + `environnement-kernel.md` |
 | Apache install, sensitive paths | `config/bases/spip.sqlite`, `config/connect.php`, `vendor/…`, `tmp/log/…` 403; `var/state/plugins.php` and `bin/spip` 200; `.env.dist`, `composer.json` 200 without the root `.htaccess`, 404 with `htaccess.txt` copied to `.htaccess` | **run** |
+| Apache rule for `var/` and `bin/` | `RedirectMatch 404 ^/(var\|bin)/` added after the `composer.*` line of the root `.htaccess`: `var/state/plugins.php`, `bin/spip` 404; `composer.json` 404; `config/bases/spip.sqlite`, `vendor/autoload.php` 403; `/` 200, `ecrire/` 302 | **run** (Apache, fresh install) |
 | Install from the CLI | impossible: no `bin/spip` command (see `bin/spip`) | **run** |
 
 ## Upgrade 4.4 → 5.0 and rollback
@@ -205,3 +207,18 @@ Deactivating then reactivating `tts_test` in `ecrire/?exec=admin_plugin` (form `
 `plugins/tts_test/`, `tmp/cache/boot/container.prod.php` recompiled at the same second. **Run**: no warmup needed after
 an activation from the back office; a class added to an active plugin still needs `spip:cache:warmup --clear`
 (`spip5-plugins`).
+
+## MySQL backup and restore
+
+Disposable MySQL 8.0.46 server (`mysqld --initialize-insecure`, own datadir and socket, port 18950); the fresh 5.0
+site reinstalled on it through the web installer behind Apache (database `spipjetable`, user `spip` with rights on
+it only): 28 tables, `version_installee` `2026080300`, public 200. The installer echoes the database password in a
+hidden field of its step 2 form (same as 4.x).
+
+| Command | Result | How |
+|---|---|---|
+| option file `[client] user/password/host/port`, mode 600 | read by both clients; no password on the command line | **run** |
+| `mysqldump --defaults-extra-file=<f> --single-transaction --routines --triggers --no-tablespaces <db> > site.sql` | exit 0, 28 `CREATE TABLE`, last line `-- Dump completed on …` | **run** |
+| same without `--no-tablespaces` | prints `Access denied; you need (at least one of) the PROCESS privilege(s) for this operation' when trying to dump tablespaces` for a user limited to its database | **run** |
+| `mysql --defaults-extra-file=<f> <db> < site.sql` | after `drop table spip_mots` and a changed `nom_site`: 28 tables and the original `nom_site` back, public 200 | **run** |
+
