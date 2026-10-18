@@ -30,3 +30,32 @@ Fresh subagent restricted to `skills/spip-migration-5/` (SKILL.md + references),
 | `generer_objet_*` signatures | same arguments as the removed family |
 
 Not addressed (would need a running instance): sample output of `bin/spip spip:pipeline:listeners`.
+
+---
+
+## Re-run after `c1bbc0a` (plugin-modele-5.md reduced to a mapping)
+
+Date: 2026-10-17
+
+`plugin-modele-5.md` lost 216 lines: the 5.0 model now lives in `spip5-plugins`, to which it points. Fresh subagent
+restricted to `skills/spip-migration-5/` and `skills/spip5-plugins/` (only when pointed to), same 8 prompts, without
+the expectations.
+
+| Q | Before `c1bbc0a` | After | Notes |
+|---|---|---|---|
+| 1 Pipeline → listener | PASS (6/6) | **PASS (6/6)** | targets taken from `spip5-plugins` (`services.php`, PSR-4, `[5.0.0-dev;5.*]`) |
+| 2 Constants & helpers | PASS (7/7) | **PASS (7/7)** | also gives the injected form for classes |
+| 3 Squelette | PASS (6/6) | **PASS (6/6)** | |
+| 4 Meta mirror | PASS (4/4) | **PASS (4/4)** | `(int)` cast, `lire_config()` for dual compat |
+| 5 Cron | PASS (5/5) | **PASS (5/5)** | `return 0` + convention change; also flags the beta queue bug and gives the `genie/` + listener workaround |
+| 6 Dual 4.4/5.0 | PASS (7/7) | **PASS (7/7)** | |
+| 7 Tooled audit | PASS (5/5) | **PASS (5/5)** | |
+| 8 CLI | PASS (4/4) | **PASS (4/4)** | |
+
+Gaps reported, checked:
+
+| Gap | Outcome |
+|---|---|
+| `#PARAM{spip.routes.back_office}` valid in 4.4? | yes: `balise_PARAM_dist()` and the parameter exist in 4.4.22 — no change |
+| `Spip::param('spip.dirs.tmp')` vs `Spip::directories()->getTmpDir()`, `Spip::logger()` channel without declaration, `$t` in `__invoke()`, `appendToBody()` without `</body>`, PHPStan/Rector setup, `spip/framework` require in the example `composer.json` | not needed by the 8 cases; left for a later pass |
+| Two "listener not called" checklists (`audit-outils.md`, `spip5-plugins` `outils.md`) | overlapping, not contradictory |

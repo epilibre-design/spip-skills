@@ -16,6 +16,9 @@ are stored differently. It is **not** Symfony full-stack: no `bin/console`, no `
 **Verified against SPIP 5.0.0-beta** (`ecrire` `c8e329575`, 2026-09-22) and SPIP 4.4.23. SPIP 5.0 is still
 moving: when a name in this skill looks off, check the source (paths in *Source of truth*) and `bin/spip list`.
 
+**Requires the `spip5-plugins` skill** for the 5.0 target code (listeners, tasks, injection, Guard, menus): this
+skill only maps 4.x constructs to it. If `spip5-plugins` is not available, say so instead of guessing the 5.0 code.
+
 ## Terms (keep as is)
 
 | Term | Meaning |
@@ -34,7 +37,7 @@ moving: when a name in this skill looks off, check the source (paths in *Source 
 | `param()`, `service()`, `spip_logger()`, `spip_log()`, `_request()` | `Spip::param()`, `Spip::service()`, `Spip::logger()`, `Spip::input()` | old helpers are deprecated in 5.0 |
 | `_IS_CLI`, `_ESPACE_PRIVE`, `_DIR_RESTREINT_ABS`, `_ROOT_RACINE` | `Spip::platform()->isCli()`, `Spip::isBackOffice()`, `generer_url_ecrire('acme')` for a `?exec=` URL, `Spip::directories()->getProjectDir()` | **removed**: fatal "undefined constant" |
 | `app()->getRootDir()`, `app()->getCoreDir()`, `app()->relative()` | `Spip::directories()->getProjectDir()` / `getCoreDir()` / `relative()` | deprecated Kernel methods |
-| genie `return 1;` (success) | `#[AsCronTask]` service, **`return 0;`** = success | in 5.0 `> 0` = **failure**, re-planned immediately |
+| genie `return 1;` (success) | `#[AsCronTask]` service, **`return 0;`** = success | in 5.0 `> 0` = **failure**, re-planned immediately; on 5.0.0-beta the queue does not run these services yet |
 | `$GLOBALS['meta']['x']` read / `unserialize()` | `Spip::config('x')` | writes now store JSON (`150` → `"[150]"`); the mirror is the raw SQL string |
 | `$GLOBALS['spip_pipeline']` in `options.php` | `<pipeline>` or listener | **silently ignored** by the compiled container |
 | `{fusion}`, `[(#LOGO_ARTICLE\|left)]`, `</INCLURE>`, `(POUR)` | `{groupby}`, `[(#LOGO_ARTICLE{left})]`, `<INCLURE{…} />`, `(DATA){source tableau, …}` | removed or deprecated syntax |
@@ -44,7 +47,7 @@ moving: when a name in this skill looks off, check the source (paths in *Source 
 | Goal | Read |
 |---|---|
 | Look up one symbol (constant, function, critère, balise) and its replacement | `references/catalogue.md` |
-| Rewrite pipelines, cron tasks, menus, assets, services for 5.0 | `references/plugin-modele-5.md` |
+| Rewrite pipelines, cron tasks, menus, assets, services for 5.0 | `references/plugin-modele-5.md` (mapping), then the **`spip5-plugins`** skill for the target code |
 | Fix a squelette for 5.0 | `references/squelettes.md` |
 | Config / metas behave differently after the upgrade | `references/config-metas.md` |
 | Keep one plugin working on **4.4 and 5.0** | `references/double-compat.md` |

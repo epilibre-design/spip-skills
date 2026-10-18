@@ -13,7 +13,7 @@ In this repository, skills are version-controlled in `skills/` and installed to 
 
 ## Available skills
 
-Skill names are prefixed by scope: `spip-*` for SPIP core, `plugin-*` for one specific plugin.
+Skill names are prefixed by scope: `spip-*` for SPIP core (`spip5-*` for SPIP 5.0-only skills), `plugin-*` for one specific plugin.
 `plugin-escal` is the first of that family; other reference plugins will follow.
 
 - `spip-plugins`: SPIP plugin development (`paquet.xml`, pipelines, SQL API, plugin architecture)
@@ -23,7 +23,8 @@ Skill names are prefixed by scope: `spip-*` for SPIP core, `plugin-*` for one sp
 - `spip-lang`: SPIP language files (`lang/prefix_XX.php`, key naming conventions, `_T()`, `<:module:key:>`)
 - `spip-logs`: SPIP logging practices (`spip_log()`, journal files, debug workflow)
 - `spip-testing`: PHPUnit testing of plugins and squelettes (setup, unit tests with mocks, integration tests against a real SPIP)
-- `spip-migration-5`: migrating SPIP 4.x plugins and squelettes to SPIP 5.0 (listeners, `#[AsCronTask]`, façade `Spip::`, config/metas, 4.4+5.0 dual compatibility, `bin/spip`)
+- `spip-migration-5`: migrating SPIP 4.x plugins and squelettes to SPIP 5.0 (listeners, `#[AsCronTask]`, façade `Spip::`, config/metas, 4.4+5.0 dual compatibility, `bin/spip`) — requires `spip5-plugins`
+- `spip5-plugins`: writing SPIP 5.0 plugins (`config/services.php`, `#[AsPipelineListener]` and event classes, `#[AsCronTask]`, injected logger/config, Guard rules, private pages and menus)
 - `spip-mutualisation-maintenance`: SPIP farm inventory, shared updates, backups/rollback, and incident investigation
 - `plugin-escal`: the Escal squelette (noisettes, `escal/config` settings, special pages, layouts, technical mots-clés, spip-cli install)
 
@@ -35,7 +36,7 @@ Linux/macOS:
 
 ```bash
 mkdir -p ~/.claude/skills
-cp -R skills/spip-* ~/.claude/skills/
+cp -R skills/spip* ~/.claude/skills/
 cp -R skills/spip-mutualisation-maintenance ~/.claude/skills/
 ```
 
@@ -43,7 +44,7 @@ Windows PowerShell:
 
 ```powershell
 New-Item -ItemType Directory -Force "$HOME/.claude/skills" | Out-Null
-Copy-Item -Recurse -Force "skills/spip-*" "$HOME/.claude/skills/"
+Copy-Item -Recurse -Force "skills/spip*" "$HOME/.claude/skills/"
 Copy-Item -Recurse -Force "skills/spip-mutualisation-maintenance" "$HOME/.claude/skills/"
 ```
 
@@ -55,7 +56,7 @@ Linux/macOS:
 
 ```bash
 mkdir -p ~/.claude/skills
-for d in skills/spip-*; do
+for d in skills/spip*; do
 	name="$(basename "$d")"
 	rm -rf "$HOME/.claude/skills/$name"
 	ln -s "$PWD/$d" "$HOME/.claude/skills/$name"
@@ -64,7 +65,7 @@ done
 
 ## Install a plugin skill (`plugin-*`)
 
-The commands above install the `spip-*` skills, which are the SPIP core baseline and apply to any
+The commands above install the `spip*` skills, which are the SPIP core baseline and apply to any
 site. Skills named `plugin-*` document one specific plugin and are useless unless that plugin is
 installed on the site you work on, so they are installed **on demand**, one at a time.
 
@@ -80,7 +81,7 @@ Windows PowerShell:
 Copy-Item -Recurse -Force "skills/plugin-escal" "$HOME/.claude/skills/"
 ```
 
-The symlink loop works the same way with an explicit folder name instead of the `skills/spip-*` glob.
+The symlink loop works the same way with an explicit folder name instead of the `skills/spip*` glob.
 
 ## Installation on claude.ai
 
@@ -92,6 +93,9 @@ Custom skill installation is available in Customize > Skills.
 4. Select `Upload a skill`.
 5. Upload the ZIP file.
 6. The skill appears in your list and can be enabled or disabled.
+
+Dependencies: `spip-migration-5` relies on `spip5-plugins` for the 5.0 target code. Upload and enable **both**,
+and update them together.
 
 Important notes:
 
@@ -122,6 +126,8 @@ You should see these folders:
 - `~/.claude/skills/spip-lang`
 - `~/.claude/skills/spip-logs`
 - `~/.claude/skills/spip-testing`
+- `~/.claude/skills/spip-migration-5`
+- `~/.claude/skills/spip5-plugins`
 - `~/.claude/skills/spip-mutualisation-maintenance`
 
 Plus one folder per `plugin-*` skill you chose to install, for example `~/.claude/skills/plugin-escal`.
@@ -136,6 +142,8 @@ test -f ~/.claude/skills/spip-saisies/SKILL.md && echo "spip-saisies OK"
 test -f ~/.claude/skills/spip-lang/SKILL.md && echo "spip-lang OK"
 test -f ~/.claude/skills/spip-logs/SKILL.md && echo "spip-logs OK"
 test -f ~/.claude/skills/spip-testing/SKILL.md && echo "spip-testing OK"
+test -f ~/.claude/skills/spip-migration-5/SKILL.md && echo "spip-migration-5 OK"
+test -f ~/.claude/skills/spip5-plugins/SKILL.md && echo "spip5-plugins OK"
 test -f ~/.claude/skills/spip-mutualisation-maintenance/SKILL.md && echo "spip-mutualisation-maintenance OK"
 ```
 
@@ -149,6 +157,8 @@ Test-Path "$HOME/.claude/skills/spip-saisies/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-lang/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-logs/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-testing/SKILL.md"
+Test-Path "$HOME/.claude/skills/spip-migration-5/SKILL.md"
+Test-Path "$HOME/.claude/skills/spip5-plugins/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-mutualisation-maintenance/SKILL.md"
 ```
 
@@ -157,7 +167,7 @@ Test-Path "$HOME/.claude/skills/spip-mutualisation-maintenance/SKILL.md"
 ### If you used copy-based install
 
 1. Edit files in `skills/<name>/`.
-2. Re-copy updated folders to `~/.claude/skills/` (Linux/macOS: `cp -R skills/spip-* ~/.claude/skills/`, PowerShell: `Copy-Item -Recurse -Force "skills/spip-*" "$HOME/.claude/skills/"`).
+2. Re-copy updated folders to `~/.claude/skills/` (Linux/macOS: `cp -R skills/spip* ~/.claude/skills/`, PowerShell: `Copy-Item -Recurse -Force "skills/spip*" "$HOME/.claude/skills/"`).
 3. Verify the skill locally.
 4. Commit changes in this repository.
 
@@ -168,11 +178,11 @@ Test-Path "$HOME/.claude/skills/spip-mutualisation-maintenance/SKILL.md"
 3. Verify symlinks and skill files:
 
 ```bash
-ls -l ~/.claude/skills/spip-*
+ls -l ~/.claude/skills/spip*
 test -L ~/.claude/skills/spip-plugins && echo "spip-plugins link OK"
 ```
 
-4. If a new `skills/spip-*` folder was added, run the symlink install loop again to create its link.
+4. If a new `skills/spip*` folder was added, run the symlink install loop again to create its link.
 
 ## Tests (Anthropic skill-creator)
 
