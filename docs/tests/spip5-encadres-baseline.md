@@ -179,11 +179,11 @@ sites under `sites/`, Champs Extras 4.3.3 in `plugins/auto/`; `mutu-50` adds `ec
 | Case | Fixture marker | Answers | Result |
 |---|---|---|---|
 | 23 — shared plugin upgrade, 5.0 farm | `ecrire/src/SpipVersion.php` 5.0.0-beta | both runs stop: out of the 4.2–4.4 scope, Mutualisation facile and Champs Extras declare 4.x only; both still lay out the 4.x action plan, every row "blocked", to be unblocked "once production is confirmed 4.2–4.4" or by "a dedicated 5.0 procedure"; neither knows that mutualisation is unfinished in 5.0 or that sites are no longer isolated | **PARTIAL 2** |
-| 24 — 5.0 farm, all sites show the same content | same | both runs link the symptom to 5.0 + Mutualisation facile, as an unverified hypothesis ("not checked in the 5.0 code"); both freeze writes, preserve the current state, then plan the return to 4.x with the pre-upgrade databases | PASS 2/2 |
+| 24 — 5.0 farm, all sites show the same content | same | both runs link the symptom to 5.0 + Mutualisation facile, as an unverified hypothesis ("not checked in the 5.0 code"); both freeze writes, preserve the current state, then plan the return to 4.x with the pre-upgrade databases. Regraded after review (the cause must be confirmed read-only before restoring the databases): run 1 adds a step that confirms the mechanism in the core and locates the writes before the restore lines; run 2 makes the restore depend on the backup and the schema state only, never on confirming the cause | PASS 1, **PARTIAL 1** (regraded) |
 | 25 — shared plugin upgrade, 4.4 farm (control) | `ecrire/inc_version.php` 4.4.22 | full 4.x procedure | PASS |
 | 26 — move a 4.4 farm to 5.0 | same | both runs block on `[4.2.0;4.*]` and the scope; both draft the migration anyway (backups, isolated rehearsal, production switch "blocked until a compatible Mutualisation exists"), as if it were only a matter of waiting for a release; neither knows that 5.0 mutualisation is experimental | **PARTIAL 2** |
 
 The spec expected the 4.x procedure applied to a 5.0 farm. The skill's 4.2–4.4 scope line prevents that. What
 remains: the agent does not know that 5.0 mutualisation is unfinished upstream nor that Mutualisation facile no
 longer isolates sites, so it frames 5.0 as "wait for a compatible release, then migrate", and only guesses the cause of
-case 24.
+case 24, sometimes without confirming it before the restore.

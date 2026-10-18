@@ -20,14 +20,19 @@ runs 5.0 if **any** of: `ecrire/src/SpipVersion.php` declares `VERSION = '5.…'
 `vendor/spip/framework/` exists, plugins live in `plugins-dist/spip/`.
 
 - Mutualisation is work in progress in SPIP 5.0: the 5.0 documentation marks the mutualised entry point
-  (`sites/default/public/index.php`) "expérimental — todo", and no farm procedure exists. On a 5.0 farm, run only the
-  read-only inventory; do not draft upgrade, backup or migration plans for it. Asked to move a farm to 5.0: say it is
-  not supported yet, and offer at most a trial on an isolated copy, outside production.
+  (`sites/default/public/index.php`) "expérimental — todo", and no farm procedure exists. On a 5.0 farm, run the
+  read-only inventory; do not draft upgrade or migration plans for it. Preserving its current state (shared files and
+  every database) stays in scope. Asked to move a farm to 5.0: say it is not supported yet, and offer at most a trial
+  on an isolated copy, outside production.
 - Mutualisation facile 2.0.1 declares `[4.2.0;4.*]` and does not isolate sites on 5.0: the 5.0 kernel defines
   `_DIR_IMG`, `_DIR_TMP`, `_DIR_VAR`, `_DIR_CONNECT` before `config/mes_options.php` runs, so `demarrer_site()` only
   sets `_DIR_SITE` and `_SPIP_PATH`, and every site uses the shared root's connection, `IMG/`, `local/` and `tmp/`.
-  Sites of a 5.0 farm showing the same content is this, not a configuration error: freeze writes, preserve the
-  current state, then restore the pre-upgrade 4.4 backup (shared files and every site's database).
+  Sites of a 5.0 farm showing the same content fits this cause but does not prove it (vhost routing gives the same
+  symptom). Confirm it read-only first: the mutualisation actually loaded (`require` target, `paquet.xml`), each
+  domain reaching the farm with its own `HTTP_HOST`, and where the writes and the connection actually go (root
+  `config/connect.php`, recent files in the root `IMG/` and `tmp/` rather than `sites/<domain>/`). Once confirmed:
+  freeze writes, preserve the incident state (shared files and every database), then restore the consistent backup
+  taken before the upgrade (the release the farm ran, shared files and every site's database).
 
 Details: none upstream yet; `spip-migration-5` covers single sites.
 

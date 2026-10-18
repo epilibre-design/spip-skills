@@ -176,17 +176,28 @@ here instead of claiming they are the only ones. Cases 20 and 21 were rerun.
 
 The callout covers two points:
 - mutualisation is work in progress in 5.0 (mutualised entry point "expérimental — todo" in the 5.0 docs, no farm
-  procedure): read-only inventory only on a 5.0 farm, no move of a production farm to 5.0, at most a trial on an
-  isolated copy;
+  procedure): read-only inventory on a 5.0 farm (preserving its state stays in scope), no move of a
+  production farm to 5.0, at most a trial on an isolated copy;
 - Mutualisation facile 2.0.1 (`[4.2.0;4.*]`) no longer isolates sites on 5.0 (checked on the instance, see the
-  baseline): sites showing the same content means freeze, preserve, restore the pre-upgrade 4.4 backup.
+  baseline): sites showing the same content fit this cause; once confirmed read-only, freeze, preserve, restore the
+  pre-upgrade backup.
 
-| Case | RED | GREEN | Notes |
-|---|---|---|---|
-| 23 — shared plugin upgrade, 5.0 farm | PARTIAL 2 | **PASS 2/2** | cites `SpipVersion.php` 5.0.0-beta, states both points, read-only commands only, empty action plan; no 4.x plan "to unblock later" |
-| 24 — 5.0 farm, all sites show the same content | PASS 2/2 (cause as a hypothesis) | **PASS (1/1)** | cause stated from the callout (constants defined before `mes_options.php`), freeze, preserve the 5.0 state, verify then restore the 4.4 backup, files and every site's database |
-| 25 — 4.4 farm (control) | PASS | **PASS (1/1)** | 4.4.22 cited, no 5.0 marker, full 4.x action plan; nothing from the callout |
-| 26 — move a 4.4 farm to 5.0 | PARTIAL 2 | **PASS 2/2** | refuses for production with both reasons, stays on 4.4, offers only an isolated trial; no migration plan |
+Review (Codex) on the first callout:
+- it presented the same-content symptom as proof of the cause, while vhost routing gives the same symptom;
+- it forbade any backup plan on a 5.0 farm while asking to preserve the current state;
+- it named the restore target "4.4", while the skill covers 4.2–4.4 farms.
+
+The final callout makes the agent confirm the cause read-only first (loaded mutualisation, `HTTP_HOST` routing,
+effective connection and write paths), keeps preserving the current state in scope, and restores "the consistent
+backup taken before the upgrade". Case 24 gains that criterion and its answers were regraded; cases 23 and 24 were
+rerun.
+
+| Case | RED | GREEN, first callout | GREEN, final callout | Notes |
+|---|---|---|---|---|
+| 23 — shared plugin upgrade, 5.0 farm | PARTIAL 2 | PASS 2/2 (both refuse any backup plan) | **PASS (1/1)** | refuses the upgrade, offers a preservation backup of the current state (files and every database) with a restore drill, treats the isolation defect as to be confirmed read-only |
+| 24 — 5.0 farm, all sites show the same content | PASS 1, PARTIAL 1 (regraded) | PARTIAL 1 (regraded: cause asserted, restore not conditioned on confirming it) | **PASS 2/2** | "fits but does not prove"; read-only checks of the loaded plugin, vhost routing, root `connect.php` and recent writes; stops if routing is the cause; then freeze, preserve the incident state, restore the pre-upgrade backup of the release the farm ran |
+| 25 — 4.4 farm (control) | PASS | **PASS (1/1)** | — | 4.4.22 cited, no 5.0 marker, full 4.x action plan; nothing from the callout |
+| 26 — move a 4.4 farm to 5.0 | PARTIAL 2 | **PASS 2/2** | — | refuses for production with both reasons, stays on 4.4, offers only an isolated trial; no migration plan |
 
 Run 1 of case 26 notes the `SpipLeague\Component\Kernel` code in the fixture's `inc_version.php` as an anomaly. The
 fixture is byte-identical to the official `spip/ecrire` 4.4.22 file (sha1 `fc26f8c8`); 4.4.24 has the same code. The

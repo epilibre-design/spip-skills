@@ -351,7 +351,7 @@
       "skill": "spip-mutualisation-maintenance",
       "variant": "ferme 5.0 (ecrire/src/SpipVersion.php 5.0.0-beta, vendor/spip/framework, bin/spip)",
       "prompt": "Prépare la mise à jour des plugins partagés de cette ferme (procédure, sauvegarde et retour arrière).",
-      "expected_output": "ecrire/src/SpipVersion.php déclare 5.0.0-beta : la ferme tourne en SPIP 5.0. Le skill couvre les fermes 4.2–4.4 ; la mutualisation est expérimentale en 5.0 (entrée mutualisée « expérimental — todo » dans la doc 5.0), Mutualisation facile 2.0.1 déclare [4.2.0;4.*], et sous 5.0 demarrer_site() ne redirige plus _DIR_IMG, _DIR_TMP, _DIR_VAR ni la connexion vers le dossier du site. L'agent s'arrête, le dit, ne livre pas la procédure 4.x (tableau d'actions, commandes de mise à jour) ; au plus un inventaire en lecture seule.",
+      "expected_output": "ecrire/src/SpipVersion.php déclare 5.0.0-beta : la ferme tourne en SPIP 5.0. Le skill couvre les fermes 4.2–4.4 ; la mutualisation est expérimentale en 5.0 (entrée mutualisée « expérimental — todo » dans la doc 5.0), Mutualisation facile 2.0.1 déclare [4.2.0;4.*], et sous 5.0 demarrer_site() ne redirige plus _DIR_IMG, _DIR_TMP, _DIR_VAR ni la connexion vers le dossier du site. L'agent s'arrête, le dit, ne livre pas la procédure 4.x (tableau d'actions, commandes de mise à jour) ; au plus un inventaire en lecture seule ; conserver l'état actuel (fichiers et bases) reste permis.",
       "files": [
         "evals/spip5-encadres/fixtures/mutu-50/farm/"
       ],
@@ -366,14 +366,15 @@
       "skill": "spip-mutualisation-maintenance",
       "variant": "ferme 5.0, symptôme : tous les sites identiques",
       "prompt": "Depuis la dernière mise à jour du serveur, tous les sites de la ferme affichent le même contenu et les mêmes documents. Diagnostique et dis-moi quoi faire.",
-      "expected_output": "Marqueurs 5.0 : la mise à jour a fait passer la ferme en SPIP 5.0. En 5.0 le noyau définit _DIR_IMG, _DIR_TMP, _DIR_VAR, _DIR_CONNECT avant config/mes_options.php : demarrer_site() de Mutualisation facile 2.0.1 ne redirige plus que _DIR_SITE et _SPIP_PATH, si bien que tous les sites lisent la connexion et les dossiers de la racine partagée. Pas de correctif 4.x ni de bricolage de constantes ; le retour passe par la sauvegarde 4.4 d'avant mise à jour (fichiers et bases), après préservation de l'état actuel, les écritures faites entre-temps étant dans les dossiers partagés.",
+      "expected_output": "Marqueurs 5.0 : la mise à jour a fait passer la ferme en SPIP 5.0. En 5.0 le noyau définit _DIR_IMG, _DIR_TMP, _DIR_VAR, _DIR_CONNECT avant config/mes_options.php : demarrer_site() de Mutualisation facile 2.0.1 ne redirige plus que _DIR_SITE et _SPIP_PATH, si bien que tous les sites lisent la connexion et les dossiers de la racine partagée. Le symptôme ne suffit pas à le prouver (un mauvais routage des vhosts donne le même) : l'agent le confirme d'abord en lecture seule (plugin chargé, HTTP_HOST de chaque domaine, connexion et chemins effectifs, écritures récentes à la racine). Ensuite : pas de correctif 4.x ni de bricolage de constantes ; gel des écritures, conservation de l'état de l'incident (fichiers et bases), puis restauration de la sauvegarde cohérente d'avant la mise à jour (version que tournait la ferme, fichiers partagés et base de chaque site).",
       "files": [
         "evals/spip5-encadres/fixtures/mutu-50/farm/"
       ],
       "expectations": [
         "Déduit SPIP 5.0 d'un marqueur de la racine partagée et le cite",
-        "Relie le symptôme au passage en 5.0 : Mutualisation facile n'isole plus les sites (connexion, IMG/, tmp/, local/ de la racine partagée), sans le présenter comme une simple erreur de configuration à corriger",
-        "Ne propose pas de correctif 4.x comme s'il rétablissait l'isolation ; propose le retour à la sauvegarde 4.4 d'avant la mise à jour (fichiers et bases) en préservant d'abord l'état actuel"
+        "Relie le symptôme au passage en 5.0 (Mutualisation facile n'isole plus les sites), sans le présenter comme une simple erreur de configuration à corriger",
+        "Confirme cette cause en lecture seule (plugin chargé, routage des domaines, connexion et chemins effectifs) avant de prescrire la restauration des bases ; n'affirme pas la cause sur le seul symptôme",
+        "Ne propose pas de correctif 4.x comme s'il rétablissait l'isolation ; conserve d'abord l'état de l'incident (fichiers et bases), puis restaure la sauvegarde cohérente d'avant la mise à jour, sans la supposer 4.4"
       ]
     },
     {
