@@ -170,3 +170,37 @@ one in `plugins/auto/ppp/v2.1.0/`; 21 plugins-dist in flat `plugins-dist/<name>/
 | 4.4 code on the database touched by 5.0 | pages still 200, but the log fills with errors (`pipeline desactive`, `spip_connect … non trouve`): code-only rollback is not enough once 5.0 has written the database | **run**: 5.0 database copied into the 4.4 site |
 | Rollback | stop serving the 5.0 directory, serve the 4.4 directory, restore the database backup (`sqlite3 <backup>/spip.sqlite ".backup 'config/bases/spip.sqlite'"`), purge `tmp/cache/`: `pragma integrity_check` ok, `medias_base_version` 1.8.1, `plugin` serialised again, 12 346 articles, public 200, `ecrire/` 302, `spip_version_branche` `4.4.21`; the remaining log lines (`spip_connect … non trouve`) also appear on the untouched reference 4.4.21 instance | **run** |
 | Deny `.htaccess` after the copy | copying only `connect.php`, `cles.php`, `chmod.php`, `bases/` leaves the new `config/` without the 4.4 `.htaccess`; on Apache, copy `config/.htaccess` too or check `config/bases/*.sqlite` returns 403 (see Fresh install) | **run** |
+
+## Diagnostics
+
+Reproduced on `jetable-spip5-instance-copie` (and on the upgraded copy for plugins). "Symptom" is what an operator
+sees; "Evidence" is where the cause shows.
+
+| Cause | Symptom | Evidence | Fix verified | How |
+|---|---|---|---|---|
+| `vendor/` missing | HTTP 500, empty body | PHP-FPM / web server error log: `Class "Symfony\Component\Runtime\SymfonyRuntime" not found` or failed `require` in `spip.php`; CLI: `Dependencies are missing. Try running "composer install".` (`bin/spip:13`) | `vendor/` back → 200 | **run** (Apache + PHP-FPM) |
+| PHP < 8.4 | HTTP 500, body "Composer detected issues in your platform: Your Composer dependencies require a PHP version ">= 8.4.1"" | same text in CLI | — | **run**: PHP 8.3.35 built-in server and CLI |
+| Site copied or moved without purging `tmp/cache/` | public pages 500, `ecrire/` still 302 | `PHP Fatal error: Cannot redeclare function barre_outils_css_icones() (previously declared in <old path>/plugins-dist/spip/porte-plume/porte_plume_fonctions.php:33)`: the boot cache loads code from the old directory | `rm -rf tmp/cache/*` + `bin/spip spip:cache:warmup --clear` → 200, no old path left in `tmp/cache` | **run**: copy of the copy on another port |
+| `tmp/cache/` not writable (empty boot cache) | HTTP 500 "An Error Occurred: Internal Server Error" | log: `Uncaught Warning: mkdir(): Permission denied`; `spip:cache:warmup` fails with `ErrorException` | write permission back + warmup → 200 | **run** |
+| `tmp/`, `var/`, `var/state/` not writable while their content exists | no visible effect (200) | — | — | **run** |
+| `SPIP_CACHE_DIR` or absolute `spip.dirs.tmp` | HTTP 500 on every hit | "Artefacts boot absents : options.php introuvable…" | see Directories | **run** |
+| `_DIR_*` redefined in `config/mes_options.php` | HTTP 500 | `Uncaught ErrorException: Warning: Constant _DIR_TMP already defined in …/config/mes_options.php:1` | remove the `define()` | **run** |
+| Guard `BotAbuseUrlRule` | 403, body `You are not authorized to view this page (robot agenda/double pagination)`, only for bot user agents with two `debut_*` (or a repeated `calendrier_annee`) | nothing in `tmp/log/`: Guard does not log; the reason is in the response body | — | **run**: `MJ12bot` 403, browser 200 on `?page=sommaire&debut_a=10&debut_b=20` |
+| Guard `LoadSheddingRule` | 429 `Retry-After: 300` for bots above `spip.guard.load_threshold` | idem; a non-integer threshold logs `Deprecated: Implicit conversion from float 0.01 to int` | `0` (default) disables | **run** |
+| Plugin refused after an upgrade | not active; `ecrire/?exec=admin_plugin` "Impossible d'activer le plugin ../plugins/<name>", "Nécessite SPIP en version ≤ 4.* minimum" | `compatibilite` in its `paquet.xml`; absent from `var/state/plugins.php` | a 5.0-compatible version of the plugin | **run** (upgrade) |
+
+### `mes_options.php`
+
+| Question | Result | How |
+|---|---|---|
+| `ecrire/mes_options.php` | ignored: `_MA_CONSTANTE` not defined | **run**: squelette `[(#EVAL{defined('_MA_CONSTANTE') ? _MA_CONSTANTE : 'non definie'})]` |
+| `config/mes_options.php` | read on every hit (`_FILE_OPTIONS` = its path in `spip:info`); a change applies without warmup | **run** |
+| `_DIR_*` in it | fatal, see above (`environnement-kernel.md`: constants frozen at boot) | **run** |
+
+### Plugin activation from the back office
+
+Deactivating then reactivating `tts_test` in `ecrire/?exec=admin_plugin` (form `admin_plugin`, `actions[off][<id>]`
+/ `actions[on][<id>]`): `spip_paquets.actif` `non` / `oui`, `var/state/plugins.php` rewritten without / with
+`plugins/tts_test/`, `tmp/cache/boot/container.prod.php` recompiled at the same second. **Run**: no warmup needed after
+an activation from the back office; a class added to an active plugin still needs `spip:cache:warmup --clear`
+(`spip5-plugins`).
