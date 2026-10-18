@@ -123,6 +123,7 @@
       ],
       "expectations": [
         "Déduit SPIP 5.0 de vendor/spip/framework/ et cite ce marqueur",
+        "Ajoute la liste demandée : chaque rubrique contenant un article lié au mot n'apparaît qu'une fois, avec son titre et un lien",
         "Le dédoublonnage n'utilise pas {fusion} : {groupby id_rubrique}, ou une boucle sans critère déprécié",
         "Le fichier livré contient [(#LOGO_MOT{right})] : la forme [(#LOGO_MOT|right)], supprimée en 5.0, n'y figure plus (la signaler sans la corriger échoue)",
         "Le fichier livré n'utilise que <INCLURE{…} /> : aucune balise fermante </INCLURE>, supprimée en 5.0 (la signaler sans la corriger échoue)"
@@ -139,6 +140,7 @@
       ],
       "expectations": [
         "Déduit du paquet.xml que le plugin vise 4.4 et 5.0, et cite ce marqueur",
+        "Ajoute la liste demandée : chaque rubrique contenant un article lié au mot n'apparaît qu'une fois, avec son titre et un lien",
         "N'utilise ni {groupby} ni {collate} (absents en 4.4)",
         "Le fichier livré contient [(#LOGO_MOT{right})] : la forme [(#LOGO_MOT|right)], supprimée en 5.0, n'y figure plus (la signaler sans la corriger échoue)",
         "Le fichier livré n'utilise que <INCLURE{…} /> : aucune balise fermante </INCLURE>, supprimée en 5.0 (la signaler sans la corriger échoue)"

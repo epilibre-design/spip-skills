@@ -73,8 +73,12 @@ the delivered file must fix them; flagging them is no longer enough. `#PARAM` dr
 case 10: `balise_PARAM_dist()` exists in 4.4. The recorded answers were re-scored, no re-run needed: the GREEN answers
 of cases 8–9 already fix both syntaxes, the RED ones fail these criteria either way.
 
+Second tightening (review): cases 8–9 did not check the requested list itself, so an answer fixing the existing
+syntaxes without adding it would pass. Both now require it, as case 10 did. Re-scored: every recorded answer adds the
+list (RED 2/5, GREEN 5/5).
+
 | Case | RED | GREEN | Notes |
 |---|---|---|---|
-| 8 — 5.0 site | FAIL (1/4) | **PASS (4/4)** | cites `vendor/spip/framework/`, `{groupby id_rubrique}`, fixes `{right}` and both `<INCLURE … />` |
-| 9 — 4.4 + 5.0 | FAIL (1/4) | **PASS (4/4)** | cites `[4.4.0;5.*]`, keeps `{fusion}` (no `{groupby}` in 4.4), fixes `{right}` and `<INCLURE … />` |
+| 8 — 5.0 site | FAIL (2/5) | **PASS (5/5)** | cites `vendor/spip/framework/`, `{groupby id_rubrique}`, fixes `{right}` and both `<INCLURE … />` |
+| 9 — 4.4 + 5.0 | FAIL (2/5) | **PASS (5/5)** | cites `[4.4.0;5.*]`, keeps `{fusion}` (no `{groupby}` in 4.4), fixes `{right}` and `<INCLURE … />` |
 | 10 — 4.x (no leak) | PASS | **PASS (2/2)** | cites `[4.2.0;4.4.*]`, `{fusion}`, file left as is; 5.0 changes listed as a future note |
