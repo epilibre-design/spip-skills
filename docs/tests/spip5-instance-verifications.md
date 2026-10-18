@@ -148,3 +148,25 @@ location ~ \.php$ { try_files $uri =404; include fastcgi_params;
 | "htaccess inopérant" message | tells to set `_DIR_TMP` and `_DIR_CONNECT` in `mes_options.php`: obsolete in 5.0 (`_DIR_*` are defined by the kernel before `mes_options.php`); the 5.0 ways are `spip.dirs.tmp` + `SPIP_CACHE_DIR` and `SPIP_ETC_DIR` (see Directories) or web server rules | **run** + `environnement-kernel.md` |
 | Apache install, sensitive paths | `config/bases/spip.sqlite`, `config/connect.php`, `vendor/…`, `tmp/log/…` 403; `var/state/plugins.php` and `bin/spip` 200; `.env.dist`, `composer.json` 200 without the root `.htaccess`, 404 with `htaccess.txt` copied to `.htaccess` | **run** |
 | Install from the CLI | impossible: no `bin/spip` command (see `bin/spip`) | **run** |
+
+## Upgrade 4.4 → 5.0 and rollback
+
+Site: copy of the 4.4.21 instance (SQLite, 12 346 articles, 261 authors, 2 181 documents; 11 plugins in `plugins/`,
+one in `plugins/auto/ppp/v2.1.0/`; 21 plugins-dist in flat `plugins-dist/<name>/`; `config/ecran_securite.php`; no
+`mes_options.php`, no `squelettes/`). Not a Git checkout: installed from the archive, with a 4.4 `composer.json`
+(`spip/ecrire` `^4.4`).
+
+| Question | Result | How |
+|---|---|---|
+| Distribution channels | `https://www.spip.net/spip_loader.api`: 4.4.28 (latest 4.4), 4.3.9, 4.2.17 as archives; 5.0 only as `dev` (`spip-master.zip`, PHP 8.4.0 minimum). No 5.0 release archive: 5.0 comes from Composer (`spip/spip` `5.0.x-dev`) | **run**: `curl` of the API |
+| Core database schema | 4.4.21 `$spip_version_base = 2026_08_03_00`; 5.0.0-beta `SpipVersion::BASE = 2026_08_03_00`: same value, no core database upgrade from 4.4.21 | source read |
+| `config/ecran_securite.php` | not loaded by 5.0 (no include in `ecrire/`, `vendor/spip*`): Guard replaces it; `spip.guard.load_threshold` replaces `ECRAN_SECURITE_LOAD` (`parametres-spip.md`) | source read |
+| Procedure run (side by side) | 1. backup: `sqlite3 config/bases/spip.sqlite ".backup '<backup>/spip.sqlite'"` (`pragma integrity_check` ok) + `tar` of the site without `tmp/cache`; 2. `composer create-project --no-dev --repository=https://get.spip.net/composer spip/spip <new> 5.0.x-dev`, then `composer update --no-dev` (→ `ecrire` `26bfe470`, no `vendor/phpunit`); 3. copy from the 4.4 site: `config/connect.php`, `config/cles.php`, `config/chmod.php`, `config/bases/`, `IMG/`, `plugins/` (not `ecran_securite.php`, `local/`, `tmp/`); 4. `bin/spip spip:cache:warmup --clear`; 5. serve the new directory; 6. log in to `ecrire/` as webmaster, open `ecrire/?exec=admin_plugin` | **run** |
+| First boot | warmup: 24 active plugins (the plugins-dist); `spip:info` `5.0.0-beta`. Public pages identical to 4.4 (articles 13, 14, 76, rubrique 1, an `IMG/` document: 200 on both) | **run** |
+| Plugins in `plugins/` | on the first webmaster visit, the 7 plugins with `compatibilite` `[…;4.*]` are refused: "Impossible d'activer le plugin ../plugins/<name>", "Nécessite SPIP en version ≤ 4.* minimum" (`adminer`, `coloration_code`, `crayons`, `inserer_modeles`, `saisies`, `verifier`, `auto/ppp/v2.1.0`); the 4 with `[…;5.*]` stay active and appear in `var/state/plugins.php` (`yaml`, `tiptap_spip`, `tiptap_spip_faq`, `tts_test`) | **run**: `exec=admin_plugin`, manifest |
+| Plugin schema upgrades | run automatically on the first webmaster hit of `ecrire/`, not on public hits: `medias_base_version` 1.8.1 → 1.9.2, logged in `tmp/log/maj.log` (`medias_base_version_maj_1.9.0: ok`); the other plugins-dist schemas are unchanged from 4.4 | **run** |
+| Metas rewritten | after the 5.0 visit, `spip_meta.plugin` is JSON (`[{"SPIP":{"nom":"SPIP",…`), not PHP-serialised | **run**: `sqlite3` |
+| Old flat `plugins-dist/<name>/` left in place | test with the 4.4 `plugins-dist/forum/` copied into the 5.0 site: ignored, the manifest keeps `plugins-dist/spip/forum/`, no error; the documentation says to delete them (`prerequis.md`) | **run** |
+| 4.4 code on the database touched by 5.0 | pages still 200, but the log fills with errors (`pipeline desactive`, `spip_connect … non trouve`): code-only rollback is not enough once 5.0 has written the database | **run**: 5.0 database copied into the 4.4 site |
+| Rollback | stop serving the 5.0 directory, serve the 4.4 directory, restore the database backup (`sqlite3 <backup>/spip.sqlite ".backup 'config/bases/spip.sqlite'"`), purge `tmp/cache/`: `pragma integrity_check` ok, `medias_base_version` 1.8.1, `plugin` serialised again, 12 346 articles, public 200, `ecrire/` 302, `spip_version_branche` `4.4.21`; the remaining log lines (`spip_connect … non trouve`) also appear on the untouched reference 4.4.21 instance | **run** |
+| Deny `.htaccess` after the copy | copying only `connect.php`, `cles.php`, `chmod.php`, `bases/` leaves the new `config/` without the 4.4 `.htaccess`; on Apache, copy `config/.htaccess` too or check `config/bases/*.sqlite` returns 403 (see Fresh install) | **run** |
