@@ -16,6 +16,9 @@ are stored differently. It is **not** Symfony full-stack: no `bin/console`, no `
 **Verified against SPIP 5.0.0-beta** (`ecrire` `c8e329575`, 2026-09-22) and SPIP 4.4.23. SPIP 5.0 is still
 moving: when a name in this skill looks off, check the source (paths in *Source of truth*) and `bin/spip list`.
 
+**Requires the `spip5-plugins` skill** for the 5.0 target code (listeners, tasks, injection, Guard, menus): this
+skill only maps 4.x constructs to it. If `spip5-plugins` is not available, say so instead of guessing the 5.0 code.
+
 ## Terms (keep as is)
 
 | Term | Meaning |

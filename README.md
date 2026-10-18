@@ -23,7 +23,7 @@ Skill names are prefixed by scope: `spip-*` for SPIP core (`spip5-*` for SPIP 5.
 - `spip-lang`: SPIP language files (`lang/prefix_XX.php`, key naming conventions, `_T()`, `<:module:key:>`)
 - `spip-logs`: SPIP logging practices (`spip_log()`, journal files, debug workflow)
 - `spip-testing`: PHPUnit testing of plugins and squelettes (setup, unit tests with mocks, integration tests against a real SPIP)
-- `spip-migration-5`: migrating SPIP 4.x plugins and squelettes to SPIP 5.0 (listeners, `#[AsCronTask]`, façade `Spip::`, config/metas, 4.4+5.0 dual compatibility, `bin/spip`)
+- `spip-migration-5`: migrating SPIP 4.x plugins and squelettes to SPIP 5.0 (listeners, `#[AsCronTask]`, façade `Spip::`, config/metas, 4.4+5.0 dual compatibility, `bin/spip`) — requires `spip5-plugins`
 - `spip5-plugins`: writing SPIP 5.0 plugins (`config/services.php`, `#[AsPipelineListener]` and event classes, `#[AsCronTask]`, injected logger/config, Guard rules, private pages and menus)
 - `spip-mutualisation-maintenance`: SPIP farm inventory, shared updates, backups/rollback, and incident investigation
 - `plugin-escal`: the Escal squelette (noisettes, `escal/config` settings, special pages, layouts, technical mots-clés, spip-cli install)
@@ -94,6 +94,9 @@ Custom skill installation is available in Customize > Skills.
 5. Upload the ZIP file.
 6. The skill appears in your list and can be enabled or disabled.
 
+Dependencies: `spip-migration-5` relies on `spip5-plugins` for the 5.0 target code. Upload and enable **both**,
+and update them together.
+
 Important notes:
 
 - Prerequisite: Code execution and file creation must be enabled in `Settings > Capabilities` (Free/Pro/Max plans).
@@ -123,6 +126,8 @@ You should see these folders:
 - `~/.claude/skills/spip-lang`
 - `~/.claude/skills/spip-logs`
 - `~/.claude/skills/spip-testing`
+- `~/.claude/skills/spip-migration-5`
+- `~/.claude/skills/spip5-plugins`
 - `~/.claude/skills/spip-mutualisation-maintenance`
 
 Plus one folder per `plugin-*` skill you chose to install, for example `~/.claude/skills/plugin-escal`.
@@ -137,6 +142,8 @@ test -f ~/.claude/skills/spip-saisies/SKILL.md && echo "spip-saisies OK"
 test -f ~/.claude/skills/spip-lang/SKILL.md && echo "spip-lang OK"
 test -f ~/.claude/skills/spip-logs/SKILL.md && echo "spip-logs OK"
 test -f ~/.claude/skills/spip-testing/SKILL.md && echo "spip-testing OK"
+test -f ~/.claude/skills/spip-migration-5/SKILL.md && echo "spip-migration-5 OK"
+test -f ~/.claude/skills/spip5-plugins/SKILL.md && echo "spip5-plugins OK"
 test -f ~/.claude/skills/spip-mutualisation-maintenance/SKILL.md && echo "spip-mutualisation-maintenance OK"
 ```
 
@@ -150,6 +157,8 @@ Test-Path "$HOME/.claude/skills/spip-saisies/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-lang/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-logs/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-testing/SKILL.md"
+Test-Path "$HOME/.claude/skills/spip-migration-5/SKILL.md"
+Test-Path "$HOME/.claude/skills/spip5-plugins/SKILL.md"
 Test-Path "$HOME/.claude/skills/spip-mutualisation-maintenance/SKILL.md"
 ```
 
