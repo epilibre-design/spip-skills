@@ -19,8 +19,8 @@ None of the existing skills mentions SPIP 5. An agent working on a 5.0 site load
 code: `spip_log()` with `_LOG_*`, `_request()` in a form, `{fusion}`, spip-cli commands. The
 callout makes the agent check the version first and switch skills.
 
-**Dependency:** PR #25 (`spip-migration-5`) merged. Links to `spip5-plugins` and `spip5-instance`
-are added when those skills exist; until then the callouts point to `spip-migration-5` only.
+**Dependency:** `spip-migration-5` (PR #25) and `spip5-plugins` (PR #27) are merged; callouts may point to both.
+Links to `spip5-instance` are added when that skill exists.
 
 ---
 
@@ -67,11 +67,11 @@ Rules:
 
 | Skill | Bullets | Points to |
 |---|---|---|
-| `spip-logs` | `spip_log($m, 'x.' . _LOG_ERREUR)` → `Spip::logger('x')->error($m)` (deprecated, still works); `spip_logger()` deprecated and absent in 4.4; level table `_LOG_*` → PSR-3; level set by `spip.logger.max_level` in `config/custom.php`, files in `tmp/log/` | `catalogue.md` (levels table) |
+| `spip-logs` | `spip_log($m, 'x.' . _LOG_ERREUR)` → `Spip::logger('x')->error($m)` (deprecated, still works; `Spip` is a global alias); `spip_logger()` deprecated and absent in 4.4; gravités → PSR-3 methods (one example, table left in the catalogue); the 4.x threshold and rotation settings have no effect; dual compat keeps `spip_log()` | `catalogue.md` (levels table, `spip.logger.*`), `spip5-plugins` `services.md` |
 | `spip-squelettes` | `<INCLURE{…}></INCLURE>` and `<INCLURE(x.php)>` → `<INCLURE{…} />`, `.html` only; `{fusion}` / `{collecte}` → `{groupby}` / `{collate}` (old names deprecated; new ones absent in 4.4); `#LARGEUR_ECRAN` → `#LAYOUT_PRIVE{…}`; `_DIR_RESTREINT_ABS` → `#PARAM{spip.routes.back_office}` | `squelettes.md` |
 | `spip-lang` | `_T($k, ['spip_lang' => 'en'])` → `_T($k, [], ['lang' => 'en'])`; string 3rd argument of `_T()` / `_L()` removed → `['class' => …]`; language files unchanged | `catalogue.md` |
 | `spip-formulaires` | `_request()` / `set_request()` → `Spip::input()` / `Spip::setInput()` in `charger/verifier/traiter`; `spip_sanitize_from_request()` removed → `spip_sanitize_env_from_request()`; `autosave_clean_value()` deprecated | `catalogue.md` |
-| `spip-plugins` | pipeline functions still run but the native model is listeners in `config/services.php`; `genie/` → `#[AsCronTask]`; `$GLOBALS['meta']` is a raw mirror → `lire_config()` / `Spip::config()`; `$GLOBALS['spip_pipeline']` in `options.php` ignored | `plugin-modele-5.md`, `config-metas.md` (later `spip5-plugins`) |
+| `spip-plugins` | pipeline functions still run but the native model is listeners in `config/services.php`; `genie/` → `#[AsCronTask]`; `$GLOBALS['meta']` is a raw mirror → `lire_config()` / `Spip::config()`; `$GLOBALS['spip_pipeline']` in `options.php` ignored | `plugin-modele-5.md`, `config-metas.md`, `spip5-plugins` |
 | `spip-testing` | spip-cli is a 4.x tool; on 5.0 use `bin/spip` (`spip:cache:warmup --clear`, `config:lire`); PHP 8.4 for the 5.0 test instance; a test suite for both versions runs twice | `audit-outils.md` |
 | `plugin-escal` | install instructions use spip-cli (4.x); Escal compatibility with 5.0 to be checked in its `paquet.xml` before any advice | — |
 | `spip-mutualisation-maintenance` | covers 4.2–4.4 farms only; the 5.0 mutualised entry point is experimental upstream; do not apply these procedures to a 5.0 instance | `spip5-instance` when available |
