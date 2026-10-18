@@ -142,3 +142,41 @@ ou réutiliser `SpipContainerFactory::createPhpFileLoader()`.
 
 **Contournement côté plugin :** lire l'environnement à l'exécution avec `#[Autowire(param: 'kernel.environment')]`,
 ou laisser le site décider dans son `config/custom.php`, chargé après les plugins.
+
+---
+
+## 5. `#URL_ACTION_AUTEUR` avec un argument vide : erreur fatale au lieu d'une erreur de squelette
+
+- [ ] MR remontée :
+
+**Dépôt :** `spip/ecrire` (`balise/url_.php`, `balise_URL_ACTION_AUTEUR_dist()`).
+**Vérifié sur :** SPIP 4.4.21 (`/src/jetables/v4.4.21`) et SPIP 5.0.0-beta (`spip/spip` `c8e329575`, `spip/ecrire`
+`26bfe470`, tête amont de `5.x` au 2026-10-18), exécuté sur les deux ; même code (lecture) dans les tags `4.4.28` et
+la tête de la branche `4.4`, `5f67f441b` (2026-10-08). PHP 8.4.25.
+
+**Symptôme :** `[(#URL_ACTION_AUTEUR{mon_action,,#SELF})]` (ou `{mon_action,,}`, `{mon_action, ,#SELF}`) fait
+échouer la page en HTTP 500 : `Uncaught TypeError: Cannot assign null to property
+Spip\Compilateur\Noeud\Champ::$code of type string` (`balise/url_.php`, ligne 371 en 4.4.21, 363 en 4.4.28 et 5.0).
+Le débusqueur ne s'affiche pas. Sur les autres balises, le même argument vide donne l'erreur de squelette prévue :
+`[(#ENV{a,,b})]` ou `[(#URL_ECRIRE{a,,b})]` affichent « Filtre ,b}) non défini » (HTTP 503, page d'erreur du
+squelette, 4.4.21).
+
+**Cause :** `phraser_arg()` (`public/phraser_html.php`) refuse un argument vide : `zbug_erreur_filtre`, puis
+`$p->param = false`. La compilation appelle quand même la balise. `interprete_argument_balise(1, $p)` renvoie alors
+`null`, et `balise_URL_ACTION_AUTEUR_dist()` l'affecte directement à `$p->code`, typé `string` depuis la 4.x. C'est
+la seule affectation de ce genre dans `ecrire/` et `plugins-dist/` sans repli : `public/balises.php` (ligne 1600 en
+5.0) écrit `interprete_argument_balise(1, $p) ?? ''`.
+
+**Reproduction** (squelette public, sans session) :
+
+```html
+[(#URL_ACTION_AUTEUR{mon_action,,#SELF})]   <!-- HTTP 500 -->
+[(#URL_ACTION_AUTEUR{mon_action,'',#SELF})] <!-- spip.php?action=mon_action&arg=&hash=… -->
+```
+
+**Piste :** dans `balise_URL_ACTION_AUTEUR_dist()`, `$p->code = interprete_argument_balise(1, $p) ?? "''";`, ou
+sortir tôt quand `$p->param === false` pour laisser l'erreur de squelette s'afficher. Plus général : ne pas appeler la
+fonction de balise quand `phraser_arg()` a mis `param` à `false`.
+
+**Contournement :** écrire l'argument vide `''`, ou `#ENV{vide}`. Documenté dans `spip-plugins`
+(`references/actions.md`).
