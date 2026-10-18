@@ -22,3 +22,15 @@ Two failure patterns:
   code and hands the check back to the user.
 
 The callout addresses both: it tells the agent to check the version, then tells it which API to use.
+
+## spip-formulaires (2026-10-18)
+
+Same task on three fixtures: add an email check in `verifier()`. The existing `traiter()` already uses `_request()`.
+
+| Case | Fixture marker | Answer | Result |
+|---|---|---|---|
+| 5 — 5.0 site code | `ecrire/src/SpipVersion.php` only, form in `squelettes/formulaires/` | `_request('email')`; a closing note reads `VERSION = '5.0.0-beta'` and asks the user to test whether `email_valide()` and the language keys still exist | **FAIL** — version detected, no 5.0 API to apply |
+| 6 — 4.4 + 5.0 | `compatibilite="[4.4.0;5.*]"` | `_request()` and `set_request()` | **PARTIAL** — right code by default, no marker cited |
+| 7 — 4.x (control) | `compatibilite="[4.2.0;4.4.*]"` | `_request()`; mentions "your version (4.2 to 4.4)" | PASS |
+
+Same two patterns as `spip-logs`: version never checked (case 6), or detected without an API to switch to (case 5).

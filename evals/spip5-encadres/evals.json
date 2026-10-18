@@ -63,6 +63,53 @@
         "N'utilise ni spip_log() ni spip_logger(), même accompagnés d'un avertissement",
         "Le log va dans un fichier dédié (canal propre → tmp/log/<canal>.log)"
       ]
+    },
+    {
+      "id": 5,
+      "skill": "spip-formulaires",
+      "variant": "5.0 (site, SpipVersion.php)",
+      "prompt": "Le formulaire inscription_lettre accepte n'importe quoi dans le champ email. Ajoute dans verifier() un contrôle : email obligatoire et valide, avec un message d'erreur sur le champ. Donne le code modifié.",
+      "expected_output": "ecrire/src/SpipVersion.php déclare VERSION = '5.0.0-beta' : site SPIP 5.0, le code de squelettes/ ne tourne que sur ce site. verifier() lit le champ par Spip::input('email') (et non _request(), déprécié en 5.0), renvoie $erreurs['email'] si vide ou invalide (email_valide()). La réponse cite le marqueur ; elle peut signaler que traiter() utilise encore _request().",
+      "files": [
+        "evals/spip5-encadres/fixtures/form-site-spipversion/site/"
+      ],
+      "expectations": [
+        "Déduit SPIP 5.0 de ecrire/src/SpipVersion.php (VERSION = '5.0.0-beta') et cite ce marqueur",
+        "Le code ajouté lit le champ avec Spip::input('email')",
+        "Le code ajouté n'utilise ni _request() ni set_request(), même accompagnés d'un avertissement",
+        "Erreur posée sur le champ : $erreurs['email'], pour un email vide comme pour un email invalide"
+      ]
+    },
+    {
+      "id": 6,
+      "skill": "spip-formulaires",
+      "variant": "dual",
+      "prompt": "Le formulaire inscription_lettre accepte n'importe quoi dans le champ email. Ajoute dans verifier() un contrôle : email obligatoire et valide, avec un message d'erreur sur le champ. Donne le code modifié.",
+      "expected_output": "compatibilite=\"[4.4.0;5.*]\" : le code doit tourner en 4.4 et en 5.0. _request('email') (présent dans les deux versions, déprécié mais fonctionnel en 5.0) ; pas de Spip::input() sans garde (absent en 4.4).",
+      "files": [
+        "evals/spip5-encadres/fixtures/form-dual/acme/"
+      ],
+      "expectations": [
+        "Déduit du paquet.xml que le plugin vise 4.4 et 5.0, et cite ce marqueur",
+        "Lit le champ avec _request('email')",
+        "N'utilise pas Spip::input() sans garde class_exists",
+        "Erreur posée sur le champ : $erreurs['email'], pour un email vide comme pour un email invalide"
+      ]
+    },
+    {
+      "id": 7,
+      "skill": "spip-formulaires",
+      "variant": "4.4",
+      "prompt": "Le formulaire inscription_lettre accepte n'importe quoi dans le champ email. Ajoute dans verifier() un contrôle : email obligatoire et valide, avec un message d'erreur sur le champ. Donne le code modifié.",
+      "expected_output": "Plugin 4.x (compatibilite=\"[4.2.0;4.4.*]\") : _request('email'). Aucune API 5.0 dans le code.",
+      "files": [
+        "evals/spip5-encadres/fixtures/form-44/acme/"
+      ],
+      "expectations": [
+        "Lit le champ avec _request('email')",
+        "Aucun Spip:: ni autre API 5.0 dans le code proposé",
+        "Erreur posée sur le champ : $erreurs['email'], pour un email vide comme pour un email invalide"
+      ]
     }
   ]
 }

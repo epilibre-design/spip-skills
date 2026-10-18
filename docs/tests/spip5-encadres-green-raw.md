@@ -579,3 +579,243 @@ function filtre_meteo_temperature_dist(string $ville): string {
 - En SPIP 5.0, `_LOG_FILTRE_GRAVITE` et les réglages de rotation de SPIP 4.x n'ont **aucun effet**. Avec les réglages par défaut, un message de niveau `error()` est bien écrit, donc vous n'avez rien à configurer.
 - Pour suivre les erreurs en direct : `tail -f tmp/log/meteo.log`.
 - Si vous voulez aussi tracer un JSON reçu mais sans clé `temp`, vous pouvez ajouter un `Spip::logger('meteo')->warning(...)` dans ce cas. C'est l'équivalent de l'ancien `_LOG_AVERTISSEMENT`.
+
+---
+
+# spip-formulaires
+
+---
+
+## spip-formulaires, cas 5 — site avec `ecrire/src/SpipVersion.php`
+
+#### Contrôle de l'email dans `verifier()`
+
+**Version du site : SPIP 5.0.** `ecrire/src/SpipVersion.php` contient `VERSION = '5.0.0-beta'`. En 5.0, `_request()` est déprécié, donc on lit la saisie avec `Spip::input('email')`. `Spip` est un alias global de `Spip\Framework\Spip`, il n'y a pas de `use` à ajouter.
+
+Pour une vérification aussi simple, inutile d'ajouter le plugin Verifier : le CVT de base suffit. `verifier()` renvoie un tableau d'erreurs indexé par nom de champ. La clé `email` affiche donc le message sur ce champ, et SPIP génère tout seul le bandeau global `message_erreur`. Tant que ce tableau n'est pas vide, `traiter()` n'est pas appelé et rien n'est inséré en base.
+
+##### `squelettes/formulaires/inscription_lettre.php` (modifié)
+
+```php
+<?php
+
+if (!defined('_ECRIRE_INC_VERSION')) {
+	return;
+}
+
+function formulaires_inscription_lettre_charger_dist() {
+	return [
+		'nom' => '',
+		'email' => '',
+	];
+}
+
+function formulaires_inscription_lettre_verifier_dist() {
+	$erreurs = [];
+
+	$email = trim((string) Spip::input('email'));
+	if ($email === '') {
+		$erreurs['email'] = _T('info_obligatoire');
+	} elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+		$erreurs['email'] = _T('inscription_lettre:erreur_email_invalide');
+	} else {
+		// on stocke la valeur nettoyée (sans espaces) pour traiter()
+		Spip::setInput('email', $email);
+	}
+
+	return $erreurs;
+}
+
+function formulaires_inscription_lettre_traiter_dist() {
+	sql_insertq('spip_inscrits', [
+		'nom' => Spip::input('nom'),
+		'email' => Spip::input('email'),
+	]);
+
+	return ['message_ok' => _T('inscription_lettre:merci')];
+}
+```
+
+Ce qui change :
+- **`verifier()`** : si l'email est vide, l'erreur est « obligatoire » (chaîne du noyau `info_obligatoire`). Si le format est invalide, c'est un message dédié. Si l'email est valide, on remet la valeur sans espaces avec `Spip::setInput()`, pour que `traiter()` enregistre une adresse propre.
+- **`traiter()`** : `_request()` est remplacé par `Spip::input()`, puisque `_request()` est déprécié en SPIP 5.0. Si ce code doit aussi tourner sur SPIP 4.4, gardez `_request()` / `set_request()` partout, car ce sont les seules fonctions disponibles dans les deux versions.
+
+##### Chaîne de langue à ajouter
+
+Le formulaire utilise déjà le module `inscription_lettre` (`inscription_lettre:merci`). Ajoutez la clé suivante dans `lang/inscription_lettre_fr.php`, à côté de `merci` :
+
+```php
+'erreur_email_invalide' => 'Cette adresse email n’est pas valide.',
+```
+
+##### Le squelette (aucun changement obligatoire)
+
+Le message s'affiche déjà sur le champ : le squelette a un `<span class="erreur_message">` sur `email` et ajoute la classe `erreur` au bloc `.editer_email`. Vous pouvez quand même le simplifier et le sécuriser plus tard :
+- `[(#ENV*{erreurs/email})]` remplace `#ENV**{erreurs}|table_valeur{email}` (une seule `*`, jamais `**`) ;
+- `#ENV*{message_ok}` remplace `#ENV**{message_ok}` ;
+- `role="status"` / `role="alert"` à ajouter sur les bandeaux ;
+- `#ENV{editable}` à la place de `#EDITABLE`.
+
+Le bloc email corrigé ressemblerait à ceci :
+
+```html
+<div class="editer editer_email obligatoire[ (#ENV*{erreurs/email}|oui)erreur]">
+	<label for="email">Email</label>
+	[<span class="erreur_message">(#ENV*{erreurs/email})</span>]
+	<input type="email" class="text" name="email" id="email" value="#ENV{email}" />
+</div>
+```
+
+À noter : `type="email"` dans le HTML ne protège pas le serveur, car un envoi forgé passe outre. C'est le contrôle dans `verifier()` qui compte.
+
+---
+
+## spip-formulaires, cas 6 — plugin 4.4 + 5.0
+
+#### Version SPIP visée
+
+Dans `paquet.xml`, `compatibilite="[4.4.0;5.*]"` : le plugin vise **à la fois SPIP 4.4 et SPIP 5.0**. Dans ce cas, je garde `_request()`. C'est la seule API de lecture des requêtes disponible dans les deux versions. `Spip::input()` n'existe qu'en 5.0 et ferait planter le plugin sous 4.4.
+
+#### `formulaires/inscription_lettre.php` modifié
+
+Seule `verifier()` change. `charger()` et `traiter()` restent identiques.
+
+```php
+<?php
+
+if (!defined('_ECRIRE_INC_VERSION')) {
+	return;
+}
+
+function formulaires_inscription_lettre_charger_dist() {
+	return [
+		'nom' => '',
+		'email' => '',
+	];
+}
+
+function formulaires_inscription_lettre_verifier_dist() {
+	$erreurs = [];
+
+	$email = trim((string) _request('email'));
+	if ($email === '') {
+		$erreurs['email'] = _T('info_obligatoire');
+	} elseif (!email_valide($email)) {
+		$erreurs['email'] = _T('info_email_invalide');
+	}
+
+	return $erreurs;
+}
+
+function formulaires_inscription_lettre_traiter_dist() {
+	sql_insertq('spip_inscrits', [
+		'nom' => _request('nom'),
+		'email' => _request('email'),
+	]);
+
+	return ['message_ok' => _T('inscription_lettre:merci')];
+}
+```
+
+Fonctionnement :
+
+- `verifier()` renvoie un tableau d'erreurs indexé par nom de champ. La clé `email` affiche donc le message **sur le champ email**. Tant que ce tableau n'est pas vide, `traiter()` ne s'exécute pas : rien n'est inséré dans `spip_inscrits`.
+- Je n'ai pas défini `message_erreur`. SPIP génère alors automatiquement le bandeau global d'erreur.
+- `email_valide()` est la fonction de validation d'adresse du core SPIP. Elle n'est pas documentée dans la doc dont je dispose : vérifiez qu'elle est bien chargée dans votre contexte.
+- Les chaînes `info_obligatoire` (« Cette information est obligatoire ») et `info_email_invalide` viennent du core. Comme pour `email_valide()`, je ne peux pas confirmer `info_email_invalide` avec ma doc : vérifiez qu'elle existe. Si vous voulez vos propres libellés, ajoutez par exemple `email_obligatoire` et `email_invalide` dans `lang/inscription_lettre_fr.php` et utilisez `_T('inscription_lettre:email_invalide')`.
+- Le plugin Verifier n'est pas nécessaire pour un contrôle aussi simple. S'il est déjà installé, vous pouvez remplacer le `elseif` par `$verifier = charger_fonction('verifier', 'inc/'); if ($msg = $verifier($email, 'email', ['mode' => 'strict'])) { $erreurs['email'] = $msg; }`.
+
+#### Corrections conseillées dans le squelette (facultatives)
+
+Le message s'affiche déjà avec le squelette actuel. Mais `formulaires/inscription_lettre.html` utilise `#ENV**{erreurs}|table_valeur{email}` : la double étoile désactive la sécurisation du texte. La forme canonique est la suivante :
+
+```html
+<div class="editer editer_email obligatoire[ (#ENV*{erreurs/email}|oui)erreur]">
+	<label for="email">Email</label>
+	[<span class="erreur_message">(#ENV*{erreurs/email})</span>]
+	<input type="email" class="text" name="email" id="email" value="#ENV{email}" />
+</div>
+```
+
+Faites la même chose pour le champ `nom` (`#ENV*{erreurs/nom}`). Deux autres corrections sont recommandées :
+
+- remplacer `#ENV**{message_ok}` par `#ENV*{message_ok}` ;
+- ajouter `role="status"` au bandeau `message_ok` et `role="alert"` au bandeau `message_erreur`.
+
+---
+
+## spip-formulaires, cas 7 — plugin 4.x
+
+**Version visée** : le `paquet.xml` du plugin déclare `compatibilite="[4.2.0;4.4.*]"`, donc SPIP 4.x uniquement. On garde `_request()`, qui est l'API de lecture de la requête en SPIP 4 (`Spip::input()` ne concerne que SPIP 5.0).
+
+#### `formulaires/inscription_lettre.php` modifié
+
+Seule `verifier()` change. `charger()` et `traiter()` restent identiques.
+
+```php
+<?php
+
+if (!defined('_ECRIRE_INC_VERSION')) {
+	return;
+}
+
+function formulaires_inscription_lettre_charger_dist() {
+	return [
+		'nom' => '',
+		'email' => '',
+	];
+}
+
+function formulaires_inscription_lettre_verifier_dist() {
+	$erreurs = [];
+
+	$email = trim((string) _request('email'));
+
+	if ($email === '') {
+		// champ obligatoire
+		$erreurs['email'] = _T('info_obligatoire');
+	} else {
+		// format d'adresse
+		include_spip('inc/filtres');
+		if (!email_valide($email)) {
+			$erreurs['email'] = _T('info_email_invalide');
+		}
+	}
+
+	return $erreurs;
+}
+
+function formulaires_inscription_lettre_traiter_dist() {
+	sql_insertq('spip_inscrits', [
+		'nom' => _request('nom'),
+		'email' => _request('email'),
+	]);
+
+	return ['message_ok' => _T('inscription_lettre:merci')];
+}
+```
+
+Ce qui se passe :
+
+- `verifier()` renvoie un tableau d'erreurs indexé par nom de champ. La clé `email` affiche le message **sous le champ email**. Si le tableau n'est pas vide, `traiter()` n'est pas appelé et rien n'est inséré dans `spip_inscrits`. SPIP ajoute aussi un message global d'erreur en haut du formulaire.
+- `verifier()` s'exécute avant `charger()`, au moment du POST. Il ne dispose donc que de `_request()`, et c'est bien ce qu'on utilise.
+- `email_valide()` est la fonction du core SPIP qui valide une adresse (déclarée dans `inc/filtres`, d'où l'`include_spip`). Un contrôle aussi simple ne justifie pas d'ajouter une dépendance au plugin Vérifier.
+- `info_obligatoire` et `info_email_invalide` sont des chaînes de langue du core. Pour un texte propre au plugin, créez par exemple `inscription_lettre:erreur_email_invalide` dans votre fichier de langue.
+- Le `trim()` évite qu'une saisie faite seulement d'espaces passe pour une adresse remplie. Si vous voulez enregistrer la version nettoyée, appliquez aussi `trim()` dans `traiter()`.
+
+#### À corriger aussi dans le squelette (recommandé)
+
+Le squelette `formulaires/inscription_lettre.html` affiche déjà l'erreur du champ email, donc le message apparaîtra sans rien changer. En revanche, il utilise `#ENV**{erreurs}|table_valeur{email}` (double étoile). La forme canonique est `#ENV*{erreurs/email}`, avec une seule étoile et jamais `**`. Il est aussi conseillé d'utiliser `#ENV*` plutôt que `#ENV**` pour `message_ok` et d'ajouter `role="status"` / `role="alert"` aux messages globaux :
+
+```html
+	[<div class="reponse_formulaire reponse_formulaire_ok" role="status">(#ENV*{message_ok})</div>]
+	[<div class="reponse_formulaire reponse_formulaire_erreur" role="alert">(#ENV*{message_erreur})</div>]
+...
+			<div class="editer editer_email obligatoire[ (#ENV*{erreurs/email}|oui)erreur]">
+				<label for="email">Email</label>
+				[<span class="erreur_message">(#ENV*{erreurs/email})</span>]
+				<input type="email" class="text" name="email" id="email" value="#ENV{email}" required />
+			</div>
+```
+
+(Faites la même chose pour le bloc `nom` avec `#ENV*{erreurs/nom}`.) Les attributs HTML `type="email"` et `required` aident l'utilisateur, mais ils se contournent facilement. Le contrôle qui protège vraiment l'inscription est celui de `verifier()`.

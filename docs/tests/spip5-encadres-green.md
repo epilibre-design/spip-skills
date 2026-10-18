@@ -29,3 +29,21 @@ Three iterations:
 | 2 — 4.4 + 5.0 | PARTIAL | **PASS (4/4)** | cites `[4.4.0;5.*]`, keeps `spip_log()`, explains why not `Spip::logger()` / `spip_logger()` |
 | 3 — 4.x (no leak) | PASS | **PASS (3/3)** | cites `[4.2.0;4.4.*]`, `spip_log()` only; 5.0 as a future note, no 5.0 code |
 | 4 — 5.0 site code | FAIL | **PASS (4/4)** | cites `bin/spip`, `Spip::logger('meteo')->error()`, `tmp/log/meteo.log`, warns not to set `_LOG_FILTRE_GRAVITE` |
+
+## spip-formulaires (2026-10-18)
+
+Callout facts checked on the local 5.0.0-beta instance (`spip/spip` `c8e329575`, `spip/ecrire` `2cd5843f`):
+`_request()` and `set_request()` call `trigger_deprecation('spip', '5.0', …)` and delegate to `Spip::input()` /
+`Spip::setInput()` (`ecrire/bootstrap/inc/request.php`; the `#[\Deprecated]` attribute on `_request()` is commented
+out); `Spip::input()` reads the query then the request bag (`spip-league/http` `Inputs::get()`);
+`spip_sanitize_from_request()` keeps its single-value form, the `'*'` / whole-environment form goes to
+`spip_sanitize_env_from_request()` (already in 4.4, where `'*'` is deprecated since 4.4); `autosave_clean_value()`
+calls `trigger_deprecation()` and delegates to `Spip\Pipeline\Listener\CvtAutoSaveListener::cleanValue()`. The
+language keys used by the answers (`info_obligatoire`, `info_email_invalide`, `form_email_non_valide`) exist in
+5.0.0-beta and 4.4.22.
+
+| Case | RED | GREEN | Notes |
+|---|---|---|---|
+| 5 — 5.0 site code | FAIL | **PASS (4/4)** | cites `VERSION = '5.0.0-beta'`, `Spip::input('email')`, no `use`; also moves `traiter()` to `Spip::input()` |
+| 6 — 4.4 + 5.0 | PARTIAL | **PASS (4/4)** | cites `[4.4.0;5.*]`, keeps `_request()`, explains why not `Spip::input()` |
+| 7 — 4.x (no leak) | PASS | **PASS (3/3)** | cites `[4.2.0;4.4.*]`, `_request()` only |

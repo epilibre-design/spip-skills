@@ -2,13 +2,32 @@
 name: spip-formulaires
 description: Use when creating, reviewing, or debugging SPIP CVT forms — canonical HTML
   wrappers, field/global errors, `charger`/`verifier`/`traiter`/`identifier`, or when
-  deciding whether Saisies or Verifier are appropriate.
+  deciding whether Saisies or Verifier are appropriate. Written for SPIP 4.x; on a SPIP 5.0 project
+  the request API changes (see the SPIP 5.0 section).
 ---
 
 # SPIP CVT forms
 
 A **formulaire CVT** is a SPIP form built around the PHP contract
 `charger` / `verifier` / `traiter`, with an optional `identifier`.
+
+## SPIP 5.0
+
+This skill describes SPIP 4.x. Check the version first and name the marker you relied on. A site is 5.0 if **any**
+of: `ecrire/src/SpipVersion.php` declares `VERSION = '5.…'`, `bin/spip` exists, `vendor/spip/framework/` exists,
+plugins live in `plugins-dist/spip/`. A plugin targets 5.0 if its `paquet.xml` `compatibilite` starts at 5.0 or
+its `composer.json` requires `spip/framework`.
+
+- Code for 5.0 only, in `charger` / `verifier` / `traiter` as everywhere: `_request('x')` → `Spip::input('x')`,
+  `set_request('x', $v)` → `Spip::setInput('x', $v)`. Both old functions are deprecated in 5.0, including in the
+  examples of this skill's references. `Spip` is a global alias of `Spip\Framework\Spip`: no `use` needed.
+- `spip_sanitize_from_request($env, '*')` (whole environment) is removed → `spip_sanitize_env_from_request($env)`,
+  which also exists in 4.4. The single-value form `spip_sanitize_from_request($value, 'key')` stays.
+- `autosave_clean_value()` is deprecated → `Spip\Pipeline\Listener\CvtAutoSaveListener::cleanValue()`.
+- Plugin for 4.4 **and** 5.0 (`compatibilite` from 4.x to `5.*`): keep `_request()` / `set_request()`, the only API
+  in both.
+
+Details: `spip-migration-5` (`references/catalogue.md`, `references/double-compat.md`).
 
 ## Quick routing
 
