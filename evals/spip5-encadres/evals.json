@@ -358,7 +358,7 @@
       "expectations": [
         "Déduit SPIP 5.0 d'un marqueur de la racine partagée et le cite",
         "Dit que le skill couvre les fermes 4.2–4.4 et que la mutualisation n'est pas stabilisée en 5.0 (Mutualisation facile [4.2.0;4.*], sites non isolés)",
-        "Ne livre pas la procédure 4.x de mise à jour des plugins (tableau d'actions, commandes) pour cette ferme ; au plus une observation en lecture seule"
+        "Ne livre pas la procédure 4.x de mise à jour des plugins (tableau d'actions, commandes) pour cette ferme ; au plus un inventaire en lecture seule, sauf pour conserver l'état actuel (fichiers et bases) et vérifier sa restauration"
       ]
     },
     {
