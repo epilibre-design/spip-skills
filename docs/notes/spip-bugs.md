@@ -14,8 +14,11 @@ l'entrée et ajouter le lien de la MR une fois remontée.
 - [ ] MR remontée :
 
 **Dépôt :** `spip/spip` (`ecrire/inc/queue.php`), et `spip-league/pipeline-bridge` pour la seconde cause.
-**Vérifié sur :** SPIP 5.0.0-beta, `ecrire` `c8e329575` (2026-09-22, dernier commit amont au 2026-10-17),
-`spip-league/pipeline-bridge` `b80ffcead`, `spip-league/kernel` `e0e80032b`.
+**Vérifié sur :** SPIP 5.0.0-beta, `spip/spip` `c8e329575` (2026-09-22), avec `ecrire` `2cd5843f` (lock de ce
+commit) puis `ecrire` `26bfe470` (2026-10-07, dernière révision amont au 2026-10-18), `spip-league/pipeline-bridge`
+`b80ffcead`, `spip-league/kernel` `e0e80032b`. Toujours présent le 2026-10-18 : sur `26bfe470`,
+`queue_genie_can_use_service_registry()` renvoie `false` et `$c->has('Spip\Cron\Task\OptimiserTask')` renvoie
+`false` (reproduction ci-dessous exécutée, hors appel à `queue_start_job()`).
 
 **Symptôme :** une tâche déclarée par `#[AsCronTask]` est bien enregistrée (`spip.genie_registry`) et planifiée dans
 `spip_jobs` (`inclure = 'service:'`), mais `queue_start_job()` renvoie `false` sans l'exécuter. Les tâches du cœur
@@ -99,3 +102,43 @@ cd site && php bin/spip list   # aucune commande d'installation ni d'activation
 
 **Piste :** des commandes `bin/spip` équivalentes à `core:installer` (serveur SQL, base, préfixe, compte webmestre),
 `plugins:activer` / `plugins:desactiver` et `plugins:maj:bdd`, utilisables en non interactif.
+
+---
+
+## 4. `$container->env()` vaut `null` dans le `config/services.php` d'un plugin
+
+- [ ] MR remontée :
+
+**Dépôt :** `spip-league/plugin-manager` (`src/Config/PluginSymfonyServicesCollector.php`, ligne 54).
+**Vérifié sur :** SPIP 5.0.0-beta, `spip/spip` `c8e329575`, `spip/ecrire` `26bfe470`, `spip-league/plugin-manager`
+`689c9253c`, `spip-league/kernel` `e0e80032b` (dernières révisions amont au 2026-10-18).
+
+**Symptôme :** dans le `config/services.php` d'un plugin, `$container->env()` renvoie `null`, quel que soit
+`APP_ENV`. Dans le `config/custom.php` du site, il renvoie bien `'prod'` ou `'dev'`. Un plugin ne peut donc pas
+adapter ses services ou ses paramètres à l'environnement (`if ($container->env() === 'dev')`), alors que la même
+écriture fonctionne côté site.
+
+**Cause :** `PluginSymfonyServicesCollector::loadIntoContainer()` crée le chargeur sans environnement :
+`new PhpFileLoader($container, new FileLocator(dirname($configFile)))`. `SpipContainerFactory::createPhpFileLoader()`,
+utilisé pour `custom.php` et les services du cœur, passe `$this->getEnvironment()` en troisième argument.
+
+**Reproduction** (exécutée sur l'instance, plugin d'essai activé puis `bin/spip spip:cache:warmup --clear`) :
+
+```php
+// plugins/acme/config/services.php
+return static function (ContainerConfigurator $container): void {
+	$container->parameters()->set('acme.env_vu', var_export($container->env(), true));
+	// …
+};
+```
+
+Un listener `affichage_final` qui injecte `#[Autowire(param: 'acme.env_vu')]` affiche `NULL` ; avec `APP_ENV=dev`
+(`.env.local`), `kernel.environment` vaut `dev` mais `acme.env_vu` reste `NULL`. La même ligne dans
+`config/custom.php` donne `'prod'`, puis `'dev'`.
+
+**Piste :** passer l'environnement au chargeur des plugins, par exemple
+`new PhpFileLoader($container, new FileLocator(dirname($configFile)), $container->getParameter('kernel.environment'))`,
+ou réutiliser `SpipContainerFactory::createPhpFileLoader()`.
+
+**Contournement côté plugin :** lire l'environnement à l'exécution avec `#[Autowire(param: 'kernel.environment')]`,
+ou laisser le site décider dans son `config/custom.php`, chargé après les plugins.
