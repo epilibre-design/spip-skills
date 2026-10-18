@@ -66,3 +66,36 @@ legacy : `>= 0` succès) déclarée par un listener sur `taches_generales_cron`
 n'a pas de méthode `getProjectDir()`. Le remplacement réel est `Spip::directories()->getProjectDir()`.
 
 **Piste :** corriger le message en `use "Spip::directories()->getProjectDir()" instead.`
+
+---
+
+## 3. Pas d'installation ni d'activation de plugin scriptables en 5.0 (demande d'évolution, pas un bug)
+
+- [ ] MR ou ticket remonté :
+
+**Dépôts :** `spip/spip` (installation), `spip-league/console` (`bin/spip`). **Vérifié sur :** SPIP 5.0.0-beta,
+`spip/spip` `c8e329575`, `spip/ecrire` `26bfe470` (2026-10-07), `spip/framework` `d0e8c97e` (dernières révisions
+amont au 2026-10-18).
+
+**Constat :** `bin/spip list` ne propose aucune commande pour installer le site (base, compte webmestre) ni pour
+activer un plugin et lancer ses mises à jour de base : les seules commandes sont `about`, `config:lire` /
+`config:ecrire`, `database:optimize`, `routes:list`, `sites:syndics:maj` et les `spip:*` (cache, conteneur,
+pipelines). Aucune autre classe `#[AsCommand]` n'existe dans `ecrire/`, `plugins-dist/`, `vendor/spip/` ou
+`vendor/spip-league/`. Le `composer.json` racine n'a pas de scripts. L'installation passe uniquement par les étapes
+web `ecrire/install/etape_*.php`. spip-cli, qui couvre ces besoins en 4.x (`core:installer`, `plugins:activer`,
+`plugins:maj:bdd`), charge `ecrire/inc_version.php` sans démarrer le Kernel (`src/Loader/Spip.php`, `e9043b8`), ce
+qui échoue en 5.0 (`Undefined constant "_FILE_OPTIONS"`, constaté avec la même séquence de chargement).
+
+**Conséquence :** un plugin 5.0 ne peut pas monter son environnement de tests d'intégration sans étape manuelle
+(installeur web, activation dans l'espace privé). La CI d'un plugin est bloquée. Relevé en écrivant l'encadré 5.0 du
+skill `spip-testing`, qui doit présenter ces deux étapes comme manuelles.
+
+**Reproduction :**
+
+```sh
+composer create-project --repository=https://get.spip.net/composer spip/spip site 5.0.x-dev
+cd site && php bin/spip list   # aucune commande d'installation ni d'activation
+```
+
+**Piste :** des commandes `bin/spip` équivalentes à `core:installer` (serveur SQL, base, préfixe, compte webmestre),
+`plugins:activer` / `plugins:desactiver` et `plugins:maj:bdd`, utilisables en non interactif.
