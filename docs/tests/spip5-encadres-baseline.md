@@ -74,3 +74,26 @@ repeated to measure variance. Runs without language files are kept in the raw fi
 
 The spec expected `['spip_lang' => 'en']`; no answer used it. The failure is code the agent was told not to touch: it
 sees the doubt and usually leaves the line, because the skill says nothing about 5.0.
+
+## spip-plugins (2026-10-18)
+
+SPIP 5.0 revisions checked: `spip/spip` `c8e329575`, `spip/ecrire` `26bfe470`, `spip/framework` `d0e8c97e` (upstream
+heads on 2026-10-18); 4.4.22 for the 4.4 side.
+
+Case 14 creates a plugin on a 5.0 site. Cases 15–16 add a banner to an existing plugin whose helper `acme_config()` reads
+`unserialize($GLOBALS['meta']['acme'])`, filled by a generic `configurer_acme` form. Checked on both instances: 4.4.22
+stores `serialize()`, and the helper works. 5.0 stores JSON (`[{"theme":"sombre",…}]`) as soon as the form saves:
+`unserialize()` returns `false`, and the feature silently disappears. `lire_config('acme/…')` reads the value on both.
+
+| Case | Fixture marker | Answers | Result |
+|---|---|---|---|
+| 14 — 5.0 site | `ecrire/src/SpipVersion.php` only (`5.0.0-beta`) | each run reads the version, rejects the skill's `[4.2.0;4.*]` and writes `[4.2.0;5.*]` (2 runs) or `[5.0.0-dev;5.*]` (1 run); `<pipeline nom="affichage_final">` + function; each adds "cannot confirm it works the same on 5.0" | PASS 3/3 |
+| 15 — 4.4 + 5.0 | `compatibilite="[4.4.0;5.*]"` | `<pipeline>` + function; every run reuses `acme_config()`; 2 runs of 3 flag that 5.0 is not covered by the doc, none spots the meta | **FAIL 3/3** — on 5.0 the banner (and the existing dark theme) never shows |
+| 16 — 4.x (control) | `compatibilite="[4.2.0;4.4.*]"` | `<pipeline>` + function, `acme_config()` reused (works in 4.4) | PASS |
+
+The spec expected the 5.0 failure to be `_pipelines.php` instead of a listener. It is not a failure: `<pipeline>` and
+`<genie>` from `paquet.xml` are still collected in 5.0 (`Spip\Framework\Pipeline\PluginPipelineCollector`), with no
+deprecation. The real failure is the same as in `spip-lang`: existing code, reused as is, that breaks on 5.0.
+
+`compatibilite` checked with the core's `plugin_version_compatible()` against `5.0.0-beta`: `[4.2.0;4.*]`,
+`[5.0.0;5.*]` and `[5.0;5.*]` refuse the plugin; `[4.4.0;5.*]`, `[5.0.0-dev;5.*]` and `[5.0.0-beta;5.*]` accept it.

@@ -2,11 +2,33 @@
 name: spip-plugins
 description: Use when developing a SPIP plugin (paquet.xml present, _pipelines.php,
   spip_* table references in PHP) or when the user asks about plugin architecture,
-  pipelines, hooks, or the SPIP PHP/SQL API. SPIP 4.1+. Not for template/squelettes
-  work — use the spip-squelettes skill for that.
+  pipelines, hooks, or the SPIP PHP/SQL API. Written for SPIP 4.1–4.4; on a SPIP 5.0 project
+  settings storage and the plugin model change (see the SPIP 5.0 section). Not for
+  template/squelettes work — use the spip-squelettes skill for that.
 ---
 
 # SPIP plugin development
+
+## SPIP 5.0
+
+This skill describes SPIP 4.x. Check the version first and name the marker you relied on. A site is 5.0 if **any**
+of: `ecrire/src/SpipVersion.php` declares `VERSION = '5.…'`, `bin/spip` exists, `vendor/spip/framework/` exists,
+plugins live in `plugins-dist/spip/`. A plugin targets 5.0 if its `paquet.xml` `compatibilite` reaches 5.x or
+its `composer.json` requires `spip/framework`.
+
+- Never read settings from `$GLOBALS['meta']` in code that runs on 5.0: it is a raw mirror of the SQL string, and
+  arrays are stored as JSON once rewritten (one save of a `configurer_` form is enough).
+  `unserialize($GLOBALS['meta']['acme'])` then returns `false` and the feature silently disappears. Read with
+  `lire_config('acme/cle')` (4.4 and 5.0, not deprecated). Fix every such read in the files you touch, including an
+  existing helper you reuse.
+- Unchanged in 5.0: `<pipeline>` and `<genie>` in `paquet.xml`, `prefixe_pipeline()` functions, `affichage_final`,
+  `$GLOBALS['html']`. Plugin for 4.4 **and** 5.0: keep this model only. The 5.0-only model (listeners,
+  `config/services.php`, `#[AsCronTask]`) is in `spip5-plugins`; never register one pipeline both ways.
+- `compatibilite` must accept the site's exact version: on `5.0.0-beta`, `[5.0.0;5.*]` refuses the plugin. Write
+  `[5.0.0-dev;5.*]` (5.0 only) or `[4.4.0;5.*]`.
+
+Details: `spip-migration-5` (`references/config-metas.md`, `references/double-compat.md`,
+`references/plugin-modele-5.md`).
 
 ## SPIP-specific terms (always kept in original form)
 

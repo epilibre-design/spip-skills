@@ -1,0 +1,23 @@
+<div class="formulaire_spip formulaire_configurer formulaire_#FORM">
+	<h3 class="titrem"><:acme:titre_configurer:></h3>
+	[<p class="reponse_formulaire reponse_formulaire_ok" role="status">(#ENV*{message_ok})</p>]
+	[<p class="reponse_formulaire reponse_formulaire_erreur" role="alert">(#ENV*{message_erreur})</p>]
+	<form method="post" action="#ENV{action}"><div>
+		#ACTION_FORMULAIRE
+		<div class="editer-groupe">
+			<div class="editer editer_theme">
+				<label for="theme"><:acme:label_theme:></label>
+				<select name="theme" id="theme">
+					<option value="clair"[(#ENV{theme}|=={clair}|oui)selected="selected"]><:acme:theme_clair:></option>
+					<option value="sombre"[(#ENV{theme}|=={sombre}|oui)selected="selected"]><:acme:theme_sombre:></option>
+				</select>
+			</div>
+			<div class="editer editer_texte_bandeau">
+				<label for="texte_bandeau"><:acme:label_texte_bandeau:></label>
+				<input type="text" class="text" name="texte_bandeau" id="texte_bandeau" value="#ENV{texte_bandeau}" />
+			</div>
+		</div>
+		<input type="hidden" name="_meta_casier" value="acme" />
+		<p class="boutons"><input type="submit" class="btn submit" value="<:bouton_enregistrer:>" /></p>
+	</div></form>
+</div>

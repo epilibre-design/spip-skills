@@ -206,6 +206,53 @@
         "Aucune API propre à 5.0 dans le code",
         "Pour un visiteur francophone, le sujet vaut « Article proposé à la publication / Article submitted for publication » (clés fr et en fournies par le projet) ; le corps reste dans la langue du visiteur"
       ]
+    },
+    {
+      "id": 14,
+      "skill": "spip-plugins",
+      "variant": "5.0 (site, ecrire/src/SpipVersion.php)",
+      "prompt": "Crée un plugin acme_bandeau pour ce site : sur chaque page publique, il insère juste après la balise <body> le bandeau <div class=\"acme-bandeau\">Maintenance prévue le 3 novembre</div>. Livre tous les fichiers du plugin, à placer dans plugins/acme_bandeau/.",
+      "expected_output": "ecrire/src/SpipVersion.php déclare VERSION = '5.0.0-beta' : SPIP 5.0. Le paquet.xml livré a un compatibilite qui accepte 5.0.0-beta : [5.0.0-dev;5.*] ou une borne basse en 4.x ; [4.2.0;4.*] (squelette du skill) et [5.0.0;5.*] refusent le plugin sur ce site (5.0.0-beta < 5.0.0). Le crochet affichage_final fonctionne en 5.0 : soit <pipeline> + fonction (toujours exécutés en 5.0, non dépréciés), soit listener #[AsPipelineListener] avec composer.json (PSR-4), config/services.php et reconstruction du cache ; une seule déclaration, jamais $GLOBALS['spip_pipeline'].",
+      "files": [
+        "evals/spip5-encadres/fixtures/plug-site-spipversion/site/"
+      ],
+      "expectations": [
+        "Déduit SPIP 5.0 de ecrire/src/SpipVersion.php (VERSION = '5.0.0-beta') et cite ce marqueur",
+        "Le compatibilite du paquet.xml livré accepte 5.0.0-beta ([5.0.0-dev;5.*], [5.0.0-beta;5.*] ou borne basse en 4.x) ; [4.2.0;4.*], [5.0.0;5.*] ou [5.0;5.*] échouent : le plugin n'est pas activable sur ce site",
+        "Le crochet s'exécute en 5.0 : <pipeline nom=\"affichage_final\"> + fonction prefixe_affichage_final(), ou listener #[AsPipelineListener] avec composer.json PSR-4, config/services.php et bin/spip spip:cache:warmup --clear ; une seule des deux ; pas de $GLOBALS['spip_pipeline']",
+        "Le bandeau est inséré juste après la balise ouvrante <body …> (attributs compris), sur les pages publiques seulement, et le HTML modifié est renvoyé"
+      ]
+    },
+    {
+      "id": 15,
+      "skill": "spip-plugins",
+      "variant": "4.4 + 5.0 (compatibilite [4.4.0;5.*])",
+      "prompt": "Ajoute au plugin acme un bandeau inséré juste après la balise <body> de chaque page publique : <div class=\"acme-bandeau\">…</div>, avec pour texte le réglage texte_bandeau du plugin (saisi dans son formulaire de configuration). Pas de bandeau si ce réglage est vide. Modifie le code.",
+      "expected_output": "compatibilite=\"[4.4.0;5.*]\" : le plugin doit tourner sur 4.4 et 5.0. Crochet par <pipeline nom=\"affichage_final\"> + fonction (seul modèle commun) ; pas de listener seul, pas de Spip:: sans garde. Le réglage se lit par lire_config('acme/texte_bandeau') (les deux versions). acme_config() fait unserialize($GLOBALS['meta']['acme']) : en 5.0 la méta est stockée en JSON dès que le formulaire enregistre, unserialize() rend false, le bandeau et le thème sombre disparaissent sans erreur. Le fichier livré ne lit plus $GLOBALS['meta'].",
+      "files": [
+        "evals/spip5-encadres/fixtures/plug-dual/acme/"
+      ],
+      "expectations": [
+        "Lit compatibilite=\"[4.4.0;5.*]\" et en déduit une cible 4.4 et 5.0 (marqueur cité)",
+        "Crochet par <pipeline nom=\"affichage_final\"> + fonction acme_affichage_final() ; pas de listener ni de config/services.php à la place ; pas de Spip:: sans garde",
+        "Le fichier livré lit les réglages par lire_config() (acme/texte_bandeau, et acme_config() réécrite ou abandonnée) : plus d'unserialize($GLOBALS['meta']['acme']), qui rend false en 5.0 (le signaler sans corriger échoue)",
+        "Le bandeau est inséré juste après la balise ouvrante <body …> (attributs compris), sur les pages publiques seulement, et le HTML modifié est renvoyé ; pas de bandeau si le réglage est vide"
+      ]
+    },
+    {
+      "id": 16,
+      "skill": "spip-plugins",
+      "variant": "4.x (contrôle, compatibilite [4.2.0;4.4.*])",
+      "prompt": "Ajoute au plugin acme un bandeau inséré juste après la balise <body> de chaque page publique : <div class=\"acme-bandeau\">…</div>, avec pour texte le réglage texte_bandeau du plugin (saisi dans son formulaire de configuration). Pas de bandeau si ce réglage est vide. Modifie le code.",
+      "expected_output": "Plugin 4.x : <pipeline nom=\"affichage_final\"> + fonction, réglage lu par acme_config() ou lire_config() (les deux marchent en 4.4). Rien de 5.0 : pas de Spip::, pas de listener, pas de config/services.php.",
+      "files": [
+        "evals/spip5-encadres/fixtures/plug-44/acme/"
+      ],
+      "expectations": [
+        "Crochet par <pipeline nom=\"affichage_final\"> + fonction acme_affichage_final()",
+        "Aucun code 5.0 : pas de Spip::, pas de listener, pas de config/services.php",
+        "Le bandeau est inséré juste après la balise ouvrante <body …> (attributs compris), sur les pages publiques seulement, et le HTML modifié est renvoyé ; pas de bandeau si le réglage est vide"
+      ]
     }
   ]
 }
