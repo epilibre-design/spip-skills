@@ -1,0 +1,135 @@
+# spip5-instance — verifications
+
+Date: 2026-10-18
+
+Every command the skill contains was run here first. Each result says whether it comes from a **run** on a disposable
+copy or a **source read**; "How" names the command or the file read.
+
+Revisions (upstream heads on 2026-10-18, `composer outdated 'spip/*'` empty on the reference instance):
+`spip/spip` `c8e329575` (2026-09-22), `spip/ecrire` `26bfe470` (2026-10-07), `spip/framework` `d0e8c97e`. PHP 8.4.25
+(CLI and built-in server), SQLite. Upstream documentation: `spip/docs` `ac8c932` (2026-09-01, up to date).
+
+Disposable copies (deleted at the end; the reference instances `/src/jetables/v5.0-dev` and `/src/jetables/v4.4.21`
+are not modified):
+
+| Copy | From | Port | Use |
+|---|---|---|---|
+| `/src/jetables/jetable-spip5-instance-copie` | `v5.0-dev` | 18941 | configuration, `bin/spip`, caches, logs, diagnostics |
+| `/src/jetables/jetable-spip5-instance-upgrade` | `v4.4.21` | 18942 | 4.4 → 5.0 upgrade and rollback |
+| `/src/jetables/jetable-spip5-instance-neuf` | `composer create-project` | 18943 | fresh install |
+
+A copied 5.0 site keeps the source's absolute paths in `tmp/cache/` (`boot/options.php`, `boot/fonctions.php`,
+`paths/`, `calcul/`): purge `tmp/cache/` and run `bin/spip spip:cache:warmup --clear` after copying or moving a site.
+**Run**: `grep -rl v5.0-dev tmp/` on the copy, before and after.
+
+Web servers for the HTTP checks, run as the user and stopped at the end: PHP built-in server with
+`PHP_CLI_SERVER_WORKERS=4` (a single worker deadlocks when a page fetches one of its own URLs, e.g. `loader.svg`
+after `spip:cache:clear --all`: 53 s, `ECHEC chinoiserie` in `distant.log`), Apache 2.4.52 + PHP-FPM 8.4 on 18944,
+nginx on 18945, both on `jetable-spip5-instance-copie`.
+
+## Requirements
+
+| Question | Result | How |
+|---|---|---|
+| PHP | `^8.4` in `composer.json`; `config.platform.php` `8.4.22` | source read |
+| Symfony | `symfony/runtime` `^8.1` required; installed `dependency-injection`, `http-foundation`, `console` 8.1.9, `dotenv` 8.1.6, `event-dispatcher` 8.1.5 | `composer show` |
+| PHP extensions required by the packages | `dom`, `filter`, `iconv`, `json`, `libxml`, `mbstring`, `pcre`, `phar`, `sodium`, `tokenizer`, `xml`, `xmlwriter`, `zip`, `zlib` | `composer check-platform-reqs` |
+| Database servers | `ecrire/req/`: `mysql.php` (extension `mysqli`, MySQL/MariaDB) and `sqlite3.php` (PDO SQLite); no PostgreSQL. The installer lists the drivers whose `spip_versions_<srv>()` succeeds | `ecrire/req/`, `install_select_serveur()` |
+| Upgrade path | database upgrade from 3.2+ only, 4.1+ advised, 4.4 ideally (`prerequis.md`, `UPGRADE_5.0.md`) | doc read |
+
+## Environment (`.env*`, `APP_ENV`)
+
+| Question | Result | How |
+|---|---|---|
+| Dotenv order | `.env`, or `.env.dist` when `.env` is absent (`.env.dist` is ignored as soon as `.env` exists); then `.env.local`, `.env.<APP_ENV>`, `.env.<APP_ENV>.local`; the last one wins | **run**: a `MARKER` variable in each file, read by `config/custom.php` (`$_SERVER['MARKER']`), `spip:config:dump --prefix=spip.test` after deleting `tmp/cache/boot/` each time |
+| `.env.dist` | tracked by `spip/spip` (`git checkout .env.dist` restores it): replaced on update, local values go in `.env.local` | **run** |
+| Real environment variable | wins over the dotenv files: `APP_ENV=prod bin/spip …` with `.env.local` `APP_ENV=dev` → `prod`; `-e prod` too | **run** |
+| Values read at compile time | a parameter set from `$_SERVER` in `config/custom.php` is frozen in the compiled container: changing `.env.local` has no effect until `tmp/cache/boot/` is rebuilt | **run**: marker unchanged across 5 edits without warmup |
+| Web | `.env.local` `APP_ENV=dev` switches public pages and `ecrire/` to `dev`; a server variable wins only if PHP puts it in `$_SERVER` | `docs/tests/ticket-28-verifications.md` (same revisions) |
+| `kernel.environment` | not shown by the default `spip:config:dump` (filter `spip.`): `spip:config:dump --prefix=kernel` | **run** |
+
+## Directories (`SPIP_ETC_DIR`, `SPIP_CACHE_DIR`, `spip.dirs.tmp`)
+
+| Question | Result | How |
+|---|---|---|
+| `SPIP_ETC_DIR=/abs/path/` (in `.env.local`) | Works: `config/` removed from the project, `connect.php`, `cles.php`, `bases/` and `custom.php` read from the new directory; public 200, `ecrire/` 302 to login, `config:lire nom_site` OK | **run** |
+| `SPIP_CACHE_DIR=/abs/path/` alone | **Breaks every HTTP hit (500)**: `bin/spip` compiles `boot/` and the container into `SPIP_CACHE_DIR`, but HTTP reads `_DIR_CACHE_BOOT` = `<spip.dirs.tmp>cache/boot/` (`LegacyDirectoryConstants::defineAll()`); "Artefacts boot absents : options.php introuvable" (`BootOrchestrator.php:32`) | **run** + source read |
+| `spip.dirs.tmp` absolute, outside the project (`config/custom.php`) | **Breaks (500)**: `SpipDirectories::relative()` turns `/src/…/tmpext/` into `src/…/tmpext/` (leading `/` dropped), and the container stays in the project's `tmp/cache/` (`SpipContainerFactory::cacheDir()` ignores `spip.dirs.tmp`) | **run**: debug line in `BootOrchestrator` on the copy, removed after |
+| Working combination | `spip.dirs.tmp` **relative** (`'../site-tmp/'`) in `config/custom.php` **and** `SPIP_CACHE_DIR=<same directory, absolute>/cache/` in `.env.local`, then `spip:cache:warmup --clear`: public 200, `ecrire/` 302, `?page=backend` 200, login 200; project `tmp/` removed and not recreated; cache, logs, sessions, `cron.lock` written outside; `spip:cache:clear --all` purges the outside cache | **run** |
+| Either setting alone with the relative `spip.dirs.tmp` | without `SPIP_CACHE_DIR`: container compiled in the project's `tmp/cache/`, HTTP 500 | **run** |
+
+## Parameters (`config/custom.php`, `spip:config:dump`)
+
+| Question | Result | How |
+|---|---|---|
+| Effective values | `bin/spip spip:config:dump` (48 parameters; `--prefix=` to filter); `spip.dirs.cache`, `spip.dirs.etc`, `spip.dirs.project` absolute | **run** |
+| Dev-only override | `if ($container->env() === 'dev') { … ->set('spip.logger.max_level', 'debug'); }` in `config/custom.php`: `prod` → `notice`, `dev` → `debug`, one container per environment (`container.dev.php`, `container.prod.php`) | **run** with `-e prod` / `-e dev` |
+| Derived parameters | setting `spip.dirs.cache`, `spip.dirs.project` or `spip.logger.max_size_bytes` in `custom.php` is silently ignored (no error, values unchanged) | **run** |
+| `spip.guard.load_threshold` | integer (`int $loadThreshold`); `0` disables. Above the threshold, only bots that are not "friends", on GET, are shed at random (probability grows with load²): 429 `Retry-After: 300`. **Run** with `1` at load 2.1: `MJ12bot` 8 × 429 out of 10, a browser user agent 10 × 200 | **run** + `LoadSheddingRule.php` |
+| Guard rules from the CLI | no `bin/spip` command lists them | `bin/spip list` |
+
+## `bin/spip`
+
+`bin/spip list --raw` (`spip/spip` `c8e329575`): `about`, `completion`, `hello`, `help`, `list`, `config:ecrire`,
+`config:lire`, `database:optimize` (alias `sql:optimize`), `routes:list`, `sites:syndics:maj`, `spip:cache:clear`
+(alias `cache:clear`), `spip:cache:warmup` (alias `cache:warmup`), `spip:config:dump`, `spip:container:debug`,
+`spip:info`, `spip:pipeline:events`, `spip:pipeline:listeners`. No install, plugin activation or database upgrade
+command.
+
+| Command | Result | How |
+|---|---|---|
+| `about` | `SPIP` `dev` (not the release), PHP, number of parameters | **run** |
+| `spip:info` | `Version SPIP` `5.0.0-beta`, `_DIR_TMP`, `_DIR_ETC`; `Plugins actifs` `n/a` | **run** |
+| `spip:cache:clear` | default `--boot`: deletes `tmp/cache/boot/`; the next HTTP hit rebuilds it (200) | **run** |
+| `spip:cache:clear --all` | empties `tmp/cache/` (page cache, `skel/`, `paths/`…), `boot/` rebuilt | **run** |
+| `spip:cache:warmup --clear` | recompiles `boot/` and the container of the environment given by `-e` / `APP_ENV`; with `-e dev` it removes `container.prod.*`, rebuilt by the next prod HTTP hit (200) | **run** |
+| `config:lire <key> [--json]`, `config:ecrire <key>:<value>` | read / write `spip_meta`; needs the database (in `spip.console.requires_spip_commands`) | **run** |
+| `database:optimize [--reorder\|--clean\|--all]` | optimises every table, exit 0 | **run** |
+| `spip:container:debug` | compiled file, `SpipCompiledContainer` | **run** |
+| `routes:list` | 6 routes: `/spip.php`, `/ecrire/{path}`, `/ecrire`, `/ecrire/`, `/ecrire/prive.php`, `/{path}` | **run** |
+| `-e <env>` | default `prod` in the help text, but `APP_ENV` from the dotenv files applies when `-e` is not given | **run** |
+
+## Caches and logs
+
+| Question | Result | How |
+|---|---|---|
+| Levels | default `notice`: notice and above are written; a `notice` line is labelled `!INFO` (legacy label), `warning` `WARNING`. With `debug`: `debug` and `info` lines too. With `warning`: only `WARNING` | **run**: squelette with one `#EVAL{spip_logger('bsk')->…}` per level, `tmp/log/bsk.log` |
+| Files | `tmp/log/<channel>.log` (`spip.log`, `serializer.log`, `distant.log`, `flock.log`…) | **run** |
+| A copied or moved site | `tmp/cache/` keeps the source's absolute paths (`boot/options.php`, `boot/fonctions.php`, `paths/`, `calcul/`): purge `tmp/cache/` and warmup after copying | **run** (see top) |
+
+## Entry point and web server
+
+`index.php` includes `spip.php`, which returns a Symfony Runtime closure booting `SpipHttpKernel`
+(`vendor/autoload_runtime.php`). The document root is the project root.
+
+HTTP status of sensitive paths on the copy (5.0 install with only `tmp/.htaccess`):
+
+| Path | Apache, no root `.htaccess` | Apache, `htaccess.txt` → `.htaccess` | nginx, rules below |
+|---|---|---|---|
+| `config/bases/spip.sqlite` | **200 (2.5 MB database downloaded)** | **200** | 403 |
+| `config/connect.php`, `cles.php`, `chmod.php` | 200 (executed, empty) | 200 | 403 |
+| `.env.dist` | 200 | 404 | 404 |
+| `composer.json`, `composer.lock` | 200 | 404 | 404 |
+| `var/state/plugins.php` | 200 | 200 | 403 |
+| `vendor/autoload.php`, `vendor/composer/installed.json` | 200 | 200 | 403 |
+| `bin/spip` | 200 | 200 | 403 |
+| `tmp/log/spip.log`, `tmp/cache/boot/container.prod.php` | 403 (`tmp/.htaccess`) | 403 | 403 |
+| `/`, `ecrire/` | 200, 302 | 200, 302 | 200, 302 |
+
+The core writes the deny `.htaccess` of `tmp/`, `config/` (`_DIR_CONNECT`) and `vendor/` at the end of the
+installer (`install_verifier_htaccess()`, `ecrire/install/etape_fin.php`) and in `MaintenanceTask`
+(`ecrire/src/Cron/Task/MaintenanceTask.php`), a `#[AsCronTask]` task that the 5.0.0-beta queue never runs
+(`docs/notes/spip-bugs.md` entry 1, branch `docs/notes-spip-bugs`). `var/` and `bin/` get none. The copied instance
+had only `tmp/.htaccess`; whether the 5.0 installer writes the others is checked in "Fresh install".
+
+nginx rules used (PHP-FPM 8.4):
+
+```nginx
+location ~ /\.(?!well-known/) { return 404; }
+location ~ ^/(config|tmp|var|vendor|bin)/ { deny all; }
+location ~ ^/composer\.(json|lock|phar)$ { return 404; }
+location ~ ^/(IMG|local)/.*\.(php[0-9]?|phtml)$ { deny all; }
+location / { try_files $uri $uri/ /spip.php?$args; }
+location ~ \.php$ { try_files $uri =404; include fastcgi_params;
+  fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name; fastcgi_pass unix:/run/php/php8.4-fpm.sock; }
+```
