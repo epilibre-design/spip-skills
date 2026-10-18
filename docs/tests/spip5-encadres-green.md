@@ -120,3 +120,26 @@ Two bullets do not answer an observed failure. They prevent the callout from cau
 | 14 — 5.0 site | PASS 3/3 | **PASS (4/4)** | cites `SpipVersion.php`, `[4.4.0;5.*]` with the `[5.0.0;5.*]` trap explained, `<pipeline>` + function, no hedging on 5.0 |
 | 15 — 4.4 + 5.0 | FAIL 3/3 | **PASS 2/2 (4/4)** | cites `[4.4.0;5.*]`, keeps `<pipeline>` + function (no listener), rewrites `acme_config()` with `lire_config()` and explains the JSON trap; one run also moves `acme_insert_head_css()` to `lire_config('acme/theme')` |
 | 16 — 4.x (no leak) | PASS | **PASS (3/3)** | cites `[4.2.0;4.4.*]`, `<pipeline>` + function, no `Spip::`, listener or `services.php`; switches to `lire_config()` (valid in 4.4) |
+
+## spip-testing (2026-10-18)
+
+Every callout fact was checked on the instances (see the baseline).
+- The callout's bootstrap snippet, copied as is, loads on 4.4.22 and on 5.0. On 5.0 the input tests pass, and only the
+  deliberate `$_POST` test fails.
+- `composer create-project … spip/spip <dir> 5.0.x-dev` is taken from the 5.0 `README.md` and was not executed.
+
+Review: the first callout recommended `set_request()` for every target. It runs on 5.0 but triggers
+`trigger_deprecation('spip', '5.0', … use "Spip::setInput()" instead.)`, so a 5.0-only answer using it fails the
+spec's GREEN rule. The callout now gives `Spip::setInput()` (`null` clears it) for 5.0 only and keeps `set_request()`
+for 4.4 + 5.0. The case 17 grid now requires `Spip::setInput()`. `Spip::setInput()` checked on the instance: 4 tests
+pass with the callout's bootstrap.
+
+Deprecations checked by capturing `E_USER_DEPRECATED` after the bootstrap (PHPUnit hides the silenced
+`trigger_deprecation()` even with `--display-deprecations`). The first-round run 2 answer emits the `set_request()`
+deprecation; the post-review run 1 answer emits none. Both pass 5 tests, 17 assertions on the 5.0 instance.
+
+| Case | RED | GREEN, first callout | GREEN, after review | Notes |
+|---|---|---|---|---|
+| 17 — 5.0 only | FAIL 2/2 | FAIL 2/2 under the new grid (`set_request()`, deprecated) | **PASS 2/2 (5/5)** | both runs cite the markers, fix the bootstrap (`$spip5` guard, Kernel, `Request`), use `Spip::setInput()` only and explain why not `set_request()`, say the 4.4 install script must be replaced (run 1 rewrites it with `composer create-project` and stops while `config/connect.php` is missing). Run 1 executed on the instance: **5 tests, 17 assertions, OK**, no deprecation (RED run 1, same setup: fatal `_FILE_OPTIONS`) |
+| 18 — 4.4 + 5.0 | FAIL 2/2 | PASS 2/2 | **PASS (4/4)** | cites `[4.4.0;5.*]`, guarded bootstrap, keeps `set_request()` and rejects `Spip::setInput()` as 5.0-only; gives the 5.0 install for the second run |
+| 19 — 4.x (no leak) | PASS | PASS | **PASS (2/2)** | cites `[4.2.0;4.4.*]`, 4.x bootstrap kept, `set_request()`, no 5.0 code |
