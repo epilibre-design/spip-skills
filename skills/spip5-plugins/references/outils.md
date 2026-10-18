@@ -72,7 +72,7 @@ then warmup.
 
 ## Static analysis: PHPStan and Rector
 
-Tools in a separate directory (or the plugin's `require-dev`), pointed at a 5.0 instance:
+Tools in the plugin's `require-dev`, pointed at a 5.0 instance. Run from the plugin directory:
 
 ```bash
 composer config repositories.spip composer https://get.spip.net/composer
@@ -97,7 +97,11 @@ parameters:
         - /path/to/spip5/prive
 ```
 
-`vendor/bin/phpstan analyse`. Verified on 5.0.0-beta (`ecrire` `26bfe470`), PHPStan 2.3.1:
+`vendor/bin/phpstan analyse`. Tools installed in a separate directory instead: run
+`/path/to/tools/vendor/bin/phpstan analyse` (and `…/rector`) from the plugin directory — both pick up the config of
+the current directory — and change the include to `/path/to/tools/vendor/phpstan/phpstan-deprecation-rules/rules.neon`.
+
+Verified on 5.0.0-beta (`ecrire` `26bfe470`), PHPStan 2.3.1:
 
 | Reported | Not reported |
 |---|---|
