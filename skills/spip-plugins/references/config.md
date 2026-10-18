@@ -20,19 +20,33 @@ Create only the HTML file. **No PHP** (no `charger`, `verifier`, `traiter` funct
 
 ```html
 <!-- formulaires/configurer_myplugin.html -->
-<div>
-  <p class="explication"><:myplugin:configurer_intro:></p>
-
-  <div class="editer-groupe">
-    <label for="in_the_spotlight"><:myplugin:champ_in_the_spotlight:></label>
-    <input type="text" name="in_the_spotlight"
-           value="[(#CONFIG{myplugin/in_the_spotlight})]"
-           id="in_the_spotlight" />
-  </div>
+<div class="formulaire_spip formulaire_configurer formulaire_#FORM">
+  <h3 class="titrem"><:myplugin:titre_configurer:></h3>
+  [<div class="reponse_formulaire reponse_formulaire_ok" role="status">(#ENV*{message_ok})</div>]
+  [<div class="reponse_formulaire reponse_formulaire_erreur" role="alert">(#ENV*{message_erreur})</div>]
+  [(#ENV{editable})
+  <form method="post" action="#ENV{action}"><div>
+    #ACTION_FORMULAIRE
+    <p class="explication"><:myplugin:configurer_intro:></p>
+    <div class="editer-groupe">
+      <div class="editer editer_in_the_spotlight[ (#ENV*{erreurs/in_the_spotlight}|oui)erreur]">
+        <label for="in_the_spotlight"><:myplugin:champ_in_the_spotlight:></label>
+        [<span class="erreur_message">(#ENV*{erreurs/in_the_spotlight})</span>]
+        <input type="text" name="in_the_spotlight" id="in_the_spotlight" class="text"
+               value="[(#ENV{in_the_spotlight})]" />
+      </div>
+    </div>
+    <p class="boutons"><input type="submit" class="btn submit" value="<:bouton_enregistrer:>" /></p>
+  </div></form>
+  ]
 </div>
 ```
 
-Field names map directly to the config key. No hidden inputs are needed for the basic case.
+The `<form>` and `#ACTION_FORMULAIRE` are required: without them `#FORMULAIRE_CONFIGURER_MYPLUGIN` renders no form
+and nothing can be saved. `#ACTION_FORMULAIRE` adds the hidden fields (`formulaire_action`, signed args). Field names
+map directly to the config key; `charger()` of `inc/cvt_configurer` puts the stored values in `#ENV`. Title and
+messages go outside `[(#ENV{editable})…]`, as in `plugins-dist` (`mots`, `sites`, `medias`). To group fields, use
+`<fieldset><legend>` (`svp`, `sites`, `urls_etendues`).
 
 ### 2. The private page — `prive/squelettes/contenu/configurer_myplugin.html`
 
