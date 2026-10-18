@@ -4,11 +4,36 @@ description: Use for any SPIP template question — BOUCLE loops, balises, crit�
   filtres, INCLURE, pagination, image filters, recursive trees, AJAX reloads. Covers
   public squelettes and plugin squelettes (espace privé, modèles). Trigger even when
   the user doesn't say "squelette". Not for PHP hooks/pipelines → use spip-plugins.
+  Written for SPIP 4.x; on a SPIP 5.0 project some syntaxes are removed (see the SPIP 5.0 section).
 ---
 
 # SPIP — Squelettes Reference
 
 SPIP generates pages from **squelettes** — `.html` files mixing HTML with BOUCLE loops and `#BALISE` tags. All template work lives in `squelettes/`. No PHP needed.
+
+## SPIP 5.0
+
+This skill describes SPIP 4.x. Check the version first and name the marker you relied on. A site is 5.0 if **any**
+of: `ecrire/src/SpipVersion.php` declares `VERSION = '5.…'`, `bin/spip` exists, `vendor/spip/framework/` exists,
+plugins live in `plugins-dist/spip/`. A plugin targets 5.0 if its `paquet.xml` `compatibilite` starts at 5.0 or
+its `composer.json` requires `spip/framework`. On a 5.0 project, fix these in every squelette you touch, not only in
+the code you add:
+
+- **Removed in 5.0**: `<INCLURE{…}></INCLURE>` → `<INCLURE{…} />`, and `.html` only (no `<INCLURE(x.php)>`, no
+  `fond=x.php`); logo pseudo-filters `[(#LOGO_X|right)]` (`left`, `center`, `top`, `bottom`) → `[(#LOGO_X{right})]`,
+  `|#URL_X` → `{#URL_X}`, `|fichier` → `#LOGO_X**`. The new forms already work in 4.4: use them on both.
+- `{fusion}` / `{fusion_supprimer}` / `{collecte}` → `{groupby}` / `{groupby_supprimer}` / `{collate}` (deprecated
+  in 5.0). The new names do not exist in 4.4: a squelette for 4.4 **and** 5.0 keeps the old ones.
+- Also removed: `(POUR)` → `(DATA){source tableau, …}`, `|foreach` → a `DATA` loop, `#EMBED_DOCUMENT` →
+  `#MODELE{emb, …}`, `#LARGEUR_ECRAN` → `#LAYOUT_PRIVE{…}`, `#CONST{_DIR_RESTREINT_ABS}` →
+  `#PARAM{spip.routes.back_office}`.
+- Brackets are now allowed in optional parts: in CSS, `a[href] { … url(#CHEMIN_IMAGE{x.svg}) }` can be read as one →
+  `url("#CHEMIN_IMAGE{x.svg}")`.
+- Language items are case-sensitive: `<:Acme:Titre:>` ≠ `<:acme:titre:>`.
+
+Details: `spip-migration-5` (`references/squelettes.md`).
+
+---
 
 ## SPIP-specific terms (always kept in original form)
 

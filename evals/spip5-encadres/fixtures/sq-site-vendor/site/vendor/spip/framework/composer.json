@@ -1,0 +1,65 @@
+{
+    "name": "spip/framework",
+    "description": "Framework pour les applications SPIP",
+    "license": "MIT",
+    "type": "library",
+    "keywords": [
+        "spip",
+        "framework"
+    ],
+    "require": {
+        "php": "^8.4",
+        "spip-league/cache": "^2.1",
+        "spip-league/config": "^1.x-dev",
+        "spip-league/filesystem": "^4.0",
+        "spip-league/http-kernel": "^1.x-dev",
+        "spip-league/kernel": "^2.x-dev",
+        "spip-league/logger": "^2.1",
+        "spip-league/path": "^2.x-dev",
+        "spip-league/plugin-manager": "^1.x-dev",
+        "spip-league/pipeline-bridge": "^1.x-dev",
+        "symfony/polyfill-mbstring": "^1.38",
+        "symfony/polyfill-php85": "^1.38"
+    },
+    "require-dev": {
+        "spip-league/console": "^1.x-dev",
+        "spip-league/sdk": "^2.4"
+    },
+    "repositories": {
+        "spip": {
+            "type": "composer",
+            "url": "https://get.spip.net/composer"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "autoload": {
+        "psr-4": {
+            "Spip\\Framework\\": "src/"
+        },
+        "files": [
+            "bootstrap/inc/facade.php",
+            "bootstrap/inc/sanitize.php",
+            "bootstrap/inc/pipeline.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Spip\\Test\\Framework\\": "tests/"
+        },
+        "files": [
+            "vendor/spip-league/sdk/src/Stub/functions_autoloading.php",
+            "vendor/spip-league/sdk/src/Stub/functions_path.php"
+        ]
+    },
+    "scripts": {
+        "analyse": "vendor/bin/phpstan --memory-limit=1G",
+        "baseline": "vendor/bin/phpstan analyse --memory-limit=1G --generate-baseline --allow-empty-baseline",
+        "check-cs": "vendor/bin/ecs check --ansi",
+        "fix-cs": "vendor/bin/ecs check --fix --ansi",
+        "rector": "vendor/bin/rector process --ansi",
+        "rector-dry-run": "vendor/bin/rector process --dry-run --ansi",
+        "test": "phpunit --colors --no-coverage",
+        "test-coverage": "XDEBUG_MODE=coverage phpunit --display-warnings --display-deprecations --colors"
+    }
+}

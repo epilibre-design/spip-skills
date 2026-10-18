@@ -34,3 +34,18 @@ Same task on three fixtures: add an email check in `verifier()`. The existing `t
 | 7 — 4.x (control) | `compatibilite="[4.2.0;4.4.*]"` | `_request()`; mentions "your version (4.2 to 4.4)" | PASS |
 
 Same two patterns as `spip-logs`: version never checked (case 6), or detected without an API to switch to (case 5).
+
+## spip-squelettes (2026-10-18)
+
+Same task on three fixtures: on `mot.html`, list the rubriques holding at least one article linked to the mot-clé,
+each once. The existing squelette contains two syntaxes removed in 5.0: `[(#LOGO_MOT|right)]` and
+`<INCLURE{…}></INCLURE>` (twice).
+
+| Case | Fixture marker | Answer | Result |
+|---|---|---|---|
+| 8 — 5.0 site | `vendor/spip/framework/` only | never checks the version; dedup with `{doublons}` (valid), `{fusion}` offered as a variant; `\|right` and `</INCLURE>` kept, not flagged | **FAIL** (1/4) |
+| 9 — 4.4 + 5.0 | `compatibilite="[4.4.0;5.*]"` | no marker cited; `{doublons}`; `\|right` and `</INCLURE>` kept, not flagged (they break on 5.0) | **FAIL** (1/4) |
+| 10 — 4.x (control) | `compatibilite="[4.2.0;4.4.*]"` | `{doublons}`, nothing from 5.0 | PASS |
+
+The criterion is not where it fails (`{doublons}` is not deprecated): the agent leaves syntaxes removed in 5.0 in the
+squelette it delivers.

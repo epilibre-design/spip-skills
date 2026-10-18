@@ -56,3 +56,20 @@ Two iterations:
 | 5 — 5.0 site code | FAIL | **PASS (5/5)** | cites `VERSION = '5.0.0-beta'`, `Spip::input('email')`, no `use`; `traiter()` moved to `Spip::input()` too |
 | 6 — 4.4 + 5.0 | PARTIAL | **PASS (4/4)** | cites `[4.4.0;5.*]`, keeps `_request()`, explains why not `Spip::input()` |
 | 7 — 4.x (no leak) | PASS | **PASS (3/3)** | cites `[4.2.0;4.4.*]`, `_request()` only |
+
+## spip-squelettes (2026-10-18)
+
+Callout facts checked on the local 5.0.0-beta instance and its `ecrire/CHANGELOG.md`: `#[\Deprecated(since: '5.0')]`
+on `critere_fusion_dist()`, `critere_fusion_supprimer_dist()`, `critere_collecte_dist()`, which delegate to
+`{groupby}`, `{groupby_supprimer}`, `{collate}` (`ecrire/public/criteres.php`, same code as 4.4 `{fusion}`); removed:
+`<INCLURE(fichier.php)>`, `fond=fichier.php`, `</INCLURE>` (#26), logo pseudo-filters `|left` `|right` `|center`
+`|bottom` `|top` `|lien` `|fichier` (spip/spip!5631; `phraser_vieux_logos()` is gone from `normaliser.php`), `POUR`,
+`|foreach`, `#EMBED_DOCUMENT`, `#LARGEUR_ECRAN` (spip/spip#5560); brackets in optional parts (spip/spip#3637);
+case-sensitive language items (spip/spip#2536). In 4.4.22: `{groupby}` / `{collate}` absent; `#LOGO_X{right}`,
+`#LOGO_X**`, `<INCLURE … />`, `#LAYOUT_PRIVE`, `#PARAM` present.
+
+| Case | RED | GREEN | Notes |
+|---|---|---|---|
+| 8 — 5.0 site | FAIL (1/4) | **PASS (4/4)** | cites `vendor/spip/framework/`, `{groupby id_rubrique}`, fixes `{right}` and both `<INCLURE … />` |
+| 9 — 4.4 + 5.0 | FAIL (1/4) | **PASS (4/4)** | cites `[4.4.0;5.*]`, keeps `{fusion}` (no `{groupby}` in 4.4), fixes `{right}` and `<INCLURE … />` |
+| 10 — 4.x (no leak) | PASS | **PASS (2/2)** | cites `[4.2.0;4.4.*]`, `{fusion}`, file left as is; 5.0 changes listed as a future note |

@@ -1,0 +1,23 @@
+<BOUCLE_mot(MOTS){id_mot}>
+<!DOCTYPE html>
+<html lang="#LANG">
+<head>
+	<title>[(#TITRE|textebrut)] - [(#NOM_SITE_SPIP|textebrut)]</title>
+	<INCLURE{fond=inclure/head}{env}></INCLURE>
+</head>
+<body class="page_mot">
+	<h1>[(#LOGO_MOT|right)]#TITRE</h1>
+	[<div class="descriptif">(#DESCRIPTIF)</div>]
+
+	<B_articles>
+	<ul class="liste-articles">
+	<BOUCLE_articles(ARTICLES){id_mot}{par date}{inverse}>
+		<li><a href="#URL_ARTICLE">#TITRE</a></li>
+	</BOUCLE_articles>
+	</ul>
+	</B_articles>
+
+	<INCLURE{fond=inclure/pied}{env}></INCLURE>
+</body>
+</html>
+</BOUCLE_mot>
