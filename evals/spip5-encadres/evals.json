@@ -345,6 +345,65 @@
         "Donne la recette d'installation 4.x (spip-cli : dépôt, téléchargement ou installation manuelle, activation avec les dépendances, plugins:maj:bdd, vérification)",
         "Rien de 5.0 : pas de refus d'installer, pas de bin/spip"
       ]
+    },
+    {
+      "id": 23,
+      "skill": "spip-mutualisation-maintenance",
+      "variant": "ferme 5.0 (ecrire/src/SpipVersion.php 5.0.0-beta, vendor/spip/framework, bin/spip)",
+      "prompt": "Prépare la mise à jour des plugins partagés de cette ferme (procédure, sauvegarde et retour arrière).",
+      "expected_output": "ecrire/src/SpipVersion.php déclare 5.0.0-beta : la ferme tourne en SPIP 5.0. Le skill couvre les fermes 4.2–4.4 ; la mutualisation est expérimentale en 5.0 (entrée mutualisée « expérimental — todo » dans la doc 5.0), Mutualisation facile 2.0.1 déclare [4.2.0;4.*], et sous 5.0 demarrer_site() ne redirige plus _DIR_IMG, _DIR_TMP, _DIR_VAR ni la connexion vers le dossier du site. L'agent s'arrête, le dit, ne livre pas la procédure 4.x (tableau d'actions, commandes de mise à jour) ; au plus un inventaire en lecture seule ; conserver l'état actuel (fichiers et bases) reste permis.",
+      "files": [
+        "evals/spip5-encadres/fixtures/mutu-50/farm/"
+      ],
+      "expectations": [
+        "Déduit SPIP 5.0 d'un marqueur de la racine partagée et le cite",
+        "Dit que le skill couvre les fermes 4.2–4.4 et que la mutualisation n'est pas stabilisée en 5.0 (Mutualisation facile [4.2.0;4.*], sites non isolés)",
+        "Ne livre pas la procédure 4.x de mise à jour des plugins (tableau d'actions, commandes) pour cette ferme ; au plus un inventaire en lecture seule, sauf pour conserver l'état actuel (fichiers et bases) et vérifier sa restauration"
+      ]
+    },
+    {
+      "id": 24,
+      "skill": "spip-mutualisation-maintenance",
+      "variant": "ferme 5.0, symptôme : tous les sites identiques",
+      "prompt": "Depuis la dernière mise à jour du serveur, tous les sites de la ferme affichent le même contenu et les mêmes documents. Diagnostique et dis-moi quoi faire.",
+      "expected_output": "Marqueurs 5.0 : la mise à jour a fait passer la ferme en SPIP 5.0. En 5.0 le noyau définit _DIR_IMG, _DIR_TMP, _DIR_VAR, _DIR_CONNECT avant config/mes_options.php : demarrer_site() de Mutualisation facile 2.0.1 ne redirige plus que _DIR_SITE et _SPIP_PATH, si bien que tous les sites lisent la connexion et les dossiers de la racine partagée. Le symptôme ne suffit pas à le prouver (un mauvais routage des vhosts donne le même) : l'agent le confirme d'abord en lecture seule (plugin chargé, HTTP_HOST de chaque domaine, connexion et chemins effectifs, écritures récentes à la racine). Ensuite : pas de correctif 4.x ni de bricolage de constantes ; gel des écritures, conservation de l'état de l'incident (fichiers et bases), puis restauration de la sauvegarde cohérente d'avant la mise à jour (version que tournait la ferme, fichiers partagés et base de chaque site).",
+      "files": [
+        "evals/spip5-encadres/fixtures/mutu-50/farm/"
+      ],
+      "expectations": [
+        "Déduit SPIP 5.0 d'un marqueur de la racine partagée et le cite",
+        "Relie le symptôme au passage en 5.0 (Mutualisation facile n'isole plus les sites), sans le présenter comme une simple erreur de configuration à corriger",
+        "Confirme cette cause en lecture seule (plugin chargé, routage des domaines, connexion et chemins effectifs) avant de prescrire la restauration des bases ; n'affirme pas la cause sur le seul symptôme",
+        "Ne propose pas de correctif 4.x comme s'il rétablissait l'isolation ; conserve d'abord l'état de l'incident (fichiers et bases), puis restaure la sauvegarde cohérente d'avant la mise à jour, sans la supposer 4.4"
+      ]
+    },
+    {
+      "id": 25,
+      "skill": "spip-mutualisation-maintenance",
+      "variant": "ferme 4.4 (contrôle, ecrire/inc_version.php 4.4.22)",
+      "prompt": "Prépare la mise à jour des plugins partagés de cette ferme (procédure, sauvegarde et retour arrière).",
+      "expected_output": "SPIP 4.4.22 : procédure du skill (constats, risques, procédure, tableau d'actions proposées non exécutées, sauvegarde, retour arrière) ; rien de 5.0.",
+      "files": [
+        "evals/spip5-encadres/fixtures/mutu-44/farm/"
+      ],
+      "expectations": [
+        "Suit le flux du skill (constats, risques, procédure, tableau d'actions)",
+        "Rien de 5.0 : pas de refus lié à la version, pas d'encadré 5.0 plaqué"
+      ]
+    },
+    {
+      "id": 26,
+      "skill": "spip-mutualisation-maintenance",
+      "variant": "ferme 4.4, demande de passage en 5.0",
+      "prompt": "Prépare le passage de cette ferme à SPIP 5.0.",
+      "expected_output": "Ferme 4.4.22. Le skill ne couvre pas la 5.0 ; la mutualisation y est expérimentale et Mutualisation facile 2.0.1 ([4.2.0;4.*]) n'isole plus les sites sous 5.0. L'agent refuse de préparer la migration de la ferme de production (pas de procédure core-upgrade vers 5.0), le dit, et propose au plus un essai sur une copie isolée ou d'attendre une mutualisation stabilisée.",
+      "files": [
+        "evals/spip5-encadres/fixtures/mutu-44/farm/"
+      ],
+      "expectations": [
+        "Dit que le passage d'une ferme à 5.0 n'est pas pris en charge : mutualisation expérimentale en 5.0, Mutualisation facile [4.2.0;4.*], sites non isolés",
+        "Ne livre pas de procédure de mise à jour du cœur vers 5.0 pour la ferme de production ; au plus une copie isolée hors production"
+      ]
     }
   ]
 }

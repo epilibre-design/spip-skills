@@ -171,3 +171,34 @@ here instead of claiming they are the only ones. Cases 20 and 21 were rerun.
 | 20 — install on a 5.0 site | PASS 2/2 | PASS 2/2 (one run tests the whole meta) | PASS (3/3) | **PASS (4/4)** | cites `bin/spip`, refuses with Escal 5.6.2's `[4.1.0;4.*]`, no forcing, three options; no spip-cli on 5.0; `bin/spip config:lire escal_base_version` for the single-key test |
 | 21 — upgraded site | PARTIAL 2 (regraded) | PASS 2/2 (one run tests the whole meta) | PASS 1, PARTIAL 1 (regraded: "or reinstall the site on 4.4") | **PASS 3/3 (4/4)** | cites `vendor/spip/framework/`, reads the copied `paquet.xml`, cause stated, no reactivation command presented as working; back to 4.4 only from the pre-migration backup, files and database, never a reinstall over the migrated base, no verified way back without it; `bin/spip spip:cache:clear` on 5.0 |
 | 22 — 4.4 site (no leak) | PASS | **PASS (2/2)** | — | — | 4.4.22 cited, full spip-cli recipe; notes the `SpipLeague\Kernel` it sees in 4.4's `inc_version.php` without changing course |
+
+## spip-mutualisation-maintenance (2026-10-18)
+
+The callout covers two points:
+- mutualisation is work in progress in 5.0 (mutualised entry point "expérimental — todo" in the 5.0 docs, no farm
+  procedure): read-only inventory on a 5.0 farm (preserving its state stays in scope), no move of a
+  production farm to 5.0, at most a trial on an isolated copy;
+- Mutualisation facile 2.0.1 (`[4.2.0;4.*]`) no longer isolates sites on 5.0 (checked on the instance, see the
+  baseline): sites showing the same content fit this cause; once confirmed read-only, freeze, preserve, restore the
+  pre-upgrade backup.
+
+Review (Codex) on the first callout:
+- it presented the same-content symptom as proof of the cause, while vhost routing gives the same symptom;
+- it forbade any backup plan on a 5.0 farm while asking to preserve the current state;
+- it named the restore target "4.4", while the skill covers 4.2–4.4 farms.
+
+The final callout makes the agent confirm the cause read-only first (loaded mutualisation, `HTTP_HOST` routing,
+effective connection and write paths), keeps preserving the current state in scope, and restores "the consistent
+backup taken before the upgrade". Case 24 gains that criterion and its answers were regraded; cases 23 and 24 were
+rerun.
+
+| Case | RED | GREEN, first callout | GREEN, final callout | Notes |
+|---|---|---|---|---|
+| 23 — shared plugin upgrade, 5.0 farm | PARTIAL 2 | PASS 2/2 (both refuse any backup plan) | **PASS (1/1)** | refuses the upgrade, offers a preservation backup of the current state (files and every database) with a restore drill, treats the isolation defect as to be confirmed read-only |
+| 24 — 5.0 farm, all sites show the same content | PASS 1, PARTIAL 1 (regraded) | PARTIAL 1 (regraded: cause asserted, restore not conditioned on confirming it) | **PASS 2/2** | "fits but does not prove"; read-only checks of the loaded plugin, vhost routing, root `connect.php` and recent writes; stops if routing is the cause; then freeze, preserve the incident state, restore the pre-upgrade backup of the release the farm ran |
+| 25 — 4.4 farm (control) | PASS | **PASS (1/1)** | — | 4.4.22 cited, no 5.0 marker, full 4.x action plan; nothing from the callout |
+| 26 — move a 4.4 farm to 5.0 | PARTIAL 2 | **PASS 2/2** | — | refuses for production with both reasons, stays on 4.4, offers only an isolated trial; no migration plan |
+
+Run 1 of case 26 notes the `SpipLeague\Component\Kernel` code in the fixture's `inc_version.php` as an anomaly. The
+fixture is byte-identical to the official `spip/ecrire` 4.4.22 file (sha1 `fc26f8c8`); 4.4.24 has the same code. The
+answer still treats the farm as 4.4 and refuses the move, so the grade stands.
