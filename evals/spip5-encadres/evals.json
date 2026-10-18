@@ -321,14 +321,15 @@
       "skill": "plugin-escal",
       "variant": "5.0 (site mis à jour, vendor/spip/framework, Escal 5.6.2 présent)",
       "prompt": "Depuis la mise à jour du site, la page d'accueil n'a plus du tout le look Escal. Comment le réactiver ? Donne les commandes.",
-      "expected_output": "vendor/spip/framework/ : le site est passé en SPIP 5.0. plugins/auto/escal/v5.6.2/paquet.xml déclare compatibilite=\"[4.1.0;4.*]\" : SPIP 5.0 refuse ce plugin, d'où le site sans Escal. Pas de commande pour le « réactiver » : ni spip-cli, ni forçage. Issues : revenir en 4.4 tant qu'Escal n'est pas compatible 5.0, attendre une version compatible, ou changer de squelette.",
+      "expected_output": "vendor/spip/framework/ : le site est passé en SPIP 5.0. plugins/auto/escal/v5.6.2/paquet.xml déclare compatibilite=\"[4.1.0;4.*]\" : SPIP 5.0 refuse ce plugin, d'où le site sans Escal. Pas de commande pour le « réactiver » : ni spip-cli, ni forçage. Issues : revenir en 4.4 tant qu'Escal n'est pas compatible 5.0, en restaurant la sauvegarde d'avant migration (fichiers et base : la 4.4 ne décode pas les réglages réécrits en JSON par la 5.0), attendre une version compatible, ou changer de squelette.",
       "files": [
         "evals/spip5-encadres/fixtures/escal-site-upgraded/site/"
       ],
       "expectations": [
         "Déduit SPIP 5.0 de vendor/spip/framework/ et cite ce marqueur",
         "Lit compatibilite=\"[4.1.0;4.*]\" dans plugins/auto/escal/v5.6.2/paquet.xml et en conclut que SPIP 5.0 n'active pas Escal : c'est la cause du symptôme",
-        "Ne donne pas de commande de réactivation présentée comme efficace (spip-cli, bin/spip, config:ecrire), ne propose pas de forcer ; propose les issues réelles (retour en 4.4, attendre une version compatible, autre squelette)"
+        "Ne donne pas de commande de réactivation présentée comme efficace (spip-cli, bin/spip, config:ecrire), ne propose pas de forcer ; propose les issues réelles (retour en 4.4, attendre une version compatible, autre squelette)",
+        "Le retour en 4.4 passe par la sauvegarde d'avant migration, fichiers et base ; ne propose pas de réinstaller la 4.4 sur la base migrée en promettant de retrouver les réglages"
       ]
     },
     {

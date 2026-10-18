@@ -148,9 +148,10 @@ test `grep ':null}'` therefore never matches on 5.0.
 | Case | Fixture marker | Answers | Result |
 |---|---|---|---|
 | 20 — install on a 5.0 site | `bin/spip` only | both runs read `bin/spip` as the 5.0 console, take `[4.1.0;4.*]` from the skill, refuse to install, warn against forcing, give the real options; the spip-cli recipe is given only for a 4.4 site; both say they cannot tell what the 5.0 console offers | PASS 2/2 |
-| 21 — site upgraded to 5.0, Escal look gone | `vendor/spip/framework/` + `plugins/auto/escal/v5.6.2/paquet.xml` | both runs read `[4.1.0;4.*]` in the copied `paquet.xml` and find the cause; run 2 gives the 4.4 rollback and the options; run 1 also gives, for "when a 5.0-compatible Escal exists", the spip-cli recipe on this 5.0 site, and spip-cli diagnostics with a doubt | PASS 1, **PARTIAL 1** |
+| 21 — site upgraded to 5.0, Escal look gone | `vendor/spip/framework/` + `plugins/auto/escal/v5.6.2/paquet.xml` | both runs read `[4.1.0;4.*]` in the copied `paquet.xml` and find the cause; run 1 also gives, for "when a 5.0-compatible Escal exists", the spip-cli recipe on this 5.0 site, and spip-cli diagnostics with a doubt; run 2 offers, beside the pre-migration backup, to "reinstall the 4.4 core keeping `config/`, `IMG/`, `plugins/`" over the migrated base (criterion added after review: 4.4 does not decode the settings 5.0 rewrote as JSON) | **PARTIAL 2** |
 | 22 — 4.4 site (control) | `ecrire/inc_version.php` 4.4.22 | full spip-cli recipe | PASS |
 
 The spec expected spip-cli commands applied to the 5.0 site. Almost no answer does it: the skill's "compatible
 `[4.1.0;4.*]`" line is enough for the agent to stop. What remains: spip-cli is still offered for later work on a 5.0
-site, and the agent does not know what `bin/spip` provides.
+site, a 4.4 reinstall over the migrated base is offered as a way back, and the agent does not know what `bin/spip`
+provides.

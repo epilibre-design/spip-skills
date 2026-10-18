@@ -36,10 +36,14 @@ exists, plugins live in `plugins-dist/spip/`.
 - Escal does not run on 5.0: its latest release (5.6.2, 2026-10-15) declares `compatibilite="[4.1.0;4.*]"`, which
   SPIP 5.0 refuses, so it is never activated (a site upgraded to 5.0 falls back to the default squelettes; the
   `escal` meta stays in base). Read the `paquet.xml` of the release at hand before any advice. Never force it
-  (editing `compatibilite`, `_DEV_VERSION_SPIP_COMPAT`). The options: keep or restore the site on 4.4, wait for a
-  release whose `compatibilite` reaches 5.x, or choose another squelette.
+  (editing `compatibilite`, `_DEV_VERSION_SPIP_COMPAT`). The options: keep the site on 4.4, wait for a release whose
+  `compatibilite` reaches 5.x, or choose another squelette.
+- Going back to 4.4 means restoring the pre-migration backup, files **and** database. Never offer to reinstall 4.4
+  over the migrated database: 5.0 rewrites array settings as JSON, which 4.4 (`unserialize`) does not decode, so the
+  Escal settings would not come back. Without that backup, say there is no verified way back with the settings.
 - The spip-cli recipes below do not apply to a 5.0 site: spip-cli is a 4.x tool, and 5.0's `bin/spip` has no
-  download, activation or `php:eval` command. It has `config:lire` / `config:ecrire` and `spip:cache:clear`.
+  download, activation or `php:eval` command. The commands useful here: `config:lire` / `config:ecrire` and
+  `spip:cache:clear`.
   `bin/spip config:lire escal --json` shows the kept settings. Its JSON is pretty-printed (`"cle": null`): to test
   whether Escal was ever installed, read the one key `escal_base_version` and match `grep -Eq '": ?null'` (not
   `':null}'`). Never run that test on the whole `escal` meta, where any `null` setting would match.
