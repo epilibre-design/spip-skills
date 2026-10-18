@@ -2,7 +2,7 @@
 name: spip-logs
 description: Use when writing, reading, or debugging SPIP logs — spip_log(), journal(),
   log constants, log file location, gravité levels, or log rotation.
-  For SPIP 4.1+.
+  For SPIP 4.1–4.4; on a SPIP 5.0 project the API changes (see the SPIP 5.0 section).
 ---
 
 # SPIP — Logs & Journal
@@ -11,6 +11,26 @@ SPIP has two distinct logging entry points:
 
 - **`spip_log()`** — writes to rotating text files in `tmp/log/`; for developer/debug traces
 - **`journal()`** — event log API; in core it writes to `tmp/log/journal.log` via `spip_log()`, and a plugin can override it (via `charger_fonction('journal', 'inc')`) to store entries in DB and display them
+
+## SPIP 5.0
+
+This skill describes SPIP 4.x. Check the version first and name the marker you relied on. A site is 5.0 if **any**
+of: `ecrire/src/SpipVersion.php` declares `VERSION = '5.…'`, `bin/spip` exists, `vendor/spip/framework/` exists,
+plugins live in `plugins-dist/spip/`. A plugin targets 5.0 if its `paquet.xml` `compatibilite` starts at 5.0 or
+its `composer.json` requires `spip/framework`.
+
+- Code for 5.0 only: `spip_log($msg, 'acme.' . _LOG_ERREUR)` → `Spip::logger('acme')->error($msg)` (file
+  `tmp/log/acme.log`). `spip_log()` is deprecated in 5.0. `Spip` is a global alias of `Spip\Framework\Spip`: no
+  `use` needed. Inside a class, inject the logger instead.
+- `spip_logger()` is deprecated in 5.0 **and** absent in 4.4: never use it.
+- Gravités become PSR-3 methods (`_LOG_INFO_IMPORTANTE` → `notice()`, …).
+- The gravité threshold and rotation settings of this skill (`_LOG_FILTRE_GRAVITE`, …) have **no effect** in 5.0.
+- Plugin for 4.4 **and** 5.0 (`compatibilite` from 4.x to `5.*`): keep `spip_log()`, the only API in both.
+
+Details: `spip-migration-5` (`references/catalogue.md`: level table, `spip.logger.*` parameters); injection:
+`spip5-plugins` (`references/services.md`).
+
+---
 
 ## SPIP-specific terms (always kept in original form)
 

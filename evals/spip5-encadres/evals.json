@@ -1,0 +1,68 @@
+{
+  "skill_name": "spip5-encadres",
+  "evals": [
+    {
+      "id": 1,
+      "skill": "spip-logs",
+      "variant": "5.0",
+      "prompt": "Dans mon plugin acme, acme_importer() (inc/acme_import.php) échoue sans laisser de trace quand le flux distant est injoignable. Ajoute un log d'erreur, dans un fichier de log propre au plugin. Donne le code modifié.",
+      "expected_output": "Le paquet.xml déclare compatibilite=\"[5.0.0-dev;5.*]\" : plugin SPIP 5.0 uniquement. Spip::logger('acme')->error('…') (fichier tmp/log/acme.log), et non spip_log() (déprécié en 5.0) ni spip_logger() (déprécié). La réponse cite le marqueur sur lequel elle s'appuie.",
+      "files": [
+        "evals/spip5-encadres/fixtures/logs-50/acme/"
+      ],
+      "expectations": [
+        "Déduit SPIP 5.0 du paquet.xml (borne basse de compatibilite à 5.0) et cite ce marqueur",
+        "Utilise Spip::logger('acme')->error(...) pour l'erreur",
+        "N'utilise ni spip_log() ni spip_logger(), même accompagnés d'un avertissement",
+        "Le log va dans un fichier propre au plugin (canal acme → tmp/log/acme.log)"
+      ]
+    },
+    {
+      "id": 2,
+      "skill": "spip-logs",
+      "variant": "dual",
+      "prompt": "Dans mon plugin acme, acme_importer() (inc/acme_import.php) échoue sans laisser de trace quand le flux distant est injoignable. Ajoute un log d'erreur, dans un fichier de log propre au plugin. Donne le code modifié.",
+      "expected_output": "Le paquet.xml déclare compatibilite=\"[4.4.0;5.*]\" : le code doit tourner en 4.4 et en 5.0. spip_log('…', 'acme.' . _LOG_ERREUR) : présent dans les deux versions (déprécié mais fonctionnel en 5.0). Pas de Spip::logger() sans garde (absent en 4.4), pas de spip_logger() (absent en 4.4).",
+      "files": [
+        "evals/spip5-encadres/fixtures/logs-dual/acme/"
+      ],
+      "expectations": [
+        "Déduit du paquet.xml que le plugin vise à la fois 4.4 et 5.0, et cite ce marqueur",
+        "Utilise spip_log('...', 'acme.' . _LOG_ERREUR)",
+        "N'utilise ni spip_logger() ni Spip::logger() sans garde class_exists",
+        "Le log va dans un fichier propre au plugin (tmp/log/acme.log)"
+      ]
+    },
+    {
+      "id": 3,
+      "skill": "spip-logs",
+      "variant": "4.4",
+      "prompt": "Dans mon plugin acme, acme_importer() (inc/acme_import.php) échoue sans laisser de trace quand le flux distant est injoignable. Ajoute un log d'erreur, dans un fichier de log propre au plugin. Donne le code modifié.",
+      "expected_output": "Plugin 4.x (compatibilite=\"[4.2.0;4.4.*]\") : spip_log('…', 'acme.' . _LOG_ERREUR). Aucune API 5.0 dans le code.",
+      "files": [
+        "evals/spip5-encadres/fixtures/logs-44/acme/"
+      ],
+      "expectations": [
+        "Utilise spip_log('...', 'acme.' . _LOG_ERREUR)",
+        "Aucun Spip::, spip_logger() ni autre API 5.0 dans le code proposé",
+        "Le log va dans un fichier propre au plugin (tmp/log/acme.log)"
+      ]
+    },
+    {
+      "id": 4,
+      "skill": "spip-logs",
+      "variant": "5.0 (site, bin/spip)",
+      "prompt": "Sur mon site, le filtre meteo_temperature (squelettes/mes_fonctions.php) renvoie une chaîne vide sans laisser de trace quand l'API météo est injoignable. Ajoute un log d'erreur, dans un fichier de log dédié. Donne le code modifié.",
+      "expected_output": "Le site a un bin/spip : c'est un site SPIP 5.0, et du code de site (squelettes/) ne tourne que sur ce site. Spip::logger('meteo')->error('…') (fichier tmp/log/meteo.log), et non spip_log() ni spip_logger(). La réponse cite bin/spip comme marqueur.",
+      "files": [
+        "evals/spip5-encadres/fixtures/logs-site-binspip/site/"
+      ],
+      "expectations": [
+        "Déduit SPIP 5.0 de la présence de bin/spip et cite ce marqueur",
+        "Utilise Spip::logger('<canal>')->error(...) pour l'erreur",
+        "N'utilise ni spip_log() ni spip_logger(), même accompagnés d'un avertissement",
+        "Le log va dans un fichier dédié (canal propre → tmp/log/<canal>.log)"
+      ]
+    }
+  ]
+}
