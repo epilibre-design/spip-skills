@@ -1,6 +1,6 @@
 ---
 name: plugin-escal
-description: Use when working on a SPIP site that uses the Escal squelette — installing or activating it, placing or configuring its noisettes (blocs latéraux, onglets « À la une »), reading or writing its escal/config settings, using its special pages (agenda, contact, recherche, annuaire, trombinoscope, forum de site, mots-clés, auteur, 404), choosing a layout, using its technical mots-clés, or restyling it without forking.
+description: Use when working on a SPIP site that uses the Escal squelette — installing or activating it, placing or configuring its noisettes (blocs latéraux, onglets « À la une »), reading or writing its escal/config settings, using its special pages (agenda, contact, recherche, annuaire, trombinoscope, forum de site, mots-clés, auteur, 404), choosing a layout, using its technical mots-clés, or restyling it without forking. Written for SPIP 4.x; Escal does not run on SPIP 5.0 (see the SPIP 5.0 section).
 ---
 
 # Escal (squelette SPIP)
@@ -26,6 +26,29 @@ A single SPIP meta named `escal`, casier `escal/config`, decides both
 ```
 
 Nothing about the composition is hard-coded in the page squelettes. Changing a setting changes which file gets included.
+
+## SPIP 5.0
+
+This skill describes SPIP 4.x. Check the site's version first and name the marker you relied on. A site is 5.0 if
+**any** of: `ecrire/src/SpipVersion.php` declares `VERSION = '5.…'`, `bin/spip` exists, `vendor/spip/framework/`
+exists, plugins live in `plugins-dist/spip/`.
+
+- Escal does not run on 5.0: its latest release (5.6.2, 2026-10-15) declares `compatibilite="[4.1.0;4.*]"`, which
+  SPIP 5.0 refuses, so it is never activated (a site upgraded to 5.0 falls back to the default squelettes; the
+  `escal` meta stays in base). Read the `paquet.xml` of the release at hand before any advice. Never force it
+  (editing `compatibilite`, `_DEV_VERSION_SPIP_COMPAT`). The options: keep the site on 4.4, wait for a release whose
+  `compatibilite` reaches 5.x, or choose another squelette.
+- Going back to 4.4 means restoring the pre-migration backup, files **and** database. Never offer to reinstall 4.4
+  over the migrated database: 5.0 rewrites array settings as JSON, which 4.4 (`unserialize`) does not decode, so the
+  Escal settings would not come back. Without that backup, say there is no verified way back with the settings.
+- The spip-cli recipes below do not apply to a 5.0 site: spip-cli is a 4.x tool, and 5.0's `bin/spip` has no
+  download, activation or `php:eval` command. The commands useful here: `config:lire` / `config:ecrire` and
+  `spip:cache:clear`.
+  `bin/spip config:lire escal --json` shows the kept settings. Its JSON is pretty-printed (`"cle": null`): to test
+  whether Escal was ever installed, read the one key `escal_base_version` and match `grep -Eq '": ?null'` (not
+  `':null}'`). Never run that test on the whole `escal` meta, where any `null` setting would match.
+
+Details: `spip-migration-5` (`references/audit-outils.md`: `bin/spip` commands).
 
 ## Vocabulary traps — verify before answering
 

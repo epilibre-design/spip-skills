@@ -300,6 +300,51 @@
         "Aucun code 5.0 : pas de Kernel::boot(), pas de Spip::, pas de request_stack",
         "Le test livré vérifie les deux cas demandés : adresse invalide → clé 'email' dans le retour de formulaires_inscription_lettre_verifier_dist(), adresse valide → pas d'erreur email"
       ]
+    },
+    {
+      "id": 20,
+      "skill": "plugin-escal",
+      "variant": "5.0 (site, bin/spip)",
+      "prompt": "Installe le squelette Escal sur ce site et active-le. Donne-moi les commandes.",
+      "expected_output": "bin/spip à la racine : SPIP 5.0. Escal (dernière version 5.6.2 au 2026-10-18, dépôt spip-contrib-squelettes/escal) déclare compatibilite=\"[4.1.0;4.*]\" : SPIP 5.0 refuse de l'activer. L'agent le dit avant toute commande, ne livre pas la recette spip-cli comme si elle allait marcher (spip-cli est un outil 4.x, bin/spip n'a ni téléchargement ni activation de plugin), ne propose pas de forcer (modifier le paquet.xml d'Escal, _DEV_VERSION_SPIP_COMPAT), et indique les issues : attendre une version d'Escal compatible 5.0 (vérifier son paquet.xml), rester en 4.4 pour Escal, ou un autre squelette.",
+      "files": [
+        "evals/spip5-encadres/fixtures/escal-site-binspip/site/"
+      ],
+      "expectations": [
+        "Déduit SPIP 5.0 de bin/spip et cite ce marqueur",
+        "Dit qu'Escal ne s'active pas en 5.0 : compatibilite [4.1.0;4.*] (à vérifier dans le paquet.xml de la version disponible), avant toute commande d'installation",
+        "Ne présente pas la recette spip-cli (plugins:svp:telecharger, plugins:activer…) comme utilisable sur ce site, ne propose pas de forcer l'activation (paquet.xml modifié, _DEV_VERSION_SPIP_COMPAT)"
+      ]
+    },
+    {
+      "id": 21,
+      "skill": "plugin-escal",
+      "variant": "5.0 (site mis à jour, vendor/spip/framework, Escal 5.6.2 présent)",
+      "prompt": "Depuis la mise à jour du site, la page d'accueil n'a plus du tout le look Escal. Comment le réactiver ? Donne les commandes.",
+      "expected_output": "vendor/spip/framework/ : le site est passé en SPIP 5.0. plugins/auto/escal/v5.6.2/paquet.xml déclare compatibilite=\"[4.1.0;4.*]\" : SPIP 5.0 refuse ce plugin, d'où le site sans Escal. Pas de commande pour le « réactiver » : ni spip-cli, ni forçage. Issues : revenir en 4.4 tant qu'Escal n'est pas compatible 5.0, en restaurant la sauvegarde d'avant migration (fichiers et base : la 4.4 ne décode pas les réglages réécrits en JSON par la 5.0), attendre une version compatible, ou changer de squelette.",
+      "files": [
+        "evals/spip5-encadres/fixtures/escal-site-upgraded/site/"
+      ],
+      "expectations": [
+        "Déduit SPIP 5.0 de vendor/spip/framework/ et cite ce marqueur",
+        "Lit compatibilite=\"[4.1.0;4.*]\" dans plugins/auto/escal/v5.6.2/paquet.xml et en conclut que SPIP 5.0 n'active pas Escal : c'est la cause du symptôme",
+        "Ne donne pas de commande de réactivation présentée comme efficace (spip-cli, bin/spip, config:ecrire), ne propose pas de forcer ; propose les issues réelles (retour en 4.4, attendre une version compatible, autre squelette)",
+        "Le retour en 4.4 passe par la sauvegarde d'avant migration, fichiers et base ; ne propose pas de réinstaller la 4.4 sur la base migrée en promettant de retrouver les réglages"
+      ]
+    },
+    {
+      "id": 22,
+      "skill": "plugin-escal",
+      "variant": "4.4 (contrôle, ecrire/inc_version.php 4.4.22)",
+      "prompt": "Installe le squelette Escal sur ce site et active-le. Donne-moi les commandes.",
+      "expected_output": "SPIP 4.4.22 : Escal 5.6.x ([4.1.0;4.*]) s'installe. Recette spip-cli du skill (dépôt, téléchargement avec la mise en garde MR !91, activation des dépendances, plugins:maj:bdd, vérification par plugins:lister) ; rien de 5.0.",
+      "files": [
+        "evals/spip5-encadres/fixtures/escal-44/site/"
+      ],
+      "expectations": [
+        "Donne la recette d'installation 4.x (spip-cli : dépôt, téléchargement ou installation manuelle, activation avec les dépendances, plugins:maj:bdd, vérification)",
+        "Rien de 5.0 : pas de refus d'installer, pas de bin/spip"
+      ]
     }
   ]
 }

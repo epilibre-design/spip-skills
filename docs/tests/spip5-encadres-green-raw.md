@@ -3439,3 +3439,760 @@ vendor/bin/spip plugins:lister | grep -E "^[[:space:]]*acme[[:space:]]"
 - **`traiter()` n'est pas couvert**, comme demandé. Il insère dans `spip_inscrits`, et cette table ne semble pas déclarée dans le plugin livré (pas de `base/` ni de `_administrations.php`). Un futur test de `traiter()` lui-même devra d'abord régler ce point.
 - **`phpunit.xml` déclare `bootstrap="tests/bootstrap.php"` par défaut, mais ce fichier n'existe pas.** Ça ne gêne pas `composer tests-integration`, qui passe `--bootstrap tests/bootstrap_integration.php`. En revanche, `composer tests-unit` ou un `vendor/bin/phpunit` sans option échoueront tant que ce bootstrap de mocks n'aura pas été créé.
 - **Le cas « champ vide »** (`info_obligatoire`) n'était pas demandé. Pour l'ajouter, il suffit d'une méthode qui appelle `verifier()` sans `set_request('email', …)` puis vérifie `assertArrayHasKey('email', $erreurs)`.
+
+---
+
+## plugin-escal, premier encadré — cas 20, tirage 1
+
+### Installer Escal sur ce site : ce n'est pas possible tel quel
+
+#### Ce site est un SPIP 5.0
+
+Avant de donner des commandes, j'ai vérifié la version du site. Le repère utilisé est **`bin/spip`** :
+
+- le fichier `bin/spip` existe à la racine du site ;
+- c'est la console de SPIP 5.0 (`SpipLeague\Component\Console\Application`, démarrée par `SpipLeague\Component\Kernel\Kernel::boot()`), et non spip-cli, l'outil de SPIP 4.x.
+
+Le site ne contient pas grand-chose d'autre : `plugins/` et `squelettes/` sont vides, et les fichiers `ecrire/`, `vendor/` et `config/connect.php` ne sont pas présents dans la copie que j'ai examinée. Je n'ai donc pas pu lire `ecrire/src/SpipVersion.php` pour confirmer. Mais `bin/spip` suffit : ce fichier n'existe que sur SPIP 5.0.
+
+#### Escal ne fonctionne pas sur SPIP 5.0
+
+- La dernière version d'Escal (5.6.2, publiée le 2026-10-15) déclare `compatibilite="[4.1.0;4.*]"`. SPIP 5.0 refuse ce plugin et ne l'active jamais. Même si vous le déposez dans `plugins/`, il n'apparaîtra pas comme activable.
+- La recette d'installation habituelle (`spip plugins:svp:telecharger …` puis `spip plugins:activer …`) passe par **spip-cli**, l'outil de SPIP 4.x. Elle ne marche pas ici : le `bin/spip` de SPIP 5.0 n'a aucune commande pour télécharger ou activer un plugin, ni de commande `php:eval`.
+
+Je ne vous donne donc pas de commandes d'installation : elles échoueraient, ou laisseraient le site dans un état incohérent.
+
+**À ne pas faire :** forcer l'activation, par exemple en modifiant la balise `compatibilite` dans le `paquet.xml` d'Escal ou en définissant `_DEV_VERSION_SPIP_COMPAT`. Escal n'a pas été conçu pour SPIP 5.0, et ce contournement casserait le site, puis serait perdu à la prochaine mise à jour du plugin.
+
+#### Les options possibles
+
+1. **Si vous voulez Escal maintenant, installez le site en SPIP 4.4.** Escal 5.6.x est compatible `[4.1.0;4.*]`. Avec spip-cli, la recette est :
+
+   ```bash
+   # à lancer depuis la racine d'un site SPIP 4.4 (le dossier qui contient config/connect.php)
+   mkdir -p plugins/auto && chmod u+rwx plugins/auto
+   spip plugins:svp:depoter https://plugins.spip.net/depots/principal.xml
+   spip plugins:svp:telecharger saisies verifier yaml agenda fullcalendarcompat \
+        svpstats nospam facteur tri_par_rubrique aide escal -y
+   spip plugins:activer saisies verifier yaml agenda fullcalendarcompat \
+        svpstats nospam facteur tri_par_rubrique aide escal -y
+   spip plugins:maj:bdd
+   spip plugins:lister --short   # chaque préfixe ci-dessus doit apparaître, plus calendriermini
+   spip cache:vider
+   ```
+
+   Deux points à vérifier sur ce site 4.4 :
+   - **La version de spip-cli.** Sans le correctif MR !91, `plugins:svp:telecharger` affiche des succès sans rien télécharger. Pour savoir si votre copie est corrigée, cherchez `UPPER(pl.prefixe) = UPPER` dans `src/Command/PluginsSvpTelecharger.php`. Fiez-vous ensuite à `plugins:lister --short`, jamais aux messages de la commande de téléchargement.
+   - **Les contenus de départ.** Une installation par la ligne de commande laisse les trois articles créés par Escal (*Édito*, *Accès direct*, *Mentions légales*) dans l'état `prepa`, c'est-à-dire non publiés. Publiez-les ensuite depuis l'espace privé.
+
+2. **Si le site doit rester en SPIP 5.0, attendez une version d'Escal compatible.** Il faut que sa balise `compatibilite` couvre 5.x. Lisez le `paquet.xml` de chaque nouvelle version pour le savoir.
+
+3. **Ou choisissez un autre squelette, compatible SPIP 5.0.**
+
+#### Si Escal avait déjà été installé avant le passage en 5.0
+
+Ce n'est pas le cas ici, mais pour mémoire : sur un site mis à jour vers 5.0, Escal est désactivé et le site revient aux squelettes par défaut. Ses réglages restent en base, dans la méta `escal`. Pour les consulter avec la console de SPIP 5.0 :
+
+```bash
+bin/spip config:lire escal --json
+```
+
+Ces réglages vous resserviront si le site revient en 4.4 ou si une version d'Escal compatible 5.x sort.
+
+---
+
+## plugin-escal, premier encadré — cas 20, tirage 2
+
+Je ne peux pas vous donner de commandes qui installent et activent Escal sur ce site, parce que **ce site tourne sous SPIP 5.0 et Escal ne fonctionne pas sous SPIP 5.0**.
+
+#### Comment j'ai identifié SPIP 5.0
+
+À la racine du site se trouve **`bin/spip`**, la console de SPIP 5.0. C'est un script Symfony qui démarre `SpipLeague\Component\Kernel\Kernel` et `SpipLeague\Component\Console\Application`. Sur SPIP 4.x, ce fichier n'existe pas : on utilise spip-cli, un outil installé à part. Ce seul indice suffit à classer le site en 5.0.
+
+Ce que j'ai sous les yeux est incomplet : il n'y a ni `ecrire/`, ni `vendor/`, ni `config/`. Seuls `bin/spip`, un dossier `plugins/` vide et un dossier `squelettes/` vide sont présents. Je n'ai donc pas pu lire la révision exacte du cœur (`ecrire/src/SpipVersion.php`). Si vous pensez que le site est en 4.4, envoyez-moi le contenu de ce fichier.
+
+#### Pourquoi Escal ne s'active pas sous 5.0
+
+- Sa dernière version (5.6.2, du 2026-10-15) déclare dans son `paquet.xml` la compatibilité `compatibilite="[4.1.0;4.*]"`. SPIP 5.0 refuse ce plugin, donc il ne sera jamais activé. Le site garde alors les squelettes par défaut.
+- La procédure habituelle (`spip plugins:svp:telecharger …`, puis `spip plugins:activer …`, puis `spip plugins:maj:bdd`) passe par **spip-cli**, un outil de SPIP 4.x. Elle ne s'applique pas ici. Le `bin/spip` de SPIP 5.0 ne sait pas télécharger un plugin, ni l'activer, ni exécuter du PHP (`php:eval`).
+- **Ne forcez pas la compatibilité**, ni en modifiant `compatibilite` dans le `paquet.xml` d'Escal, ni avec la constante `_DEV_VERSION_SPIP_COMPAT`. Escal n'est pas prévu pour SPIP 5.0.
+
+#### Ce que vous pouvez faire
+
+1. **Garder ou remettre le site en SPIP 4.4**, puis installer Escal avec spip-cli. Je vous donnerai alors la procédure complète :
+   - dépôt SVP ;
+   - téléchargement d'Escal et de ses dépendances ;
+   - activation ;
+   - `plugins:maj:bdd` ;
+   - publication des articles de démarrage.
+2. **Attendre une version d'Escal dont la `compatibilite` couvre SPIP 5.x.** Avant toute installation, lisez le `paquet.xml` de la version que vous avez.
+3. **Choisir un autre squelette** qui est compatible SPIP 5.0.
+
+#### Commandes utiles dès maintenant sur ce site (5.0)
+
+Le `bin/spip` de SPIP 5.0 a quand même deux commandes utiles. La première vérifie qu'il ne reste pas de configuration Escal en base (cas d'un site migré depuis la 4.x) :
+
+```bash
+# Depuis la racine du site
+bin/spip config:lire escal --json
+# Le JSON est indenté ("cle": null) : on teste l'absence ainsi
+bin/spip config:lire escal --json | grep -Eq '": ?null' && echo "pas de config Escal en base" || echo "config Escal conservée en base"
+```
+
+La seconde vide le cache :
+
+```bash
+bin/spip spip:cache:clear
+```
+
+Dites-moi laquelle des trois options vous choisissez. Si c'est le retour en 4.4, je vous donne la procédure d'installation complète.
+
+---
+
+## plugin-escal, premier encadré — cas 21, tirage 1
+
+### Pourquoi le look Escal a disparu et comment le récupérer
+
+#### En bref
+
+Votre site est passé en **SPIP 5.0**, et **Escal ne fonctionne pas sous SPIP 5.0**. Ce n'est pas un réglage perdu. SPIP refuse d'activer Escal, donc la page d'accueil utilise les squelettes par défaut. Aucune commande ne peut « réactiver » Escal sur ce site tant qu'il reste en 5.0.
+
+#### Ce que j'ai constaté dans le site
+
+1. **Le site est en SPIP 5.0.** Le dossier `vendor/spip/framework/` est présent (paquet Composer `spip/framework`, qui demande PHP `^8.4`). C'est l'un des signes qui identifient un SPIP 5.0. Un SPIP 4.x n'a pas ce dossier.
+2. **La version d'Escal installée ne déclare pas SPIP 5 comme compatible.** C'est la dernière version, 5.6.2, dans `plugins/auto/escal/v5.6.2/paquet.xml` :
+
+   ```xml
+   <paquet
+       prefix="escal"
+       categorie="squelette"
+       version="5.6.2"
+       schema="1.0.17"
+       etat="stable"
+       compatibilite="[4.1.0;4.*]"
+   ```
+
+   La plage `[4.1.0;4.*]` s'arrête à SPIP 4.x. SPIP 5.0 n'active donc pas le plugin. Les squelettes d'Escal ne sont plus utilisés et le site affiche les squelettes par défaut. **Votre configuration Escal n'est pas perdue :** la méta `escal` (blocs, mise en page, couleurs…) reste en base.
+
+#### Vérifier vous-même (commandes SPIP 5.0)
+
+Sous SPIP 5.0, l'outil en ligne de commande est `bin/spip`. L'ancien `spip-cli` de SPIP 4 ne s'applique pas ici. `bin/spip` n'a d'ailleurs pas de commande pour télécharger ou activer un plugin. Depuis la racine du site :
+
+```bash
+# 1. Confirmer la version de SPIP (affiche VERSION = '5.…')
+grep -n "VERSION" ecrire/src/SpipVersion.php
+ls bin/spip vendor/spip/framework/   # présents seulement en SPIP 5.0
+
+# 2. Lire la compatibilité déclarée par Escal
+grep -n 'compatibilite=' plugins/auto/escal/*/paquet.xml | head -1
+
+# 3. Vérifier que vos réglages Escal sont toujours en base
+bin/spip config:lire escal --json
+# Le JSON est indenté : on teste l'absence avec '": ?null'
+bin/spip config:lire escal --json | grep -Eq '": ?null' \
+  && echo "aucune config Escal" || echo "config Escal conservée"
+```
+
+#### Les solutions possibles
+
+**À ne pas faire :** forcer l'activation, par exemple en changeant `compatibilite` dans `paquet.xml` ou en définissant `_DEV_VERSION_SPIP_COMPAT`. Escal n'a pas été écrit pour SPIP 5.0, ce qui risque de casser le site. En plus, la prochaine mise à jour du plugin effacera la modification.
+
+Il reste trois possibilités :
+
+1. **Revenir en SPIP 4.4 (le plus rapide pour retrouver Escal).** Restaurez la sauvegarde d'avant la mise à jour : les fichiers et la base. Votre réglage Escal étant toujours en base, l'apparence revient telle quelle. Une fois de retour en 4.4, avec spip-cli :
+
+   ```bash
+   spip plugins:lister --short     # « escal » doit apparaître
+   # s'il n'est pas actif :
+   spip plugins:activer saisies verifier yaml agenda fullcalendarcompat \
+        svpstats nospam facteur tri_par_rubrique aide escal -y
+   spip plugins:maj:bdd
+   spip cache:vider
+   ```
+
+2. **Rester en SPIP 5.0 et attendre une version d'Escal compatible**, c'est-à-dire dont le `paquet.xml` déclare une `compatibilite` qui couvre 5.x. Avant d'installer une nouvelle version, contrôlez-le avec la commande `grep` du point 2 ci-dessus. Vos réglages, toujours en base, seront alors repris. Après l'installation, videz le cache :
+
+   ```bash
+   bin/spip spip:cache:clear
+   ```
+
+3. **Choisir un autre jeu de squelettes compatible SPIP 5.0**, si vous devez rester en 5.0 sans attendre.
+
+Si le site est en production et que l'apparence compte, je recommande la solution 1 : restaurer la 4.4 et attendre qu'Escal annonce sa compatibilité avec SPIP 5 avant de refaire la migration.
+
+---
+
+## plugin-escal, premier encadré — cas 21, tirage 2
+
+### Pourquoi Escal ne s'affiche plus, et ce que vous pouvez faire
+
+#### Diagnostic : la mise à jour a fait passer le site en SPIP 5.0
+
+Votre site tourne désormais sous **SPIP 5.0**. Je m'appuie sur ce repère : le répertoire
+`vendor/spip/framework/` existe. Son `composer.json` est celui de `spip/framework`, qui exige
+`php ^8.4`. Ce paquet n'existe pas sous SPIP 4.x.
+
+La version d'Escal présente, `plugins/auto/escal/v5.6.2/paquet.xml`, déclare :
+
+```xml
+version="5.6.2"
+compatibilite="[4.1.0;4.*]"
+```
+
+Cette plage s'arrête à la branche 4. **SPIP 5.0 refuse donc d'activer Escal.** Le site retombe
+sur les squelettes par défaut de SPIP, d'où la page d'accueil sans le look Escal. Vos réglages
+Escal sont toujours en base (la meta `escal`, casier `escal/config`) : rien n'est perdu.
+
+**Aucune commande ne réactive Escal sur ce site en 5.0.** En particulier :
+
+- **ne forcez pas** l'activation, ni en modifiant `compatibilite` dans le `paquet.xml`, ni avec
+  `_DEV_VERSION_SPIP_COMPAT`. Le plugin n'a pas été écrit pour 5.0 : vous obtiendriez des erreurs
+  ou un site cassé, et la prochaine mise à jour d'Escal écraserait de toute façon la modification ;
+- les commandes spip-cli habituelles (`spip plugins:activer escal`, `plugins:svp:telecharger`,
+  `php:eval`) **ne s'appliquent pas** à un site 5.0. spip-cli est un outil de SPIP 4.x, et le
+  `bin/spip` de SPIP 5.0 n'a pas de commande de téléchargement, d'activation de plugin ni
+  `php:eval`.
+
+#### Les options réalistes
+
+1. **Revenir en SPIP 4.4** (recommandé si le look Escal est indispensable tout de suite) :
+   restaurez la sauvegarde d'avant la mise à jour (fichiers et base). Escal 5.6.2 y fonctionne
+   (`[4.1.0;4.*]`) et retrouve sa configuration.
+2. **Rester en 5.0 et attendre** une version d'Escal dont le `paquet.xml` déclare une
+   compatibilité qui couvre 5.x. Avant d'installer une nouvelle version, ouvrez son `paquet.xml`
+   et lisez l'attribut `compatibilite`.
+3. **Choisir un autre squelette** compatible avec SPIP 5.0.
+
+#### Commandes utiles en attendant (SPIP 5.0, `bin/spip`)
+
+Lancez-les depuis la racine du site.
+
+```bash
+# Vérifier que la configuration Escal est toujours en base (lecture seule)
+bin/spip config:lire escal --json
+
+# Tester la présence d'une clé : la sortie JSON est indentée ("cle": null),
+# il faut donc un motif qui tolère l'espace
+bin/spip config:lire escal_base_version --json | grep -Eq '": ?null' \
+  && echo "absente" || echo "présente"
+
+# Après un retour en 4.4 ou l'installation d'une version compatible 5.x : vider le cache
+bin/spip spip:cache:clear
+```
+
+Si vous revenez en **SPIP 4.4**, ce sont alors les commandes spip-cli 4.x qui s'appliquent, par
+exemple :
+
+```bash
+spip plugins:lister --short     # escal doit apparaître dans la liste
+spip plugins:activer escal -y   # seulement s'il n'est pas actif
+spip cache:vider
+```
+
+Pensez aussi à prévenir votre hébergeur ou la personne qui a fait la mise à jour : avec Escal, le
+site doit rester en 4.4 tant qu'aucune version compatible 5.x n'est sortie.
+
+---
+
+## plugin-escal, premier encadré — cas 22
+
+#### Ce que j'ai vérifié sur le site
+
+**Version de SPIP : 4.4.22.** Je me suis appuyé sur `ecrire/inc_version.php`, qui déclare `$spip_version_branche = '4.4.22'` et `_SPIP_VERSION_ID = 40422`. Aucun des marqueurs de SPIP 5.0 n'est présent : pas de `ecrire/src/SpipVersion.php`, pas de `bin/spip`, pas de `vendor/spip/framework/` ni de `plugins-dist/spip/`. Escal 5.6.x (`compatibilite="[4.1.0;4.*]"`) peut donc être installé ici.
+
+Point à surveiller : ce `inc_version.php` utilise le noyau `SpipLeague\Component\Kernel` (`app()`, `param()`), ce qu'on ne s'attend pas à trouver dans un SPIP 4.4 classique. Si `spip plugins:activer` refuse Escal pour cause d'incompatibilité, le cœur est en réalité un 5.x. Dans ce cas, n'essayez pas de forcer (ne modifiez ni `compatibilite` ni `_DEV_VERSION_SPIP_COMPAT`). Escal ne fonctionne pas sur SPIP 5.0.
+
+**État actuel :** `plugins/` et `squelettes/` sont vides (Escal n'est pas encore installé). Je ne vois pas de `config/connect.php` : le site doit d'abord avoir été installé (base configurée) pour que spip-cli puisse fonctionner. Lancez toutes les commandes **depuis la racine du site**, c'est-à-dire le dossier qui contient `ecrire/` et `config/connect.php`.
+
+Escal est un **plugin** de catégorie « squelette », de préfixe `escal`. On ne le copie donc pas dans `squelettes/` : on le télécharge et on l'active comme un plugin. Le dossier `squelettes/` vous servira plus tard pour les personnalisations.
+
+#### 0. Vérifier que votre spip-cli sait télécharger
+
+La version 2.0.1 de spip-cli, sans correctif, ne télécharge rien avec `plugins:svp:telecharger`, mais **affiche quand même un succès** (corrigé par la MR !91). Dans le dossier source de spip-cli :
+
+```bash
+grep -q 'UPPER(pl.prefixe) = UPPER' src/Command/PluginsSvpTelecharger.php \
+  && echo "patché (MR!91)" || echo "NON patché — les téléchargements échoueront en silence"
+```
+
+Si ce n'est pas corrigé, déposez les plugins à la main dans `plugins/` (ou passez par l'espace privé, menu Plugins → Ajouter). Utilisez ensuite spip-cli seulement pour l'étape 3 (activation).
+
+#### 1. Préparer le dossier et le dépôt de plugins
+
+```bash
+# SVP décompresse dans plugins/auto/, que SPIP ne crée pas de lui-même
+mkdir -p plugins/auto && chmod u+rwx plugins/auto
+
+# Déclarer le dépôt officiel (une seule fois)
+spip plugins:svp:depoter https://plugins.spip.net/depots/principal.xml
+```
+
+#### 2. Télécharger Escal et ses dépendances
+
+```bash
+spip plugins:svp:telecharger saisies verifier yaml agenda fullcalendarcompat \
+     svpstats nospam facteur tri_par_rubrique aide escal -y
+```
+
+`calendriermini` est aussi téléchargé comme dépendance indirecte : attendez-vous à 11 paquets. SVP les range par version, par exemple `plugins/auto/escal/v5.6.x/`.
+
+**Ne vous fiez pas au message de cette commande.** Vérifiez que les dossiers sont bien arrivés :
+
+```bash
+ls plugins/auto/
+```
+
+#### 3. Activer (dépendances d'abord), puis mettre à jour la base
+
+```bash
+spip plugins:activer saisies verifier yaml agenda fullcalendarcompat \
+     svpstats nospam facteur tri_par_rubrique aide escal -y
+
+spip plugins:maj:bdd        # doit afficher « Installation du plugin Escal … MAJ 1.0.17 »
+spip plugins:lister --short # tous les préfixes ci-dessus doivent y figurer, escal compris
+```
+
+À l'activation, `escal_upgrade()` crée la meta `escal` (casier `escal/config`), les groupes de mots-clés `affichage` et `Agenda_couleur`, une rubrique cachée et trois articles de départ. N'écrivez jamais la meta `escal` à la main pour « installer » Escal.
+
+Vérifier que l'installation a bien eu lieu :
+
+```bash
+spip config:lire escal_base_version --json   # {"escal_base_version":null} => PAS installé
+```
+
+#### 4. Publier les contenus de départ (indispensable après une installation en ligne de commande)
+
+Quand on installe depuis spip-cli, aucun auteur n'est connecté. Les articles *Édito*, *Accès direct* et *Mentions légales* restent donc « en cours de rédaction » (`prepa`), et les blocs correspondants s'affichent vides. On les publie en ouvrant une session webmestre dans la CLI :
+
+```bash
+spip php:eval 'include_spip("action/editer_objet"); include_spip("base/abstract_sql");
+$GLOBALS["visiteur_session"] = sql_fetsel("*", "spip_auteurs", "statut=" . sql_quote("0minirezo"));
+$GLOBALS["visiteur_session"]["webmestre"] = "oui";
+foreach (sql_allfetsel("id_article", "spip_articles", "statut=" . sql_quote("prepa")) as $x) {
+  objet_instituer("article", $x["id_article"], ["statut" => "publie"]);
+}'
+```
+
+Attention : ce script publie **tous** les articles en `prepa`. Sur un site qui contient déjà des brouillons, limitez la requête aux articles créés par Escal.
+
+#### 5. Vider le cache
+
+```bash
+spip cache:vider
+```
+
+#### Ensuite
+
+- La configuration se fait dans **Espace privé → Squelettes → Escal** (réservé aux webmestres) : mise en page, choix des blocs dans chaque emplacement, etc.
+- Plugins facultatifs qu'Escal reconnaît s'ils sont présents : `palette`, `spip_400`, `orr`, `Shoutbox`, `reservation_evenement`, `reservations_multiples`.
+- Pour personnaliser l'apparence, ne modifiez jamais les fichiers dans `plugins/auto/escal/` : une mise à jour les écraserait. Utilisez `squelettes/styles/perso.css`, `squelettes/persoconfig.css.html`, ou surchargez un bloc avec `squelettes/inclusions/inc-‹nom›.html`.
+
+---
+
+## plugin-escal, encadré final (test d'absence sur une seule clé) — cas 20
+
+Je ne vais pas te donner de commandes d'installation : **ce site est en SPIP 5.0, et Escal ne fonctionne pas sous SPIP 5.0.**
+
+#### Pourquoi je dis que c'est du 5.0
+
+L'indice que j'ai utilisé, c'est la présence de **`bin/spip`** à la racine du site. C'est la console de SPIP 5.0 : un script PHP basé sur `SpipLeague\Component\Console\Application` et `SpipLeague\Component\Kernel\Kernel`, qui charge `vendor/autoload_runtime.php`. SPIP 4.x n'a pas ce fichier, il utilise l'outil externe spip-cli (commande `spip`).
+
+Le reste du dossier est presque vide : seulement `bin/`, `plugins/` (vide) et `squelettes/` (vide). Il n'y a ni `ecrire/`, ni `vendor/`, ni `config/connect.php`. Je n'ai donc pas pu lire `ecrire/src/SpipVersion.php` pour confirmer le numéro de version. Pour vérifier de ton côté :
+
+```bash
+grep VERSION ecrire/src/SpipVersion.php   # attendu : VERSION = '5.…'
+ls -d vendor/spip/framework plugins-dist/spip 2>/dev/null
+```
+
+#### Pourquoi Escal ne peut pas être activé
+
+- La dernière version d'Escal (5.6.2, du 2026-10-15) déclare `compatibilite="[4.1.0;4.*]"` dans son `paquet.xml`. SPIP 5.0 refuse d'activer un plugin dont la plage de compatibilité ne couvre pas la 5.x. Escal ne sera donc jamais activé, quelle que soit la méthode utilisée (espace privé ou ligne de commande).
+- Les commandes habituelles (`spip plugins:svp:telecharger`, `spip plugins:activer`, `spip plugins:maj:bdd`, `spip php:eval`) viennent de spip-cli, un outil de SPIP 4.x. Le `bin/spip` de SPIP 5.0 n'a **aucune** commande pour télécharger ou activer un plugin, ni de `php:eval`. Il propose seulement `config:lire`, `config:ecrire` et `spip:cache:clear`.
+- **Ne force pas l'installation** : ne modifie pas le `compatibilite` du `paquet.xml`, et ne définis pas `_DEV_VERSION_SPIP_COMPAT`. Escal n'a pas été écrit pour SPIP 5.0, donc tu aurais un site cassé, et ces modifications seraient perdues à chaque mise à jour.
+
+Si tu récupères une archive d'Escal, lis d'abord son `paquet.xml` :
+
+```bash
+grep -o 'compatibilite="[^"]*"' chemin/vers/escal/paquet.xml
+```
+
+Tant que la plage ne va pas jusqu'à `5.*`, rien ne change.
+
+#### Ce que tu peux faire
+
+1. **Rester sur SPIP 4.4 (ou y revenir)** si Escal est indispensable. Sur un site 4.4 avec spip-cli, l'installation se fait avec `plugins:svp:telecharger` puis `plugins:activer` (Escal et ses dépendances : saisies, verifier, yaml, agenda, fullcalendarcompat, svpstats, nospam, facteur, tri_par_rubrique, aide), suivis de `plugins:maj:bdd`. Je peux te détailler la marche à suivre si tu choisis cette option.
+2. **Attendre une version d'Escal** dont la `compatibilite` inclut SPIP 5.x.
+3. **Choisir un autre squelette** compatible SPIP 5.0.
+
+#### Si le site vient d'une mise à jour d'un site 4.x qui utilisait Escal
+
+Après le passage en 5.0, le site utilise les squelettes par défaut, mais les réglages d'Escal (meta `escal`) restent dans la base. Pour savoir si Escal a déjà été installé, interroge seulement la clé de version (et jamais toute la meta `escal`, où n'importe quel réglage `null` donnerait un faux résultat) :
+
+```bash
+if bin/spip config:lire escal_base_version --json | grep -Eq '": ?null'; then
+  echo "Escal n'a jamais été installé sur cette base"
+else
+  echo "Escal a été installé ; ses réglages sont conservés"
+  bin/spip config:lire escal --json   # pour consulter les réglages conservés
+fi
+```
+
+Ces réglages seront réutilisés si tu reviens en 4.4, ou quand une version d'Escal compatible avec SPIP 5 sortira.
+
+---
+
+## plugin-escal, encadré final — cas 21, tirage 1
+
+### Pourquoi le site n'a plus le look Escal
+
+Désolé, mais ça ne se règle pas avec une commande. Votre mise à jour a fait passer le site en **SPIP 5.0**, et **Escal ne fonctionne pas sous SPIP 5.0**. SPIP n'a donc pas activé le squelette et affiche à la place ses squelettes par défaut. C'est pour ça que la page d'accueil a changé d'apparence.
+
+#### Ce que j'ai vérifié
+
+1. **Le site tourne sous SPIP 5.0.** Le dossier `vendor/spip/framework/` existe, et on ne le trouve que sur une installation 5.0. Son `composer.json` demande d'ailleurs `"php": "^8.4"` et les paquets `spip-league/*` du nouveau noyau.
+2. **La version d'Escal installée refuse SPIP 5.** Le fichier `plugins/auto/escal/v5.6.2/paquet.xml` indique :
+
+   ```xml
+   <paquet prefix="escal" categorie="squelette" version="5.6.2" schema="1.0.17"
+           compatibilite="[4.1.0;4.*]" ...>
+   ```
+
+   La 5.6.2 (sortie le 2026-10-15) est la dernière version d'Escal, et elle ne déclare que la branche 4.x. Avec `[4.1.0;4.*]`, SPIP 5.0 n'active pas le plugin. Le site affiche donc les squelettes par défaut.
+
+**Bonne nouvelle : vos réglages ne sont pas perdus.** La configuration d'Escal (la meta `escal` : blocs, mise en page, couleurs…) reste dans la base. Elle sera à nouveau utilisée dès que le site tournera avec une version de SPIP qu'Escal accepte.
+
+#### Ce qu'il ne faut pas faire
+
+Ne forcez pas l'activation. Ne modifiez pas `compatibilite` dans le `paquet.xml` et ne définissez pas `_DEV_VERSION_SPIP_COMPAT`. Escal n'a pas été écrit pour SPIP 5.0, qui a changé ou retiré plusieurs API et syntaxes de squelettes. Vous auriez au mieux un site à moitié cassé, au pire des erreurs PHP. Et ces bricolages seraient de toute façon écrasés à la prochaine mise à jour du plugin.
+
+Les commandes spip-cli qu'on trouve dans les tutoriels Escal (`spip plugins:activer escal`, `spip plugins:svp:telecharger …`) ne servent pas non plus. spip-cli est un outil pour SPIP 4.x. L'outil de SPIP 5.0, `bin/spip`, n'a pas de commande pour télécharger ou activer un plugin.
+
+#### Commandes de vérification (SPIP 5.0)
+
+À lancer depuis la racine du site, si `bin/spip` est présent dans votre installation. Je ne l'ai pas trouvé dans les fichiers que j'ai pu consulter.
+
+```bash
+# 1. Confirmer la version de SPIP
+ls -d vendor/spip/framework bin/spip plugins-dist/spip 2>/dev/null
+grep -n "VERSION" ecrire/src/SpipVersion.php 2>/dev/null
+
+# 2. Confirmer la compatibilité déclarée par Escal
+grep -n 'compatibilite=' plugins/auto/escal/*/paquet.xml
+
+# 3. Vérifier que les réglages Escal sont toujours en base
+bin/spip config:lire escal --json
+
+# 4. Vérifier qu'Escal a bien été installé un jour (lire UNE seule clé)
+bin/spip config:lire escal_base_version --json \
+  | grep -Eq '": ?null' && echo "Escal jamais installé" || echo "Escal installé, réglages conservés"
+```
+
+N'appliquez le test `null` de l'étape 4 qu'à la clé `escal_base_version`. Sur toute la meta `escal`, n'importe quel réglage vide donnerait un faux résultat.
+
+#### Les solutions possibles
+
+1. **Revenir à SPIP 4.4. C'est la seule façon de retrouver Escal tout de suite.** Restaurez la sauvegarde d'avant la mise à jour (fichiers et base), ou réinstallez le site en SPIP 4.4. Escal se réactive alors avec la configuration que vous aviez. Ensuite, sous 4.4, videz le cache :
+
+   ```bash
+   spip cache:vider
+   ```
+
+2. **Rester en SPIP 5.0 et attendre une version d'Escal compatible**, c'est-à-dire une version dont le `paquet.xml` déclare une `compatibilite` qui va jusqu'à 5.x. Pour savoir si elle est sortie, regardez la page du plugin (<https://contrib.spip.net/Escal-4077>) ou relancez la commande 2 après avoir mis le plugin à jour. Vos réglages, restés en base, seront repris. Après la mise à jour du plugin, videz le cache :
+
+   ```bash
+   bin/spip spip:cache:clear
+   ```
+
+3. **Rester en SPIP 5.0 et choisir un autre squelette** qui est compatible avec SPIP 5.0.
+
+Si le site doit garder son apparence Escal dès maintenant, je vous conseille la solution 1 : revenir à SPIP 4.4 en attendant qu'une version d'Escal compatible avec SPIP 5 soit publiée.
+
+---
+
+## plugin-escal, encadré final — cas 21, tirage 2
+
+### Pourquoi le look Escal a disparu, et ce qu'on peut faire
+
+#### Diagnostic : la mise à jour a fait passer le site en SPIP 5.0
+
+Le dossier du site contient `vendor/spip/framework/`. Ce dossier n'existe que sur SPIP 5.0 : votre mise à jour a donc fait passer le site de SPIP 4.x à **SPIP 5.0**.
+
+Escal est bien téléchargé, dans `plugins/auto/escal/v5.6.2/`. Mais son `paquet.xml` déclare :
+
+```xml
+<paquet prefix="escal" categorie="squelette" version="5.6.2" ... compatibilite="[4.1.0;4.*]">
+```
+
+La version 5.6.2 est la dernière publiée d'Escal (2026-10-15). Elle se déclare compatible avec SPIP 4.1 à 4.x seulement, et **SPIP 5.0 refuse d'activer un plugin dont la compatibilité n'inclut pas 5.x**. Escal n'est donc plus actif, et SPIP affiche ses squelettes par défaut : c'est ce que vous voyez sur la page d'accueil.
+
+Vos réglages Escal ne sont pas perdus. La méta `escal` (casier `escal/config` : blocs, layout, couleurs…) reste en base. Elle ne sert plus à rien tant qu'Escal n'est pas actif.
+
+**Escal ne peut donc pas être réactivé sur ce site en SPIP 5.0.** Aucune commande ne le permet proprement, et `bin/spip` (la console de SPIP 5.0) n'a pas de commande pour activer ou télécharger un plugin.
+
+À ne pas faire : modifier `compatibilite` dans le `paquet.xml` d'Escal, ou forcer avec `_DEV_VERSION_SPIP_COMPAT`. Escal n'a pas été écrit pour SPIP 5.0 : vous auriez au mieux un site instable, au pire des erreurs PHP. Et la prochaine mise à jour du plugin écraserait votre modification.
+
+#### Vérifications (lecture seule)
+
+À lancer depuis la racine du site :
+
+```bash
+# 1. Confirmer la version de SPIP (marqueurs de SPIP 5.0)
+ls -d vendor/spip/framework bin/spip 2>/dev/null
+grep -h "VERSION" ecrire/src/SpipVersion.php 2>/dev/null
+
+# 2. Vérifier ce que déclare la version d'Escal présente
+grep -o 'compatibilite="[^"]*"' plugins/auto/escal/*/paquet.xml | head -1
+#  → compatibilite="[4.1.0;4.*]" : pas de 5.x, donc pas activable en 5.0
+
+# 3. Vérifier qu'Escal avait bien été installé (une seule clé, en JSON)
+bin/spip config:lire escal_base_version --json
+bin/spip config:lire escal_base_version --json | grep -Eq '": ?null' \
+  && echo "Escal jamais installé" || echo "Escal installé auparavant : réglages conservés en base"
+
+# 4. (facultatif) Sauvegarder vos réglages Escal pour plus tard
+bin/spip config:lire escal --json > escal-config-sauvegarde.json
+```
+
+#### Les options possibles
+
+##### Option 1 (recommandée si le look Escal doit revenir vite) : revenir en SPIP 4.4
+
+Restaurez le site en SPIP 4.4 à partir de la sauvegarde faite avant la mise à jour : fichiers **et** base de données. Une fois revenu en 4.x, Escal est de nouveau compatible. S'il n'est pas actif après la restauration, réactivez-le avec spip-cli, l'outil de SPIP 4.x, depuis la racine du site :
+
+```bash
+spip plugins:lister --short | grep -w escal || \
+  spip plugins:activer saisies verifier yaml agenda fullcalendarcompat \
+       svpstats nospam facteur tri_par_rubrique aide escal -y
+spip plugins:maj:bdd
+spip plugins:lister --short     # escal et ses dépendances doivent apparaître
+spip cache:vider
+```
+
+Les réglages repartent de la méta `escal`, conservée en base : vous retrouvez votre mise en page.
+
+##### Option 2 : rester en SPIP 5.0 et attendre une version d'Escal compatible
+
+Surveillez la page du plugin (https://contrib.spip.net/Escal-4077). Avant de réactiver quoi que ce soit, lisez le `paquet.xml` de chaque nouvelle version : il faut que `compatibilite` couvre la 5.x. En attendant, le site garde l'apparence par défaut. Après chaque changement de squelette, videz le cache :
+
+```bash
+bin/spip spip:cache:clear
+```
+
+##### Option 3 : rester en SPIP 5.0 avec un autre squelette
+
+Choisissez un jeu de squelettes dont le `paquet.xml` déclare une compatibilité 5.x. Vos réglages Escal resteront en base, sans effet, au cas où vous reviendriez à Escal plus tard.
+
+#### En résumé
+
+- La disparition du look Escal vient du passage en SPIP 5.0, pas d'une erreur de réglage.
+- Escal 5.6.2 (`[4.1.0;4.*]`) ne peut pas tourner sur SPIP 5.0, et il ne faut pas le forcer.
+- Pour retrouver le look tout de suite : restaurer le site en SPIP 4.4 (option 1).
+- Sinon : rester en 5.0 avec l'apparence par défaut ou un autre squelette, en attendant une version d'Escal compatible 5.x.
+
+## plugin-escal, encadré après revue (retour en 4.4 = sauvegarde fichiers et base) — cas 20
+
+Je ne vais pas vous donner de commandes d'installation pour Escal : **votre site tourne sous SPIP 5.0, et Escal ne fonctionne pas sur SPIP 5.0.**
+
+## Pourquoi je dis que le site est en SPIP 5.0
+
+Le repère que j'ai utilisé, c'est le fichier `bin/spip` à la racine du site. C'est la console de SPIP 5.0 : il démarre `SpipLeague\Component\Kernel\Kernel` et `SpipLeague\Component\Console\Application`. Un site SPIP 4.x n'a pas ce fichier. Il s'administre en ligne de commande avec spip-cli, qui est un outil séparé.
+
+Remarque : le dossier que j'ai pu consulter ne contient que `bin/`, `plugins/` et `squelettes/` (ces deux derniers sont vides). `ecrire/` et `vendor/` sont absents, donc je n'ai pas pu lire le numéro de version exact dans `ecrire/src/SpipVersion.php`. Si vous pensez que le site est en réalité en 4.x, vérifiez ce fichier : la ligne `VERSION = '5.…'` tranche la question.
+
+## Pourquoi Escal ne s'installera pas
+
+- La dernière version d'Escal (5.6.2, du 15/10/2026) déclare dans son `paquet.xml` une compatibilité `[4.1.0;4.*]`. SPIP 5.0 refuse donc de l'activer.
+- Il ne faut pas contourner ce blocage, ni en modifiant `compatibilite` dans le `paquet.xml`, ni avec `_DEV_VERSION_SPIP_COMPAT`. Le squelette n'a pas été prévu pour 5.0 et le site risquerait de casser.
+- Les recettes d'installation habituelles (`spip plugins:svp:telecharger …`, `spip plugins:activer …`) viennent de spip-cli, qui ne sert qu'en 4.x. Le `bin/spip` de SPIP 5.0 n'a aucune commande pour télécharger ou activer un plugin.
+
+## Ce que vous pouvez faire
+
+1. **Garder un site en SPIP 4.4** si Escal est indispensable. Pour un nouveau site, cela veut dire l'installer directement en 4.4. Si ce site a été migré depuis une 4.4, le seul retour possible passe par la **sauvegarde d'avant la migration, fichiers et base de données ensemble**. Ne réinstallez pas une 4.4 sur la base déjà migrée : SPIP 5.0 réécrit les réglages en JSON, que la 4.4 ne sait pas relire, et vous perdriez vos réglages Escal. Sans cette sauvegarde, je ne connais pas de retour vérifié qui conserve les réglages.
+2. **Attendre une version d'Escal** dont la compatibilité inclut SPIP 5.x. Vérifiez le champ `compatibilite` du `paquet.xml` de chaque nouvelle version avant d'essayer.
+3. **Choisir un autre squelette** compatible SPIP 5.0.
+
+## Les seules commandes utiles aujourd'hui
+
+À lancer depuis la racine du site, une fois `vendor/` installé (`composer install`). Elles ne font que lire :
+
+```bash
+# Escal a-t-il déjà été installé sur ce site (par exemple avant une migration) ?
+bin/spip config:lire escal_base_version --json \
+  | grep -Eq '": ?null' && echo "Escal n'a jamais été installé" || echo "Escal a déjà été installé"
+
+# Si oui, voir les réglages Escal conservés en base
+bin/spip config:lire escal --json
+```
+
+Lancez ce test sur la seule clé `escal_base_version`, pas sur toute la méta `escal` : n'importe quel réglage vide (`null`) donnerait sinon un faux résultat. Si Escal a déjà été installé, ses réglages restent en base même s'il n'est pas actif. Le site utilise alors les squelettes par défaut de SPIP.
+
+Dites-moi quelle option vous choisissez (rester en 4.4, attendre ou changer de squelette) et je vous donnerai la marche à suivre et les commandes correspondantes.
+
+## plugin-escal, encadré après revue (retour en 4.4 = sauvegarde fichiers et base) — cas 21, tirage 1
+
+Bonjour,
+
+Mauvaise nouvelle d'abord : aucune commande ne réactive Escal sur ce site, et il ne faut pas essayer de le forcer. Voici pourquoi, puis ce que vous pouvez faire.
+
+## Ce qui s'est passé
+
+**Votre site est passé en SPIP 5.0.** Je m'appuie sur ce repère : le dossier `vendor/spip/framework/` est présent (son `composer.json` décrit le « Framework pour les applications SPIP » et demande PHP ^8.4). Ce dossier n'existe qu'en SPIP 5.0.
+
+**Escal ne fonctionne pas sous SPIP 5.0.** La version installée, `plugins/auto/escal/v5.6.2/` (c'est aussi la dernière parue, le 2026-10-15), déclare dans son `paquet.xml` :
+
+```xml
+compatibilite="[4.1.0;4.*]"
+```
+
+SPIP 5.0 refuse donc de l'activer. Le site affiche alors les squelettes par défaut de SPIP, et c'est pour ça que votre page d'accueil n'a plus le look Escal. Rien n'est cassé dans votre configuration : SPIP a simplement désactivé un plugin qu'il ne sait pas faire tourner.
+
+Vos réglages Escal (mise en page, noisettes, couleurs) sont restés dans la base, dans la méta `escal`. Ils sont seulement inutilisés.
+
+## Ce qu'il ne faut pas faire
+
+- Ne modifiez pas la ligne `compatibilite` du `paquet.xml` d'Escal.
+- Ne définissez pas `_DEV_VERSION_SPIP_COMPAT` pour contourner le contrôle.
+
+Avec l'une ou l'autre, SPIP chargerait un squelette écrit pour 4.x sur un cœur dont l'API a changé. Vous risquez des pages en erreur, et une prochaine mise à jour du plugin écraserait de toute façon la modification.
+
+## Vos trois options
+
+1. **Revenir en SPIP 4.4** et retrouver Escal tel qu'il était. Il faut pour cela **restaurer la sauvegarde faite avant la migration, à la fois les fichiers et la base de données**. Ne réinstallez surtout pas SPIP 4.4 par-dessus la base migrée : SPIP 5.0 a réécrit les réglages au format JSON, que SPIP 4.4 ne sait pas relire, et vos réglages Escal seraient perdus. **Si vous n'avez pas de sauvegarde d'avant la migration, je ne connais pas de retour vérifié vers 4.4 qui conserve vos réglages.**
+2. **Rester en SPIP 5.0 et attendre une version d'Escal compatible**, c'est-à-dire une version dont le `paquet.xml` annonce une `compatibilite` qui inclut 5.x. Vos réglages, toujours en base, seront alors disponibles. Pour suivre les annonces : <https://contrib.spip.net/Escal-4077>.
+3. **Rester en SPIP 5.0 et choisir un autre squelette**, compatible 5.0.
+
+## Commandes utiles en attendant
+
+Sous SPIP 5.0, l'outil en ligne de commande est `bin/spip`, à lancer depuis la racine du site. Les commandes `spip plugins:activer` et `spip php:eval` qu'on trouve dans les tutoriels Escal viennent de spip-cli, un outil de SPIP 4.x : elles ne s'appliquent pas ici, et `bin/spip` n'a aucune commande pour activer un plugin. (Le dossier `bin/` n'apparaît pas dans la copie du site que j'ai consultée : lancez les commandes sur le serveur.)
+
+Pour vérifier la version d'Escal présente et sa compatibilité :
+
+```bash
+grep -E 'version=|compatibilite=' plugins/auto/escal/*/paquet.xml | head -4
+```
+
+Pour voir les réglages Escal conservés en base :
+
+```bash
+bin/spip config:lire escal --json
+```
+
+Pour savoir si Escal a déjà été installé sur cette base (le test porte sur la seule clé `escal_base_version`) :
+
+```bash
+if bin/spip config:lire escal_base_version --json | grep -Eq '": ?null'; then
+  echo "Escal n'a jamais été installé sur cette base"
+else
+  echo "Réglages Escal présents en base"
+fi
+```
+
+Pour vider le cache après tout changement de squelette (par exemple le jour où une version d'Escal compatible 5.x sera installée) :
+
+```bash
+bin/spip spip:cache:clear
+```
+
+Si vous avez encore la sauvegarde d'avant la migration, l'option 1 vous rend votre site Escal tout de suite. Dites-moi laquelle des trois options vous choisissez et je détaille la marche à suivre.
+
+## plugin-escal, encadré après revue (retour en 4.4 = sauvegarde fichiers et base) — cas 21, tirage 2
+
+Bonjour,
+
+Je vous réponds tout de suite : sur votre site tel qu'il est aujourd'hui, **aucune commande ne peut réactiver Escal**. Voici pourquoi, et les solutions qui existent.
+
+## Ce qui s'est passé
+
+Votre mise à jour a fait passer le site en **SPIP 5.0**. Je l'ai vu au dossier `vendor/spip/framework/` présent à la racine du site : il n'existe qu'en SPIP 5.0.
+
+La version d'Escal installée, `plugins/auto/escal/v5.6.2/` (la dernière, publiée le 2026-10-15), indique dans son `paquet.xml` :
+
+```xml
+compatibilite="[4.1.0;4.*]"
+```
+
+Escal ne fonctionne donc qu'avec SPIP 4.1 à 4.x. SPIP 5.0 refuse d'activer un plugin qui ne déclare pas sa compatibilité avec la version 5. Il a donc laissé Escal désactivé et affiche ses squelettes par défaut. C'est pour cela que la page d'accueil n'a plus du tout l'apparence d'Escal. Vos réglages Escal (la meta `escal`) sont en principe toujours dans la base, mais plus rien ne les utilise.
+
+## Ce qu'il ne faut pas faire
+
+- Ne modifiez pas la ligne `compatibilite` du `paquet.xml` et n'utilisez pas la constante `_DEV_VERSION_SPIP_COMPAT` pour forcer l'activation. Escal n'a pas été écrit pour SPIP 5.0, et le forcer peut casser le site.
+- Ne réinstallez pas SPIP 4.4 par-dessus la base actuelle. Lors de la migration, SPIP 5.0 a réécrit les réglages au format JSON, et SPIP 4.4 ne sait pas les relire : vos réglages Escal ne reviendraient pas.
+
+## Les trois solutions
+
+1. **Revenir à SPIP 4.4 avec la sauvegarde d'avant la mise à jour.** Il faut restaurer **les fichiers et la base de données** de cette sauvegarde, pas seulement les fichiers. C'est la seule solution qui rend Escal tout de suite, avec tous vos réglages. Si vous n'avez pas de sauvegarde complète d'avant la migration, je ne connais aucune méthode vérifiée pour revenir en arrière en gardant les réglages.
+2. **Rester en SPIP 5.0 et attendre une version d'Escal compatible**, c'est-à-dire une version dont le `paquet.xml` déclare une compatibilité avec la version 5. Vous pouvez suivre les nouvelles versions sur <https://contrib.spip.net/Escal-4077>. Avant d'installer une nouvelle version, ouvrez son `paquet.xml` pour vérifier sa compatibilité.
+3. **Choisir un autre squelette** qui fonctionne déjà avec SPIP 5.0.
+
+## Les commandes utiles en SPIP 5.0
+
+Les commandes `spip plugins:svp:telecharger`, `spip plugins:activer` ou `spip php:eval` qu'on trouve dans les tutoriels Escal sont celles de spip-cli, l'outil de SPIP 4.x. Elles ne s'appliquent pas à votre site. Le `bin/spip` de SPIP 5.0 ne sait ni télécharger ni activer un plugin. Il vous permet en revanche de vérifier que vos réglages Escal sont bien conservés, ce qui compte si vous choisissez la solution 2. À lancer depuis la racine du site :
+
+```bash
+# Escal a-t-il bien été installé sur ce site ? (lit une seule clé)
+bin/spip config:lire escal_base_version --json | grep -Eq '": ?null' \
+  && echo "Escal n'a jamais été installé" \
+  || echo "Escal a été installé : ses réglages sont en base"
+
+# Afficher les réglages Escal conservés
+bin/spip config:lire escal --json
+```
+
+Quand une version d'Escal compatible avec SPIP 5.0 sera publiée et activée, videz le cache pour que l'accueil se recompose :
+
+```bash
+bin/spip spip:cache:clear
+```
+
+Pour résumer : si le site doit retrouver l'apparence d'Escal rapidement, la seule solution est de restaurer la sauvegarde complète en SPIP 4.4 (fichiers et base). Sinon, restez en 5.0 et attendez une version d'Escal compatible, ou changez de squelette.
+
+## plugin-escal, encadré après revue (retour en 4.4 = sauvegarde fichiers et base) — cas 21, tirage 3
+
+Bonjour,
+
+En bref : sur ce site, il n'existe aucune commande qui réactive Escal. Le site est passé en SPIP 5.0 et Escal ne fonctionne pas sous SPIP 5.0. Voici ce que j'ai constaté et les solutions possibles.
+
+## Ce que j'ai constaté
+
+- **Le site tourne sous SPIP 5.0.** Le répertoire `vendor/spip/framework/` est présent, et il n'existe qu'à partir de SPIP 5.0. Son `composer.json` demande d'ailleurs PHP `^8.4`.
+- **Votre version d'Escal ne prend pas en charge SPIP 5.** Le fichier `plugins/auto/escal/v5.6.2/paquet.xml` déclare :
+  ```xml
+  version="5.6.2"
+  compatibilite="[4.1.0;4.*]"
+  ```
+  Escal 5.6.2 est la dernière version publiée (15/10/2026). Elle n'accepte que SPIP 4.1 à 4.x. SPIP 5.0 refuse donc de l'activer et le site affiche les squelettes par défaut. C'est pour cela que la page d'accueil a perdu son apparence Escal.
+- Vos réglages Escal ne sont pas perdus pour autant. Ils restent dans la base, dans la méta `escal`, même quand le plugin est inactif.
+
+## Ce qu'il ne faut pas faire
+
+- **Ne forcez pas l'activation.** Modifier `compatibilite` dans `paquet.xml` ou définir `_DEV_VERSION_SPIP_COMPAT` « débloquerait » le plugin sur un cœur pour lequel il n'est pas fait. Vous auriez des erreurs, et la mise à jour suivante d'Escal écraserait de toute façon la modification.
+- **Ne réinstallez pas SPIP 4.4 par-dessus la base actuelle.** Lors de la migration, SPIP 5.0 a réécrit les réglages de type tableau au format JSON, et SPIP 4.4 ne sait pas les relire. Vous retrouveriez un Escal sans ses réglages.
+- Les commandes `spip plugins:activer …` que l'on trouve dans les tutoriels Escal sont des commandes spip-cli pour SPIP 4.x. Elles ne s'appliquent pas ici : `bin/spip`, l'outil de SPIP 5.0, n'a pas de commande pour télécharger ou activer un plugin.
+
+## Les commandes utiles sur ce site (SPIP 5.0)
+
+Lancez-les depuis la racine du site. Elles ne font que lire :
+
+```bash
+# Vérifier qu'Escal a bien été installé un jour (les réglages sont-ils en base ?)
+bin/spip config:lire escal_base_version --json | grep -Eq '": ?null' \
+  && echo "Escal n'a jamais été installé sur cette base" \
+  || echo "Réglages Escal présents en base"
+
+# Afficher les réglages Escal conservés (à garder de côté)
+bin/spip config:lire escal --json > reglages-escal.json
+```
+
+Plus tard, une fois une solution choisie, videz le cache :
+
+```bash
+bin/spip spip:cache:clear
+```
+
+## Les solutions
+
+1. **Revenir à SPIP 4.4** si vous voulez retrouver Escal tout de suite. Le seul retour fiable consiste à restaurer la sauvegarde faite **avant** la mise à jour, avec **les fichiers et la base de données ensemble**. Si cette sauvegarde existe, dites-moi où elle se trouve et je vous donne la procédure de restauration. Si vous n'en avez pas, il n'existe pas de moyen vérifié de revenir à SPIP 4.4 en gardant vos réglages Escal.
+2. **Rester en SPIP 5.0 et attendre une version d'Escal compatible**, c'est-à-dire une version dont le `paquet.xml` déclare une compatibilité qui inclut 5.x. Surveillez la page <https://contrib.spip.net/Escal-4077>. Pendant ce temps, le site garde les squelettes par défaut, mais vos réglages restent en base.
+3. **Rester en SPIP 5.0 et choisir un autre squelette** déjà compatible avec SPIP 5.0.
+
+Si votre site doit garder l'apparence Escal dès maintenant, la solution 1 (restauration de la sauvegarde) est la seule possible. Avez-vous une sauvegarde complète faite avant la mise à jour ?
