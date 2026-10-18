@@ -13,7 +13,8 @@ SPIP 5.0 runs SPIP inside a **compiled Symfony container**: plugins contribute s
 are stored differently. It is **not** Symfony full-stack: no `bin/console`, no `#[AsEventListener]`, no
 `debug:event-dispatcher`.
 
-**Verified against SPIP 5.0.0-beta** (`ecrire` `c8e329575`, 2026-09-22) and SPIP 4.4.23. SPIP 5.0 is still
+**Verified against SPIP 5.0.0-beta** (`spip/spip` `c8e329575`, 2026-09-22, `ecrire` `2cd5843f`; additions of
+2026-10-18 on `ecrire` `26bfe470`) and SPIP 4.4.23. SPIP 5.0 is still
 moving: when a name in this skill looks off, check the source (paths in *Source of truth*) and `bin/spip list`.
 
 **Requires the `spip5-plugins` skill** for the 5.0 target code (listeners, tasks, injection, Guard, menus): this
@@ -51,7 +52,7 @@ skill only maps 4.x constructs to it. If `spip5-plugins` is not available, say s
 | Fix a squelette for 5.0 | `references/squelettes.md` |
 | Config / metas behave differently after the upgrade | `references/config-metas.md` |
 | Keep one plugin working on **4.4 and 5.0** | `references/double-compat.md` |
-| Audit a plugin, verify listeners, CLI commands | `references/audit-outils.md` |
+| Audit a plugin (grep, PHPStan, Rector), verify listeners, CLI commands | `references/audit-outils.md` |
 
 ## Guardrails
 

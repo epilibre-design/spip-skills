@@ -20,10 +20,19 @@ grep -rnE -A1 "#\[\\\\?Deprecated\(.*since: '5\.0'" ecrire prive plugins-dist ve
 the Kernel path methods, critères `fusion`/`collecte`. `trigger_deprecation()` covers argument forms (`lire_config(,,false)`,
 `/store/` prefix, `_T` with `spip_lang`, `$GLOBALS['spip_pipeline']`, `menu_squelette`, `bando_*`, cookie constants).
 
-Static analysis: PHPStan with deprecation rules against the 5.0 sources; Rector rules for SPIP live in
-`spip-league/rector` (pulled by `spip-league/qa-tools` / `spip-league/sdk`).
+## 3. Static: PHPStan, Rector
 
-## 3. Runtime on a 5.0 instance
+Configuration and commands: `spip5-plugins` `outils.md`, *Static analysis*. What to expect (verified on 5.0.0-beta):
+
+- **PHPStan** + `phpstan/phpstan-deprecation-rules`, level ≥ 1, scanning a 5.0 instance: reports `#[\Deprecated]`
+  symbols, removed functions (`function.notFound`) and removed constants (`constant.notFound`). It misses everything
+  deprecated by `trigger_deprecation()` only (`_request()`, `Kernel\param()`, argument forms): keep steps 1–2 and
+  step 4.
+- **Rector**: `spip-league/rector` has no 5.0 rule (`SPIP_50` set empty) and is not pulled by `spip-league/qa-tools`.
+  Its 4.1 rule renames `generer_url_entite*` without moving a connection argument: check each changed call against
+  `catalogue.md`.
+
+## 4. Runtime on a 5.0 instance
 
 - Requirements first: PHP **8.4**, `composer update` (Symfony 8.1), `plugins-dist/` now in `plugins-dist/spip/<plugin>/`
   (delete old copies at the root of `plugins-dist/`), config files only in `config/` (no `ecrire/mes_options.php`).
@@ -31,7 +40,7 @@ Static analysis: PHPStan with deprecation rules against the 5.0 sources; Rector 
   read `tmp/log/`.
 - Squelettes: `?var_mode=recalcul`; JavaScript: `?var_mode=debug_js` (browser console).
 
-## 4. Console `bin/spip` (5.0)
+## 5. Console `bin/spip` (5.0)
 
 SPIP 5.0 ships **`bin/spip`** at the project root (`spip-league/console`, Symfony Console). It is not spip-cli
 (`spip …`, the 4.x tool), not `bin/console`. `bin/spip list` shows what the instance provides.
@@ -50,12 +59,7 @@ SPIP 5.0 ships **`bin/spip`** at the project root (`spip-league/console`, Symfon
 
 Global options: `-e/--env` (default `prod`), `--with-spip` (force full SPIP load).
 
-## Listener not called — checklist
+## Listener not called
 
-1. Class under the PSR-4 namespace of the plugin `composer.json`, file path matches.
-2. Namespace loaded by `config/services.php` with `autowire()` + `autoconfigure()`.
-3. Attribute is `SpipLeague\Bridge\Pipeline\Attribute\AsPipelineListener` (not Symfony's `AsEventListener`).
-4. Argument typed with the exact event class, or `PipelineEvent` **with** the pipeline name.
-5. Plugin active (manifest `var/state/plugins.php` lists its path).
-6. `bin/spip spip:cache:warmup --clear`, then `bin/spip spip:pipeline:listeners`.
-7. The same pipeline is not also handled by a legacy function that overwrites the result.
+Checklist (plugin active, PSR-4, `services.php`, exact attribute, event type, warmup, page cache, double registration):
+`spip5-plugins` `outils.md`, *Listener / rule / task not called*.

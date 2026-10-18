@@ -1,6 +1,6 @@
 # One plugin for SPIP 4.4 and 5.0
 
-The upstream documentation does not cover this case; rules below come from comparing the 4.4.23 and 5.0.0-beta sources.
+The upstream documentation does not cover this case; rules below come from comparing the 4.4.23 and 5.0.0-beta sources (`_T()`: 4.4.22 and 4.4.28).
 
 ---
 
@@ -38,6 +38,7 @@ The upstream documentation does not cover this case; rules below come from compa
 |---|---|
 | `spip_logger()` | **does not exist in 4.4**, deprecated in 5.0 → keep `spip_log()` in shared code |
 | `Spip::…` | absent in 4.4 |
+| `_T($k, [], ['lang' => 'en'])` | the 5.0 form is **ignored without error** by 4.4: `_T()` of 4.4.22 (and 4.4.28) reads only `$args['spip_lang']`, the string comes out in the current language (verified on 4.4.21: `Accueil` instead of `Home`). Shared code: `lang_select('en'); _T($k); lang_select();` (not deprecated in 5.0), or keep `_T($k, ['spip_lang' => 'en'])` — deprecated in 5.0 but works |
 | `SpipVersion::…` | absent in 4.4. `$GLOBALS['spip_version_branche']` is still set in 5.0 but holds the **full** version (`SpipVersion::VERSION`, ex. `5.0.0-beta`): compare with `version_compare()`, never `=== '5.0'` |
 | `\SpipLeague\Component\Kernel\param()` | exists in 4.4 but deprecated in 5.0 |
 | `_ROOT_RACINE`, `_DIR_IMG_PACK` | removed in 5.0 |

@@ -53,16 +53,16 @@ Verified in SPIP 5.0.0-beta. "doc" = stated by dev.spip.net, not re-verified in 
 | `\SpipLeague\Component\Kernel\param()` | `Spip::param($name)` (`Spip::param($name, $default)` returns `$default` if absent) | deprecated |
 | `\SpipLeague\Component\Kernel\service()` | `Spip::service($id)` | deprecated |
 | `app()->getRootDir()` | `Spip::directories()->getProjectDir()` | deprecated |
-| `app()->getCoreDir()`, `getTmpDir()`, `getDocDir()`, `getPluginsDir()`, `getExtensionsDir()`, `getTemplateDir()`, `getPrivateTemplateDir()`, `getCustomDir()` | same method on `Spip::directories()` | deprecated |
+| `app()->getCoreDir()`, `getTmpDir()`, `getDocDir()`, `getPluginsDir()`, `getExtensionsDir()`, `getTemplateDir()`, `getPrivateTemplateDir()`, `getCustomDir()` | same method on `Spip::directories()` (absolute, trailing slash). Not `Spip::param('spip.dirs.tmp')`: raw setting `tmp/`, relative to the site directory, not to the current directory | deprecated |
 | `app()->getEtcDir()` | `Spip::directories()->getConfigDir()` | deprecated |
 | `app()->getVarDir()` (meant `local/`) | `Spip::directories()->getPublicAssetsDir()` | deprecated |
 | `app()->relative()->getX()` | `Spip::directories()->relative()->getX()` | deprecated |
-| `spip_log($msg, 'acme.' . _LOG_ERREUR)` | `Spip::logger('acme')->error($msg)` — see level table below | deprecated |
+| `spip_log($msg, 'acme.' . _LOG_ERREUR)` | `Spip::logger('acme')->error($msg)` — see level table below; the channel is created on first use, no declaration | deprecated |
 | `spip_logger('acme')` | `Spip::logger('acme')` | deprecated (**does not exist in 4.4**) |
 | `inc_log_dist()` | `Spip::logger()` | deprecated |
 | `_request($k)` | `Spip::input($k)`; `Spip::request()?->query->get($k)` | deprecated |
 | `set_request($k, $v)` | `Spip::setInput($k, $v)` | deprecated |
-| `_T($k, ['spip_lang' => 'en'])` | `_T($k, [], ['lang' => 'en'])` | deprecated |
+| `_T($k, ['spip_lang' => 'en'])` | `_T($k, [], ['lang' => 'en'])` — 5.0 only, 4.4 ignores it (`double-compat.md`) | deprecated |
 | `_T($k, [], 'classe_css')`, `_L(…, 'classe')` | `_T($k, [], ['class' => 'classe_css'])` | removed (string 3rd arg) |
 | `extraire_multi($t, 'en', true)`, `extraire_idiome(…, true)` | `…, ['echappe_span' => true]` | deprecated |
 | `lire_config('/store/cle')`, `ecrire_config('/store/…')`, `effacer_config('/store/…')` | `Spip::configs('store')->get('cle')` / `->set()` | deprecated |
