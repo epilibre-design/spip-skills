@@ -520,3 +520,187 @@ Le squelette affiche déjà l'erreur, mais il a quelques écarts avec la structu
 - Pour les erreurs de champ, l'écriture recommandée est `#ENV*{erreurs/email}` (une seule étoile), plutôt que `#ENV**{erreurs}|table_valeur{email}`.
 - `[(#EDITABLE|oui) …]` s'écrit normalement `[(#ENV{editable}|oui) …]`.
 - Il manque le marqueur `<!--extra-->` avant les boutons, et le bouton devrait avoir la classe `btn submit`.
+
+---
+
+# spip-squelettes
+
+---
+
+## spip-squelettes, cas 8 — site avec `vendor/spip/framework/`
+
+Voici `squelettes/mot.html` modifié. J'ajoute un bloc « Rubriques concernées » sous la liste des articles.
+
+**Principe :** on parcourt les articles liés au mot (`ARTICLES{id_mot}`). Pour chacun, une boucle `RUBRIQUES{id_rubrique}` imbriquée affiche sa rubrique. Le critère `{doublons}` sur cette boucle interne fait qu'une rubrique déjà affichée ne revient pas. Chaque rubrique sort donc une seule fois, même si elle contient plusieurs articles portant ce mot.
+
+Pourquoi ne pas écrire directement `RUBRIQUES{id_mot}` : ce critère renverrait les rubriques auxquelles le mot-clé est attaché **elles-mêmes**, pas celles qui contiennent des articles portant ce mot.
+
+```html
+<BOUCLE_mot(MOTS){id_mot}>
+<!DOCTYPE html>
+<html lang="#LANG">
+<head>
+	<title>[(#TITRE|textebrut)] - [(#NOM_SITE_SPIP|textebrut)]</title>
+	<INCLURE{fond=inclure/head}{env}></INCLURE>
+</head>
+<body class="page_mot">
+	<h1>[(#LOGO_MOT|right)]#TITRE</h1>
+	[<div class="descriptif">(#DESCRIPTIF)</div>]
+
+	<B_articles>
+	<ul class="liste-articles">
+	<BOUCLE_articles(ARTICLES){id_mot}{par date}{inverse}>
+		<li><a href="#URL_ARTICLE">#TITRE</a></li>
+	</BOUCLE_articles>
+	</ul>
+	</B_articles>
+
+	<B_arts_mot>
+	<h2>Rubriques concernées</h2>
+	<ul class="liste-rubriques">
+	<BOUCLE_arts_mot(ARTICLES){id_mot}{par date}{inverse}>
+		<BOUCLE_rub_mot(RUBRIQUES){id_rubrique}{doublons}>
+		<li><a href="#URL_RUBRIQUE">#TITRE</a></li>
+		</BOUCLE_rub_mot>
+	</BOUCLE_arts_mot>
+	</ul>
+	</B_arts_mot>
+
+	<INCLURE{fond=inclure/pied}{env}></INCLURE>
+</body>
+</html>
+</BOUCLE_mot>
+```
+
+Comment ça marche :
+
+- `BOUCLE_arts_mot` reprend la sélection de la liste existante : les articles publiés liés au mot courant (`{id_mot}` vient de `BOUCLE_mot`). Elle ne produit rien elle-même.
+- Dans `BOUCLE_rub_mot`, `{id_rubrique}` vient de l'article en cours. Elle renvoie donc la rubrique qui contient cet article.
+- `{doublons}` mémorise les rubriques déjà affichées sur la page et les écarte ensuite. Aucune autre boucle `RUBRIQUES` de la page ne porte `{doublons}`, donc rien d'autre n'est affecté. Si vous en ajoutez une plus tard, par exemple dans un menu, utilisez un doublon nommé pour garder les deux ensembles séparés : `{doublons rub_mot}`.
+- Les sections `<B_arts_mot>` … `</B_arts_mot>` (titre `<h2>` et `<ul>`) ne s'affichent que si le mot a au moins un article. Sans article, la page n'a ni titre vide ni liste vide.
+- Les rubriques sortent dans l'ordre du premier article rencontré : celle de l'article le plus récent d'abord. Pour un ordre alphabétique, il faudrait une autre approche, car ici le tri ne peut se faire que sur les articles.
+
+Variante plus compacte : le critère SQL de regroupement `{fusion id_rubrique}` garde un seul article par rubrique. Il n'est pas décrit dans ma documentation, à vérifier donc sur votre version :
+
+```html
+<BOUCLE_arts_mot(ARTICLES){id_mot}{fusion id_rubrique}>
+	<BOUCLE_rub_mot(RUBRIQUES){id_rubrique}>
+	<li><a href="#URL_RUBRIQUE">#TITRE</a></li>
+	</BOUCLE_rub_mot>
+</BOUCLE_arts_mot>
+```
+
+La version avec `{doublons}` ci-dessus n'utilise que des critères documentés. C'est celle que je recommande.
+
+---
+
+## spip-squelettes, cas 9 — plugin 4.4 + 5.0
+
+Voici `mot.html` modifié. J'ai ajouté un bloc « Rubriques concernées » entre la description du mot et la liste des articles.
+
+```html
+<BOUCLE_mot(MOTS){id_mot}>
+<!DOCTYPE html>
+<html lang="#LANG">
+<head>
+	<title>[(#TITRE|textebrut)] - [(#NOM_SITE_SPIP|textebrut)]</title>
+	<INCLURE{fond=inclure/head}{env}></INCLURE>
+</head>
+<body class="page_mot">
+	<h1>[(#LOGO_MOT|right)]#TITRE</h1>
+	[<div class="descriptif">(#DESCRIPTIF)</div>]
+
+	<B_rubriques_mot>
+	<h2>Rubriques concernées</h2>
+	<ul class="liste-rubriques">
+	<BOUCLE_rubriques_mot(ARTICLES){id_mot}>
+		<BOUCLE_rubrique_article(RUBRIQUES){id_rubrique}{doublons rub_mot}>
+		<li><a href="#URL_RUBRIQUE">#TITRE</a></li>
+		</BOUCLE_rubrique_article>
+	</BOUCLE_rubriques_mot>
+	</ul>
+	</B_rubriques_mot>
+
+	<B_articles>
+	<ul class="liste-articles">
+	<BOUCLE_articles(ARTICLES){id_mot}{par date}{inverse}>
+		<li><a href="#URL_ARTICLE">#TITRE</a></li>
+	</BOUCLE_articles>
+	</ul>
+	</B_articles>
+
+	<INCLURE{fond=inclure/pied}{env}></INCLURE>
+</body>
+</html>
+</BOUCLE_mot>
+```
+
+#### Fonctionnement
+
+- **Boucle extérieure `BOUCLE_rubriques_mot(ARTICLES){id_mot}`** : elle parcourt les articles publiés liés au mot. `{id_mot}` vient de la boucle `BOUCLE_mot` qui l'entoure.
+- **Boucle intérieure `BOUCLE_rubrique_article(RUBRIQUES){id_rubrique}`** : pour chaque article, elle récupère la rubrique qui le contient, puisque `{id_rubrique}` est repris de l'article en cours. `#TITRE` et `#URL_RUBRIQUE` sont donc ceux de la rubrique.
+- **`{doublons rub_mot}`** : c'est ce critère qui affiche chaque rubrique une seule fois. Quand trois articles du mot sont dans la même rubrique, celle-ci ne sort qu'au premier passage. J'ai nommé le jeu de doublons (`rub_mot`) pour qu'il reste séparé de tout autre `{doublons}` éventuel de la page. La liste d'articles existante n'est donc pas touchée.
+- **`<B_rubriques_mot>` … `</B_rubriques_mot>`** : le titre « Rubriques concernées » et le `<ul>` ne s'affichent que si le mot a au moins un article. Sinon la page n'affiche aucune liste vide.
+
+#### Remarques
+
+- Le critère `{id_mot}` sur `RUBRIQUES` ne convient pas ici : il renverrait les rubriques auxquelles le mot-clé est attaché directement, pas celles qui contiennent un article portant ce mot.
+- L'ordre des rubriques suit l'ordre dans lequel les articles sont lus. Pour les avoir à peu près par ordre alphabétique, on ne peut pas trier la boucle intérieure (elle ne renvoie qu'une ligne à chaque passage). On peut en revanche trier la boucle extérieure. Une autre possibilité est de regrouper les articles par rubrique avec `{fusion id_rubrique}` sur la boucle extérieure, à la place des doublons. Je n'ai pas retenu cette variante parce que ma documentation ne décrit `{fusion}` que pour les boucles `DATA` : testez-la avant de vous en servir.
+- Le texte « Rubriques concernées » est écrit en dur. Si le squelette est multilingue, remplacez-le par une chaîne de langue du plugin, par exemple `<:acme:rubriques_concernees:>`.
+
+---
+
+## spip-squelettes, cas 10 — plugin 4.x
+
+Voici `mot.html` modifié. J'ai ajouté un bloc « Rubriques concernées » après la liste des articles :
+
+```html
+<BOUCLE_mot(MOTS){id_mot}>
+<!DOCTYPE html>
+<html lang="#LANG">
+<head>
+	<title>[(#TITRE|textebrut)] - [(#NOM_SITE_SPIP|textebrut)]</title>
+	<INCLURE{fond=inclure/head}{env}></INCLURE>
+</head>
+<body class="page_mot">
+	<h1>[(#LOGO_MOT|right)]#TITRE</h1>
+	[<div class="descriptif">(#DESCRIPTIF)</div>]
+
+	<B_articles>
+	<ul class="liste-articles">
+	<BOUCLE_articles(ARTICLES){id_mot}{par date}{inverse}>
+		<li><a href="#URL_ARTICLE">#TITRE</a></li>
+	</BOUCLE_articles>
+	</ul>
+	</B_articles>
+
+	<B_articles_rubs>
+	<h2>Rubriques concernées</h2>
+	<ul class="liste-rubriques">
+	<BOUCLE_articles_rubs(ARTICLES){id_mot}{par date}{inverse}>
+		<BOUCLE_rub_du_mot(RUBRIQUES){id_rubrique}{doublons rubmot}>
+		<li><a href="#URL_RUBRIQUE">#TITRE</a></li>
+		</BOUCLE_rub_du_mot>
+	</BOUCLE_articles_rubs>
+	</ul>
+	</B_articles_rubs>
+
+	<INCLURE{fond=inclure/pied}{env}></INCLURE>
+</body>
+</html>
+</BOUCLE_mot>
+```
+
+#### Comment ça marche
+
+- **`BOUCLE_articles_rubs(ARTICLES){id_mot}`** : `{id_mot}` reprend le mot de la boucle englobante `BOUCLE_mot`. On obtient donc les articles liés à ce mot-clé. Comme d'habitude, la boucle ARTICLES ne renvoie que les articles publiés.
+- **`BOUCLE_rub_du_mot(RUBRIQUES){id_rubrique}`** : pour chaque article, `{id_rubrique}` reprend la rubrique de l'article en cours. `#TITRE` et `#URL_RUBRIQUE` sont alors ceux de la rubrique.
+- **`{doublons rubmot}`** : une rubrique déjà affichée n'est plus affichée par les passages suivants. Ainsi, si dix articles du mot sont dans la même rubrique, elle n'apparaît **qu'une fois**. Les doublons portent un nom (`rubmot`). Ils sont donc indépendants de tout autre `{doublons}` de la page ou des inclusions.
+- **Partie conditionnelle `<B_articles_rubs> … </B_articles_rubs>`** : le titre `<h2>` et le `<ul>` ne s'affichent que si le mot a au moins un article. Dans ce cas, il y a forcément au moins une rubrique, donc pas de `<ul>` vide.
+
+#### À savoir
+
+- **Ordre** : les rubriques sortent dans l'ordre où elles apparaissent pour la première fois dans la liste des articles (du plus récent au plus ancien). Ce n'est pas un ordre alphabétique. Un `{par titre}` sur la boucle RUBRIQUES ne servirait à rien, car elle ne renvoie qu'une rubrique à chaque passage.
+- **Rubrique directe seulement** : on liste la rubrique *qui contient* l'article, pas ses rubriques parentes.
+- Je n'ai pas modifié `BOUCLE_articles`. J'ai ajouté une deuxième boucle ARTICLES distincte (`_articles_rubs`) pour ne pas mélanger les deux affichages. La requête de plus est légère.
+- Variante plus courte, si vous préférez dédoublonner en SQL : `<BOUCLE_articles_rubs(ARTICLES){id_mot}{fusion id_rubrique}>`, qui regroupe les articles par rubrique (GROUP BY). Avec cette variante, le `{doublons rubmot}` de la boucle interne n'est plus nécessaire. Attention : ma documentation ne décrit `{fusion}` que pour les boucles DATA. Je recommande donc la version avec `{doublons}` ci-dessus, qui est la forme documentée.

@@ -981,3 +981,201 @@ L'erreur s'affichera déjà avec le gabarit actuel. Il lit toutefois les erreurs
 ```
 
 L'attribut `required` et `type="email"` n'apportent qu'un confort côté navigateur. Le vrai contrôle reste celui de `verifier()`, côté serveur.
+
+---
+
+# spip-squelettes
+
+---
+
+## spip-squelettes, cas 8 — site avec `vendor/spip/framework/`
+
+#### Version de SPIP
+
+Le site tourne sous **SPIP 5.0**. Je m'appuie sur la présence de `vendor/spip/framework/` (paquet `spip/framework`). J'en tiens compte dans le code ajouté et dans tout le squelette modifié :
+
+- `{fusion}` est déprécié en 5.0. On utilise `{groupby}` à la place.
+- `<INCLURE{…}></INCLURE>` est supprimé en 5.0. On écrit `<INCLURE{…} />` (les deux lignes `inclure/head` et `inclure/pied` sont corrigées).
+- Le pseudo-filtre de logo `[(#LOGO_MOT|right)]` est supprimé en 5.0. On écrit `[(#LOGO_MOT{right})]`.
+
+#### Principe
+
+Une boucle `RUBRIQUES{id_mot}` ne convient pas ici. Elle donnerait les rubriques auxquelles le mot est lié directement, pas celles qui contiennent des articles liés au mot.
+
+On part donc des **articles** liés au mot (`ARTICLES{id_mot}`) et on les regroupe par rubrique avec `{groupby id_rubrique}`. On obtient ainsi une seule ligne par rubrique. Une boucle `RUBRIQUES{id_rubrique}` imbriquée affiche ensuite le titre et l'URL de cette rubrique.
+
+Comme toute boucle ARTICLES, celle-ci ne prend que les articles publiés. Une rubrique qui ne contient que des brouillons liés au mot n'apparaît donc pas, ce qui est le comportement voulu sur le site public.
+
+#### Squelette `squelettes/mot.html` modifié
+
+```html
+<BOUCLE_mot(MOTS){id_mot}>
+<!DOCTYPE html>
+<html lang="#LANG">
+<head>
+	<title>[(#TITRE|textebrut)] - [(#NOM_SITE_SPIP|textebrut)]</title>
+	<INCLURE{fond=inclure/head}{env} />
+</head>
+<body class="page_mot">
+	<h1>[(#LOGO_MOT{right})]#TITRE</h1>
+	[<div class="descriptif">(#DESCRIPTIF)</div>]
+
+	<B_articles>
+	<ul class="liste-articles">
+	<BOUCLE_articles(ARTICLES){id_mot}{par date}{inverse}>
+		<li><a href="#URL_ARTICLE">#TITRE</a></li>
+	</BOUCLE_articles>
+	</ul>
+	</B_articles>
+
+	<B_rubriques_mot>
+	<h2>Rubriques concernées</h2>
+	<ul class="liste-rubriques">
+	<BOUCLE_rubriques_mot(ARTICLES){id_mot}{groupby id_rubrique}>
+		<BOUCLE_rub(RUBRIQUES){id_rubrique}>
+		<li><a href="#URL_RUBRIQUE">#TITRE</a></li>
+		</BOUCLE_rub>
+	</BOUCLE_rubriques_mot>
+	</ul>
+	</B_rubriques_mot>
+
+	<INCLURE{fond=inclure/pied}{env} />
+</body>
+</html>
+</BOUCLE_mot>
+```
+
+#### Remarques
+
+- `{id_mot}` vient de la boucle englobante `_mot`. `{id_rubrique}` dans `_rub` vient de la ligne en cours de `_rubriques_mot`, c'est-à-dire de la rubrique de l'article.
+- La partie conditionnelle `<B_rubriques_mot>…</B_rubriques_mot>` n'affiche le titre et la liste que s'il y a au moins un résultat.
+- **Attention si le squelette doit aussi tourner sous SPIP 4.4** : `{groupby}` n'y existe pas. Il faudrait alors garder `{fusion id_rubrique}`, qui fonctionne encore en 5.0 mais y est déprécié. Les nouvelles formes de `INCLURE` et de logo fonctionnent déjà en 4.4.
+- La liste des rubriques suit l'ordre des articles regroupés. Pour un tri alphabétique strict par titre de rubrique, il faudrait une autre construction. Dites-le-moi si c'est nécessaire.
+
+---
+
+## spip-squelettes, cas 9 — plugin 4.4 + 5.0
+
+#### Version ciblée
+
+Le `paquet.xml` du plugin déclare `compatibilite="[4.4.0;5.*]"` : le squelette doit tourner **à la fois sur SPIP 4.4 et sur SPIP 5.0**. Ça a deux conséquences :
+
+1. Pour dédoublonner, j'utilise le critère `{fusion}`. En 5.0 il est déprécié au profit de `{groupby}`, mais `{groupby}` n'existe pas en 4.4 ; un squelette 4.4 + 5.0 doit donc garder `{fusion}` (qui fonctionne encore en 5.0).
+2. Deux syntaxes déjà présentes dans `mot.html` sont **supprimées en 5.0**, je les corrige au passage (les nouvelles formes marchent déjà en 4.4) :
+   - `<INCLURE{…}></INCLURE>` → `<INCLURE{…} />`
+   - `[(#LOGO_MOT|right)]` → `[(#LOGO_MOT{right})]`
+
+#### Principe
+
+On part des articles liés au mot (`ARTICLES{id_mot}`, publiés par défaut), on les regroupe par rubrique avec `{fusion id_rubrique}` : chaque rubrique n'apparaît donc qu'une fois. Une boucle `RUBRIQUES{id_rubrique}` imbriquée récupère ensuite le titre et l'URL de la rubrique.
+
+#### Squelette modifié (`mot.html`)
+
+```html
+<BOUCLE_mot(MOTS){id_mot}>
+<!DOCTYPE html>
+<html lang="#LANG">
+<head>
+	<title>[(#TITRE|textebrut)] - [(#NOM_SITE_SPIP|textebrut)]</title>
+	<INCLURE{fond=inclure/head}{env} />
+</head>
+<body class="page_mot">
+	<h1>[(#LOGO_MOT{right})]#TITRE</h1>
+	[<div class="descriptif">(#DESCRIPTIF)</div>]
+
+	<B_articles>
+	<ul class="liste-articles">
+	<BOUCLE_articles(ARTICLES){id_mot}{par date}{inverse}>
+		<li><a href="#URL_ARTICLE">#TITRE</a></li>
+	</BOUCLE_articles>
+	</ul>
+	</B_articles>
+
+	<B_rubriques_mot>
+	<h2>Rubriques</h2>
+	<ul class="liste-rubriques">
+	<BOUCLE_rubriques_mot(ARTICLES){id_mot}{fusion id_rubrique}>
+		<BOUCLE_rubrique_mot(RUBRIQUES){id_rubrique}>
+		<li><a href="#URL_RUBRIQUE">#TITRE</a></li>
+		</BOUCLE_rubrique_mot>
+	</BOUCLE_rubriques_mot>
+	</ul>
+	</B_rubriques_mot>
+
+	<INCLURE{fond=inclure/pied}{env} />
+</body>
+</html>
+</BOUCLE_mot>
+```
+
+#### Remarques
+
+- `{id_mot}` est hérité de la boucle `_mot` englobante ; seuls les articles publiés sont pris en compte (statut par défaut de la boucle ARTICLES), donc une rubrique n'apparaît que si elle contient au moins un article **publié** lié au mot.
+- Le bloc `<B_rubriques_mot>…</B_rubriques_mot>` (titre `<h2>` et `<ul>`) ne s'affiche que s'il y a au moins une rubrique.
+- L'ordre des rubriques suit celui des articles regroupés (pas d'ordre alphabétique garanti sur le titre de rubrique, puisque le tri porte sur la table ARTICLES).
+- Le jour où le plugin abandonne SPIP 4.4 (compatibilité à partir de 5.0), remplacer `{fusion id_rubrique}` par `{groupby id_rubrique}`.
+- Le libellé « Rubriques » est en dur ; idéalement le passer dans un fichier de langue du plugin (`<:acme:rubriques_du_mot:>`).
+
+---
+
+## spip-squelettes, cas 10 — plugin 4.x
+
+Le plugin cible SPIP 4.x : le `paquet.xml` déclare `compatibilite="[4.2.0;4.4.*]"`. J'ai donc utilisé la syntaxe 4.x.
+
+#### Principe
+
+- Une boucle `ARTICLES{id_mot}` récupère les articles liés au mot-clé. Elle hérite de `id_mot` grâce à la boucle `_mot` qui l'englobe.
+- Le critère `{fusion id_rubrique}` regroupe ces articles par rubrique (un `GROUP BY` SQL). On obtient **une ligne par rubrique**, même si la rubrique contient plusieurs articles avec ce mot.
+- Une boucle `RUBRIQUES{id_rubrique}` imbriquée affiche ensuite le titre et le lien de la rubrique de chaque ligne.
+
+Comme dans toutes les boucles SPIP publiques, seuls les articles et rubriques **publiés** sont pris en compte (statut par défaut). Les parties `<B_rubriques_mot>` / `</B_rubriques_mot>` font que le bloc n'est pas affiché si aucune rubrique ne correspond.
+
+#### Squelette `mot.html` modifié
+
+```html
+<BOUCLE_mot(MOTS){id_mot}>
+<!DOCTYPE html>
+<html lang="#LANG">
+<head>
+	<title>[(#TITRE|textebrut)] - [(#NOM_SITE_SPIP|textebrut)]</title>
+	<INCLURE{fond=inclure/head}{env}></INCLURE>
+</head>
+<body class="page_mot">
+	<h1>[(#LOGO_MOT|right)]#TITRE</h1>
+	[<div class="descriptif">(#DESCRIPTIF)</div>]
+
+	<B_articles>
+	<ul class="liste-articles">
+	<BOUCLE_articles(ARTICLES){id_mot}{par date}{inverse}>
+		<li><a href="#URL_ARTICLE">#TITRE</a></li>
+	</BOUCLE_articles>
+	</ul>
+	</B_articles>
+
+	<B_rubriques_mot>
+	<h2>Rubriques concernées</h2>
+	<ul class="liste-rubriques">
+	<BOUCLE_rubriques_mot(ARTICLES){id_mot}{fusion id_rubrique}>
+		<BOUCLE_rub(RUBRIQUES){id_rubrique}>
+		<li><a href="#URL_RUBRIQUE">#TITRE</a></li>
+		</BOUCLE_rub>
+	</BOUCLE_rubriques_mot>
+	</ul>
+	</B_rubriques_mot>
+
+	<INCLURE{fond=inclure/pied}{env}></INCLURE>
+</body>
+</html>
+</BOUCLE_mot>
+```
+
+#### Remarques
+
+- **Ordre d'affichage** : les rubriques sortent dans l'ordre du regroupement SQL, pas dans l'ordre alphabétique. Le tri `{par titre}` s'applique ici aux titres des *articles* et ne trie pas les rubriques. Si l'ordre alphabétique des rubriques compte, il faut une autre boucle (par exemple parcourir `RUBRIQUES{par titre}` et ne garder une rubrique que si elle contient un article lié au mot). Cette solution est plus coûteuse sur un gros site.
+- **Libellé** : le texte « Rubriques concernées » est écrit en dur. Si le site est multilingue, remplacez-le par une chaîne de langue du plugin, par exemple `<:acme:rubriques_concernees:>`, à déclarer dans `lang/acme_fr.php`.
+- **SPIP 5.0** : le plugin vise 4.2 à 4.4, donc j'ai gardé `{fusion}` (`{groupby}` n'existe pas en 4.4) ainsi que la syntaxe actuelle du fichier : `<INCLURE{…}></INCLURE>` et `|right`. Si le plugin passe un jour à SPIP 5.0, il faudra remplacer :
+  - `{fusion id_rubrique}` par `{groupby id_rubrique}` ;
+  - `<INCLURE{…}></INCLURE>` par `<INCLURE{…} />` ;
+  - `[(#LOGO_MOT|right)]` par `[(#LOGO_MOT{right})]`.
+
+  Les deux dernières formes fonctionnent déjà en 4.4. On peut donc les changer dès maintenant si on le souhaite.

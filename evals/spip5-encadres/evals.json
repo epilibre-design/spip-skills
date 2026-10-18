@@ -111,6 +111,54 @@
         "Aucun Spip:: ni autre API 5.0 dans le code proposé",
         "Erreur posée sur le champ : $erreurs['email'], pour un email vide comme pour un email invalide"
       ]
+    },
+    {
+      "id": 8,
+      "skill": "spip-squelettes",
+      "variant": "5.0 (site, vendor/spip/framework)",
+      "prompt": "Sur la page mot.html, ajoute la liste des rubriques qui contiennent au moins un article lié à ce mot-clé : chaque rubrique une seule fois, avec son titre et un lien. Donne le squelette modifié.",
+      "expected_output": "vendor/spip/framework/ existe : site SPIP 5.0. Dédoublonnage par {groupby id_rubrique} (et non {fusion}, déprécié en 5.0), ou une boucle RUBRIQUES sans critère déprécié. Le squelette existant contient deux syntaxes supprimées en 5.0 : [(#LOGO_MOT|right)] → [(#LOGO_MOT{right})], et <INCLURE{…}></INCLURE> → <INCLURE{…} />. Le fichier livré les corrige : une syntaxe supprimée casse le squelette, la signaler ne suffit pas.",
+      "files": [
+        "evals/spip5-encadres/fixtures/sq-site-vendor/site/"
+      ],
+      "expectations": [
+        "Déduit SPIP 5.0 de vendor/spip/framework/ et cite ce marqueur",
+        "Ajoute la liste demandée : chaque rubrique contenant un article lié au mot n'apparaît qu'une fois, avec son titre et un lien",
+        "Le dédoublonnage n'utilise pas {fusion} : {groupby id_rubrique}, ou une boucle sans critère déprécié",
+        "Le fichier livré contient [(#LOGO_MOT{right})] : la forme [(#LOGO_MOT|right)], supprimée en 5.0, n'y figure plus (la signaler sans la corriger échoue)",
+        "Le fichier livré n'utilise que <INCLURE{…} /> : aucune balise fermante </INCLURE>, supprimée en 5.0 (la signaler sans la corriger échoue)"
+      ]
+    },
+    {
+      "id": 9,
+      "skill": "spip-squelettes",
+      "variant": "dual",
+      "prompt": "Sur la page mot.html, ajoute la liste des rubriques qui contiennent au moins un article lié à ce mot-clé : chaque rubrique une seule fois, avec son titre et un lien. Donne le squelette modifié.",
+      "expected_output": "compatibilite=\"[4.4.0;5.*]\" : le squelette doit tourner en 4.4 et en 5.0. Dédoublonnage par {fusion id_rubrique} ({groupby} n'existe pas en 4.4), ou une boucle sans ce critère. Les syntaxes supprimées en 5.0 passent à des formes valables dans les deux versions : [(#LOGO_MOT{right})] et <INCLURE{…} />.",
+      "files": [
+        "evals/spip5-encadres/fixtures/sq-dual/acme/"
+      ],
+      "expectations": [
+        "Déduit du paquet.xml que le plugin vise 4.4 et 5.0, et cite ce marqueur",
+        "Ajoute la liste demandée : chaque rubrique contenant un article lié au mot n'apparaît qu'une fois, avec son titre et un lien",
+        "N'utilise ni {groupby} ni {collate} (absents en 4.4)",
+        "Le fichier livré contient [(#LOGO_MOT{right})] : la forme [(#LOGO_MOT|right)], supprimée en 5.0, n'y figure plus (la signaler sans la corriger échoue)",
+        "Le fichier livré n'utilise que <INCLURE{…} /> : aucune balise fermante </INCLURE>, supprimée en 5.0 (la signaler sans la corriger échoue)"
+      ]
+    },
+    {
+      "id": 10,
+      "skill": "spip-squelettes",
+      "variant": "4.4",
+      "prompt": "Sur la page mot.html, ajoute la liste des rubriques qui contiennent au moins un article lié à ce mot-clé : chaque rubrique une seule fois, avec son titre et un lien. Donne le squelette modifié.",
+      "expected_output": "Plugin 4.x (compatibilite=\"[4.2.0;4.4.*]\") : {fusion id_rubrique} ou une boucle RUBRIQUES. Aucune syntaxe propre à 5.0 ({groupby}, {collate}).",
+      "files": [
+        "evals/spip5-encadres/fixtures/sq-44/acme/"
+      ],
+      "expectations": [
+        "N'utilise ni {groupby}, ni {collate}, ni autre syntaxe propre à 5.0",
+        "Chaque rubrique n'apparaît qu'une fois, avec son titre et un lien"
+      ]
     }
   ]
 }

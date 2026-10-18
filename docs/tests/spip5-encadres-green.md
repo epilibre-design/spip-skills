@@ -56,3 +56,29 @@ Two iterations:
 | 5 — 5.0 site code | FAIL | **PASS (5/5)** | cites `VERSION = '5.0.0-beta'`, `Spip::input('email')`, no `use`; `traiter()` moved to `Spip::input()` too |
 | 6 — 4.4 + 5.0 | PARTIAL | **PASS (4/4)** | cites `[4.4.0;5.*]`, keeps `_request()`, explains why not `Spip::input()` |
 | 7 — 4.x (no leak) | PASS | **PASS (3/3)** | cites `[4.2.0;4.4.*]`, `_request()` only |
+
+## spip-squelettes (2026-10-18)
+
+Callout facts checked on the local 5.0.0-beta instance and its `ecrire/CHANGELOG.md`: `#[\Deprecated(since: '5.0')]`
+on `critere_fusion_dist()`, `critere_fusion_supprimer_dist()`, `critere_collecte_dist()`, which delegate to
+`{groupby}`, `{groupby_supprimer}`, `{collate}` (`ecrire/public/criteres.php`, same code as 4.4 `{fusion}`); removed:
+`<INCLURE(fichier.php)>`, `fond=fichier.php`, `</INCLURE>` (#26), logo pseudo-filters `|left` `|right` `|center`
+`|bottom` `|top` `|lien` `|fichier` (spip/spip!5631; `phraser_vieux_logos()` is gone from `normaliser.php`), `POUR`,
+`|foreach`, `#EMBED_DOCUMENT`, `#LARGEUR_ECRAN` (spip/spip#5560); brackets in optional parts (spip/spip#3637);
+case-sensitive language items (spip/spip#2536). In 4.4.22: `{groupby}` / `{collate}` absent; `#LOGO_X{right}`,
+`#LOGO_X**`, `<INCLURE … />`, `#LAYOUT_PRIVE`, `#PARAM` present.
+
+Grid tightened after review: in cases 8–9, `|right` and `</INCLURE>` are removed in 5.0 (the squelette breaks), so
+the delivered file must fix them; flagging them is no longer enough. `#PARAM` dropped from the "5.0 only" list of
+case 10: `balise_PARAM_dist()` exists in 4.4. The recorded answers were re-scored, no re-run needed: the GREEN answers
+of cases 8–9 already fix both syntaxes, the RED ones fail these criteria either way.
+
+Second tightening (review): cases 8–9 did not check the requested list itself, so an answer fixing the existing
+syntaxes without adding it would pass. Both now require it, as case 10 did. Re-scored: every recorded answer adds the
+list (RED 2/5, GREEN 5/5).
+
+| Case | RED | GREEN | Notes |
+|---|---|---|---|
+| 8 — 5.0 site | FAIL (2/5) | **PASS (5/5)** | cites `vendor/spip/framework/`, `{groupby id_rubrique}`, fixes `{right}` and both `<INCLURE … />` |
+| 9 — 4.4 + 5.0 | FAIL (2/5) | **PASS (5/5)** | cites `[4.4.0;5.*]`, keeps `{fusion}` (no `{groupby}` in 4.4), fixes `{right}` and `<INCLURE … />` |
+| 10 — 4.x (no leak) | PASS | **PASS (2/2)** | cites `[4.2.0;4.4.*]`, `{fusion}`, file left as is; 5.0 changes listed as a future note |
