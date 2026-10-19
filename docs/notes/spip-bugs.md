@@ -7,6 +7,43 @@ Les erreurs de la **documentation** (`spip/docs`) sont notées à part dans
 Chaque entrée indique la version vérifiée, l'emplacement, une reproduction et une piste de correction. Cocher
 l'entrée et ajouter le lien de la MR une fois remontée.
 
+## Revérification du 2026-10-19
+
+L'instance de référence `/src/jetables/v5.0-dev` a été mise à jour avant les essais
+(`composer update spip/ecrire --with-dependencies`, puis `bin/spip spip:cache:warmup --clear`).
+La constante `Spip\SpipVersion::VERSION` vaut toujours `5.0.0-beta` ; PHP CLI : 8.4.25.
+
+Révisions vérifiées le 2026-10-19 :
+
+| Dépôt / paquet | Révision |
+|---|---|
+| `spip/spip` (`master`) | `c8e329575c2d4e9aa28853db1606c34214c2845f` |
+| `spip/ecrire` (`5.x`) | `218a10d1bd9be718f2e0a1743118bc9d2351f856` (2026-10-19) |
+| `spip/framework` | `d0e8c97e62cde5cbf89805e5b874e46d094cd401` |
+| `spip-league/kernel` | `e0e80032b7fcb0d6d84f2fc53088119c6f1b2ab3` |
+| `spip-league/pipeline-bridge` | `b80ffcead6b188331f98e2d0fc83506d664b512a` |
+| `spip-league/plugin-manager` | `689c9253c292353f68755d5b1e95a9a4fadb304a` |
+| `spip-league/console` | `c5b9d472aab44437efcbf7e11e48a7fe3f4d918d` |
+
+`git ls-remote` confirme les têtes amont de `spip/spip`, `spip/ecrire` et des quatre paquets
+`spip-league` ci-dessus. Après mise à jour, `composer outdated 'spip*' --format=json` renvoie
+`{"installed": []}`. Le dépôt racine n'a pas changé ; le cœur `spip/ecrire` a avancé depuis `26bfe470`.
+
+| Entrée | Résultat au 2026-10-19 | Vérification effectuée |
+|---|---|---|
+| 1 — tâches cron | Toujours reproduit, deux blocages présents | Registre accessible, tâche `optimiser` enregistrée, garde à `false`, service privé inaccessible ; signature de la ligne SQL valide et `queue_start_job()` à `false`. |
+| 2 — dépréciation | Toujours présent | Lecture de l'attribut par `ReflectionMethod` et `method_exists(Spip\Framework\Spip::class, 'getProjectDir')` à `false`. |
+| 3 — commandes d'installation / activation | Demande d'évolution toujours pertinente | Exécution de `bin/spip list --raw` : aucune commande d'installation ou d'activation de plugin. Le parcours spip-cli n'a pas été réexécuté. |
+| 4 — environnement des plugins | Toujours reproduit | Appel réel de `PluginSymfonyServicesCollector::loadIntoContainer()` sur un fichier de services d'essai : `NULL` en `prod` et `dev` ; le même fichier chargé avec un `PhpFileLoader` recevant l'environnement donne respectivement `'prod'` et `'dev'`. |
+| 5 — argument vide | Toujours reproduit | Compilation par `recuperer_fond()` : argument omis → même `TypeError` ; argument `''` → URL d'action générée. Pas de nouvel essai HTTP. |
+| 6 — répertoires | Incohérences toujours reproduites ; cause 2 précisée ci-dessous | Avec `SPIP_CACHE_DIR`, artefacts créés dans le cache externe mais `_DIR_CACHE_BOOT` reste `tmp/cache/boot/`. Avec `spip.dirs.tmp=/srv/site-tmp/`, `getTmpDir()` donne `<projet>/srv/site-tmp/`, son relatif `srv/site-tmp/`, et le cache reste `<projet>/tmp/cache/`. Pas de nouvel essai HTTP. |
+| 7 — fin d'installation | Causes toujours présentes à la lecture | Le `&&` court-circuite encore les écritures ; le conseil `mes_options.php` et les constantes définies par le kernel sont inchangés. Pas de nouvelle installation complète ; le blocage de la tâche de maintenance est confirmé par l'entrée 1. |
+| 8 — protection de `var/` et `bin/` | Absence de protection toujours présente à la lecture | Appelants de `verifier_htaccess()` et `htaccess.txt` relus : aucune protection dédiée ; aucun `.htaccess` dans ces deux répertoires sur l'instance. Pas de nouvel essai Apache. |
+| 9 — version CLI | Toujours reproduit | `bin/spip about` affiche `dev`, `bin/spip spip:info` affiche `5.0.0-beta`. |
+
+Les essais HTTP et les installations complètes datés du 2026-10-18 dans les entrées suivantes restent
+les observations historiques ; le tableau distingue les nouveaux essais des vérifications par lecture.
+
 ---
 
 ## 1. Les tâches `#[AsCronTask]` ne sont jamais exécutées par la file
@@ -14,11 +51,10 @@ l'entrée et ajouter le lien de la MR une fois remontée.
 - [ ] MR remontée :
 
 **Dépôt :** `spip/spip` (`ecrire/inc/queue.php`), et `spip-league/pipeline-bridge` pour la seconde cause.
-**Vérifié sur :** SPIP 5.0.0-beta, `spip/spip` `c8e329575` (2026-09-22), avec `ecrire` `2cd5843f` (lock de ce
-commit) puis `ecrire` `26bfe470` (2026-10-07, dernière révision amont au 2026-10-18), `spip-league/pipeline-bridge`
-`b80ffcead`, `spip-league/kernel` `e0e80032b`. Toujours présent le 2026-10-18 : sur `26bfe470`,
-`queue_genie_can_use_service_registry()` renvoie `false` et `$c->has('Spip\Cron\Task\OptimiserTask')` renvoie
-`false` (reproduction ci-dessous exécutée, hors appel à `queue_start_job()`).
+**Vérifié sur :** SPIP 5.0.0-beta, `spip/spip` `c8e329575`, `spip/ecrire` `218a10d1`
+(tête de `5.x` au 2026-10-19), `spip-league/pipeline-bridge` `b80ffcead`, `spip-league/kernel` `e0e80032b`.
+Toujours reproduit le 2026-10-19, y compris l'appel à `queue_start_job()` sur une ligne SQL de signature valide.
+Déjà constaté avec `ecrire` `2cd5843f`, puis `26bfe470`.
 
 **Symptôme :** une tâche déclarée par `#[AsCronTask]` est bien enregistrée (`spip.genie_registry`) et planifiée dans
 `spip_jobs` (`inclure = 'service:'`), mais `queue_start_job()` renvoie `false` sans l'exécuter. Les tâches du cœur
@@ -35,18 +71,58 @@ n'est journalisé (`queue.log` ne contient jamais `start (cron service)`).
    services de tâches sont privés (chargés par `load()` sans `->public()`) et `SpipGenieTaskPass` ne les rend pas
    publics : `has()` renvoie `false` et `get()` lève « service … has been removed or inlined ».
 
-**Reproduction** (instance 5.0, PHP 8.4, script amorcé comme `bin/spip`) :
+**Reproduction autonome** (instance 5.0 installée, PHP 8.4, à lancer depuis la racine du site).
+Enregistrer ce script sous `repro-cron.php`, puis exécuter `php repro-cron.php` :
 
 ```php
+<?php
+require __DIR__ . '/vendor/autoload.php';
+\SpipLeague\Component\Kernel\Kernel::boot();
+require __DIR__ . '/ecrire/inc_version.php';
 include_spip('base/abstract_sql');
 include_spip('inc/queue');
-var_dump(queue_genie_can_use_service_registry());          // false
-$row = sql_fetsel('*', 'spip_jobs', "fonction='optimiser'");
-var_dump(queue_start_job($row));                           // false, tâche non exécutée
+
+// 1. Le registre contient bien la tâche « optimiser ».
 $c = \Spip\Framework\Spip::app()->getContainer();
-$t = $c->get('spip.genie_registry')->get('optimiser');
-var_dump($c->has($t['service']));                          // false
+$tache = $c->get('spip.genie_registry')->get('optimiser');
+echo "Tâche enregistrée : ";
+var_dump($tache !== null);                           // true
+
+// 2. Premier blocage : la file croit le registre indisponible.
+echo "Fonction app globale : ";
+var_dump(function_exists('app'));                    // false
+echo "Fonction app du kernel : ";
+var_dump(function_exists('SpipLeague\\Component\\Kernel\\app')); // true
+echo "Registre utilisable par la file : ";
+var_dump(queue_genie_can_use_service_registry());     // false
+
+// 3. Second blocage, indépendant : le service n'est pas accessible.
+echo "Service accessible depuis le conteneur : ";
+var_dump($tache !== null && $c->has($tache['service'])); // false
+
+// 4. Vérifier aussi le point d'entrée sur une tâche réellement planifiée.
+$job = sql_fetsel('*', 'spip_jobs', "fonction='optimiser' AND inclure='service:'");
+if (!$job) {
+    echo "Aucune tâche optimiser/service: en base ; étape 4 non testée.\n";
+} elseif (!queue_verify_signed_job($job)) {
+    echo "Signature invalide ; étape 4 non concluante.\n";
+} elseif (!queue_genie_can_use_service_registry()) {
+    echo "Signature valide ; résultat de queue_start_job : ";
+    var_dump(queue_start_job($job));                 // false
+} else {
+    echo "Premier blocage levé ; tâche non lancée par ce diagnostic.\n";
+}
 ```
+
+**Lecture du résultat :** la tâche existe dans le registre (`true`), mais la file refuse de l'utiliser (`false`).
+Le `use function …\app` de `queue.php` permet d'appeler `app()` dans ce fichier ; il ne crée pas de fonction
+**globale** nommée `app`, celle que cherche `function_exists('app')`. L'étape 3 montre séparément que corriger
+ce test ne suffirait pas : le service de la tâche reste privé. L'étape 4 confirme le refus d'exécution dans la
+file, après avoir exclu une signature invalide comme cause du `false`.
+
+Sur l'instance testée le 2026-10-19, la ligne SQL existe, sa signature est valide et l'appel renvoie `false`.
+Ce script ne crée ni ne retire de job ; dans l'état bogué vérifié, il n'exécute pas la tâche `optimiser`.
+Supprimer `repro-cron.php` après l'essai.
 
 **Pistes :** `function_exists('SpipLeague\Component\Kernel\app')` (ou tester directement la classe et le conteneur via
 la façade `Spip::app()`) ; dans `SpipGenieTaskPass`, rendre les services tagués `spip.genie_task` publics
@@ -208,9 +284,11 @@ _DIR_CACHE . 'boot/'` sans tenir compte de `SPIP_CACHE_DIR`. `PluginBootCache::f
 `/srv/site-tmp/`) : 500 également. Une trace temporaire dans `BootOrchestrator` montre
 `src/srv/site-tmp/cache/boot/options.php` (le `/` initial a disparu).
 
-**Cause 2 :** `SpipDirectories::relative()` réduit un chemin absolu situé hors du projet en retirant le `/` de tête,
-au lieu de produire un chemin relatif (`../…`) ou de le garder absolu. Par ailleurs `SpipContainerFactory::cacheDir()`
-ignore `spip.dirs.tmp` : le conteneur reste dans `<site>/tmp/cache`.
+**Cause 2 (précisée le 2026-10-19) :** `SpipDirectories::resolveDir()` passe le chemin configuré à
+`Path::join($basePath, $relative)`, même s'il est absolu. Avec `/srv/site-tmp/`, cela produit
+`<projet>/srv/site-tmp/`. `SpipRelativeDirectories::toRelative()` le relativise ensuite correctement en
+`srv/site-tmp/` : la perte du `/` initial observée vient donc de la résolution en amont, pas de cette relativisation.
+Par ailleurs `SpipContainerFactory::cacheDir()` ignore `spip.dirs.tmp` : le conteneur reste dans `<site>/tmp/cache`.
 
 **Reproduction :**
 
@@ -225,7 +303,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://site.local/      # 500
 plus rien n'est écrit dans le `tmp/` du projet.
 
 **Pistes :** dériver `_DIR_CACHE` / `_DIR_CACHE_BOOT` de `SpipDirectories::getCacheDir()` (relativisé) ; faire
-produire à `relative()` un chemin `../` pour les cibles hors projet ; faire suivre `spip.dirs.tmp` à `cacheDir()`.
+respecter les chemins absolus par `resolveDir()` avant leur relativisation ; faire suivre `spip.dirs.tmp` à `cacheDir()`.
 
 ---
 
