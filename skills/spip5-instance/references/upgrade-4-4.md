@@ -7,7 +7,8 @@ copy first.
 ## Before
 
 - 5.0 is a beta: the decision to put a client site on it is the client's.
-- Database upgrade paths: from 3.2+ only, 4.1+ advised, 4.4 ideally. The latest 4.4 is **4.4.28**.
+- Database upgrade paths: from 3.2+ only, 4.1+ advised, 4.4 ideally: first bring the site to the latest published
+  4.4 (see "Which versions" below).
 - 4.4.21 and 5.0.0-beta have the **same core schema** (`2026_08_03_00`): no core database upgrade from a recent 4.4;
   plugins may still upgrade theirs.
 - Inventory the plugins: 5.0 refuses every plugin whose `paquet.xml` `compatibilite` stops at 4
@@ -22,6 +23,23 @@ for f in plugins/*/paquet.xml plugins/auto/*/paquet.xml plugins/auto/*/*/paquet.
 - What does not carry over: `config/ecran_securite.php` (not loaded in 5.0; Guard replaces it,
   `spip.guard.load_threshold` replaces `ECRAN_SECURITE_LOAD`), `ecrire/mes_options.php` (ignored), `_DIR_*` /
   `_NOM_*` in `mes_options.php` (fatal), `_LOG_FILTRE_GRAVITE` (`caches-logs.md`).
+
+## Which versions
+
+Do not rely on a version number written here: look it up the day of the upgrade.
+
+```bash
+# published releases (archives) and the PHP minimum per branch
+curl -s https://www.spip.net/spip_loader.api | jq -r '.versions | keys[] | select(startswith("4.4."))' | sort -V | tail -1
+curl -s https://www.spip.net/spip_loader.api | jq -c '.requirements.php'
+# 5.0 is not published as an archive (only "dev"): current revisions of its branches
+git ls-remote https://git.spip.net/spip/spip.git HEAD
+git ls-remote https://git.spip.net/spip/ecrire.git refs/heads/5.x
+```
+
+On the site, after the upgrade: `composer show spip/ecrire` and `bin/spip spip:info`. This reference was tested on
+2026-10-18/19 with `spip/spip` `c8e329575`, `spip/ecrire` `26bfe470` (branch `5.x`), `spip/framework` `d0e8c97e`; the
+API then listed 4.4.28 as the latest 4.4. Behaviour described here holds for those revisions; recheck on newer ones.
 
 ## Backup
 
@@ -76,8 +94,8 @@ mysql --defaults-extra-file=/srv/backup/db.cnf <rehearsal_database> < /srv/backu
 On the production switch, the shared database is expected; the backup taken just before is the rollback. With
 SQLite, the copied `config/bases/` is already a separate copy.
 
-Then point a staging vhost (rehearsal) or the production vhost (switch) at `/var/www/site5` and, as webmaster, open
-`ecrire/` and `ecrire/?exec=admin_plugin`:
+Then point a staging vhost at `/var/www/site5` and, as webmaster, open `ecrire/` and `ecrire/?exec=admin_plugin`
+(rehearsal); the production switch follows "Switch in a maintenance window" below:
 
 - plugins stopping at 4 are refused: « Impossible d'activer le plugin ../plugins/<name> », « Nécessite SPIP en
   version ≤ 4.* minimum »; plugins declaring `5.*` stay active and appear in `var/state/plugins.php`;
@@ -88,6 +106,42 @@ Then point a staging vhost (rehearsal) or the production vhost (switch) at `/var
 The plugins-dist live in `plugins-dist/spip/<name>/`. Upgrading in place (5.0 files over a 4.4 tree) leaves the old
 flat `plugins-dist/<name>/`: delete them. A leftover `plugins-dist/forum/` was ignored in the test (no error), but
 the documentation asks for their removal.
+
+## Switch in a maintenance window
+
+Between the rehearsal and the switch, the 4.4 site keeps receiving writes (articles, forums, documents in `IMG/`): the
+copies taken earlier are stale. Freeze writes first, then take the final backup, then sync.
+
+1. **Maintenance on** for everyone except the operator's address, on the 4.4 vhost (then on the 5.0 one). Also
+   suspend any system cron that calls the site (SPIP's own cron runs from HTTP hits and is stopped by the 503).
+
+   nginx, in the `server` block:
+
+   ```nginx
+   set $maintenance 1;
+   if ($remote_addr = 203.0.113.10) { set $maintenance 0; }   # operator
+   if ($maintenance) { return 503; }
+   ```
+
+   Apache, at the very top of the root `.htaccess` (before the SPIP rules):
+
+   ```apache
+   RewriteEngine On
+   RewriteCond %{REMOTE_ADDR} !^203\.0\.113\.10$
+   RewriteRule ^ - [R=503,L]
+   ```
+
+   Run with 127.0.0.1 as operator: operator 200 (Apache: the request goes on to the SPIP rules), any other address
+   503 on `/`, `ecrire/` and rewritten URLs.
+2. **Final backup** of the frozen 4.4 site (the "Backup" commands): this is the rollback point.
+3. **Final sync** into `/var/www/site5`: `IMG/` again (`rm -rf /var/www/site5/IMG && cp -a /var/www/site/IMG
+   /var/www/site5/IMG`); SQLite: `cp -a /srv/backup/spip.sqlite /var/www/site5/config/bases/spip.sqlite`;
+   MySQL/MariaDB: put the **production** database back in `/var/www/site5/config/connect.php` (it pointed to the
+   rehearsal database).
+4. Point the production vhost at `/var/www/site5` (maintenance rule included), reload the web server, then, as the
+   operator, open `ecrire/` and `ecrire/?exec=admin_plugin` (plugin schema upgrades run on this hit).
+5. Checks below, as the operator.
+6. **Maintenance off** only when the checks pass. If they fail, roll back (below) while still in maintenance.
 
 ## Checks
 
@@ -100,18 +154,25 @@ the documentation asks for their removal.
 ## Rollback
 
 Once 5.0 has served `ecrire/`, the 4.4 code on that database **half works**: pages answer 200 but the log fills with
-errors (`pipeline desactive`, `spip_connect … non trouve`). Restoring the code alone is not a rollback.
+errors (`pipeline desactive`, `spip_connect … non trouve`). Restoring the code alone is not a rollback, and nobody
+must reach the 4.4 site before its database is restored. Paths are absolute on purpose: the shell is often still in
+`/var/www/site5`.
 
-1. point the vhost back at the 4.4 directory (side by side) or restore the files archive;
-2. restore the database backup:
+1. maintenance on (it is still on if the switch failed);
+2. point the vhost back at `/var/www/site` (side by side) or restore the files archive there;
+3. restore the backup taken in maintenance:
 
 ```bash
-sqlite3 /srv/backup/spip.sqlite ".backup 'config/bases/spip.sqlite'"      # SQLite
-mysql --defaults-extra-file=/srv/backup/db.cnf <database> < /srv/backup/site.sql   # MySQL/MariaDB
+sqlite3 /srv/backup/spip.sqlite ".backup '/var/www/site/config/bases/spip.sqlite'"         # SQLite
+mysql --defaults-extra-file=/srv/backup/db.cnf <database> < /srv/backup/site.sql             # MySQL/MariaDB
 ```
 
-3. purge `tmp/cache/` of the 4.4 site.
+4. purge the 4.4 cache: `rm -rf /var/www/site/tmp/cache/*`;
+5. checks as the operator (public pages, `ecrire/`, `grep spip_version_branche /var/www/site/ecrire/inc_version.php`);
+6. maintenance off.
 
-Verified: `pragma integrity_check` ok, plugin schema back (`medias` 1.8.1), `plugin` meta serialised again, same
-article count, public 200, `ecrire/` 302, `ecrire/inc_version.php` `4.4.21`. One `pipeline desactive` line on the
+Anything written on the 5.0 site after the maintenance was lifted is lost by this rollback.
+
+Verified (SQLite): `pragma integrity_check` ok, plugin schema back (`medias` 1.8.1), `plugin` meta serialised again,
+same article count, public 200, `ecrire/` 302, `spip_version_branche` `4.4.21`. One `pipeline desactive` line on the
 first hit after the purge is the cache being rebuilt; it does not come back.

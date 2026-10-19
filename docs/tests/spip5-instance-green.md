@@ -43,3 +43,14 @@ are wording fixes on points the re-runs exposed; they were not re-run.
 (`bin-spip.md`, `configuration.md`, `caches-logs.md`). `spip5-plugins` GREEN cases 1 and 7 re-run on it (fresh
 subagents, that skill only): **PASS 6/6 and 5/5** — `[5.0.0-dev;5.*]`, PSR-4, `services.php`, `AffichageFinalEvent`
 + `appendToBody()`, warmup + `spip:pipeline:listeners`; full checklist, no spip-cli.
+
+## Review of PR #40 (Codex, 2026-10-19)
+
+| Finding | Change |
+|---|---|
+| P1: writes never frozen; the rollback reopened the 4.4 vhost before restoring the shared database | `upgrade-4-4.md`: "Switch in a maintenance window" (maintenance for all but the operator, final backup, final sync of `IMG/` and the database, switch, checks, reopening); rollback in maintenance, database restored before any visitor, reopening last. nginx and Apache rules run |
+| P2: nginx block without `index index.php;` → 403 on `/` and `ecrire/` | `prerequis.md`: directive added; block re-run as published |
+| P2: SQLite restore to a relative path while the shell is in `/var/www/site5` | `upgrade-4-4.md`: absolute destinations (`/var/www/site/config/bases/spip.sqlite`, `/var/www/site/tmp/cache/`) |
+| User: "latest 4.4: 4.4.28" ages at once | `upgrade-4-4.md` "Which versions": query `spip_loader.api` and `git ls-remote`; tested revisions kept with their date; `SKILL.md` guardrail |
+
+The eight evals were not re-run: they do not cover these procedure details.

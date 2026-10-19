@@ -10,7 +10,7 @@ Verified 2026-10-18, `spip/spip` `c8e329575`, `spip/ecrire` `26bfe470`.
 | Extensions required by the packages | `dom`, `filter`, `iconv`, `json`, `libxml`, `mbstring`, `pcre`, `phar`, `sodium`, `tokenizer`, `xml`, `xmlwriter`, `zip`, `zlib` | `composer check-platform-reqs` |
 | Database | MySQL/MariaDB (`mysqli`) or SQLite (`pdo_sqlite`); PostgreSQL is gone (`ecrire/req/`) | source |
 | Framework | Symfony 8.1 components, resolved by Composer | `composer show` |
-| Distribution | Composer only: `spip_loader.api` lists 4.4.28 (latest 4.4), 4.3.9, 4.2.17 as archives and 5.0 only as `dev` | `https://www.spip.net/spip_loader.api` |
+| Distribution | Composer only for 5.0: `https://www.spip.net/spip_loader.api` lists the published archives per branch and 5.0 only as `dev` (2026-10-18: 4.4.28, 4.3.9, 4.2.17, `dev`); query it, `upgrade-4-4.md` "Which versions" | API read |
 
 Check PHP for the web SAPI (PHP-FPM pool or Apache module), not only `php -v` in the shell. Not covered (not
 verified): distribution package names, and extensions beyond those Composer requires (e.g. `gd` for image filters,
@@ -84,9 +84,11 @@ RedirectMatch 404 ^/(var|bin)/
 (run on Apache 2.4 below the `composer.*` line of `htaccess.txt`: `var/state/plugins.php` and `bin/spip` 404, `/`
 200, `ecrire/` 302.)
 
-nginx, run with PHP-FPM 8.4 (all paths above 403/404, `/` 200, `ecrire/` 302):
+nginx, run with PHP-FPM 8.4 (all paths above 403/404, `/` 200, `ecrire/` 302), inside the `server` block (with its
+`root` = project root). Without `index index.php;`, nginx's default index makes `/` and `ecrire/` answer 403:
 
 ```nginx
+index index.php;
 location ~ /\.(?!well-known/) { return 404; }
 location ~ ^/(config|tmp|var|vendor|bin)/ { deny all; }
 location ~ ^/composer\.(json|lock|phar)$ { return 404; }

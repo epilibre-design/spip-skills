@@ -223,3 +223,15 @@ hidden field of its step 2 form (same as 4.x).
 | same without `--no-tablespaces` | prints `Access denied; you need (at least one of) the PROCESS privilege(s) for this operation' when trying to dump tablespaces` for a user limited to its database | **run** |
 | `mysql --defaults-extra-file=<f> <db> < site.sql` | after `drop table spip_mots` and a changed `nom_site`: 28 tables and the original `nom_site` back, public 200 | **run** |
 
+
+## Review fixes (2026-10-19)
+
+Same revisions (`git ls-remote`: `spip/spip` `HEAD` `c8e329575`, `spip/ecrire` `5.x` `26bfe470`, `4.4` `5f67f441b`).
+
+| Question | Result | How |
+|---|---|---|
+| Published nginx block, as written in `prerequis.md` (only the socket path and an absolute `fastcgi_params` include changed for the test prefix) | `/` 200, `ecrire/` 302, `spip.php?page=sommaire` 200, `config/bases/spip.sqlite`, `var/state/plugins.php`, `bin/spip` 403, `composer.json`, `.env.dist` 404 | **run**: nginx + PHP-FPM 8.4 on a fresh copy of `v5.0-dev`, deleted after |
+| Same block without `index index.php;` | `/` and `ecrire/` 403 (nginx default index), other paths unchanged | **run** |
+| nginx maintenance rule (`set $maintenance` / `if ($remote_addr = …)` / `return 503`) + published block | operator (127.0.0.1): `/` 200, `ecrire/` 302, `config/bases/spip.sqlite` 403; other address (127.0.0.2, `curl --interface`): 503 on all | **run** |
+| Apache maintenance rule (`RewriteCond %{REMOTE_ADDR} !^…$`, `RewriteRule ^ - [R=503,L]`) at the top of the 5.0 `htaccess.txt` copied to `.htaccess` | operator: request goes on to the SPIP rules; other address: 503 on `/`, `ecrire/`, `article1.html`, `composer.json`; without the rule 200 | **run**: Apache 2.4.52, static docroot |
+| `spip_loader.api` lookup | `jq -r '.versions \| keys[] \| select(startswith("4.4."))' \| sort -V \| tail -1` → `4.4.28`; `.requirements.php` → `{"master":"8.4.0","4.4":"7.4.0",…}`; `.default_branch` `4.4` | **run** |

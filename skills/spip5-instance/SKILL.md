@@ -63,6 +63,8 @@ checks and the plan.
 ## Guardrails
 
 - Never write a `bin/spip`, spip-cli or Composer command that is not in the references: they were all run.
+- Never give "the latest version" from memory or from these files: query `https://www.spip.net/spip_loader.api`
+  and `git ls-remote` (`upgrade-4-4.md`); the revisions above only date what was tested.
 - Never move `tmp/` with `SPIP_CACHE_DIR` alone or an absolute `spip.dirs.tmp`: both give HTTP 500 on every page in
   the beta (`configuration.md`).
 - After installing or upgrading, check that `config/`, `vendor/`, `var/` and `bin/` are not served
