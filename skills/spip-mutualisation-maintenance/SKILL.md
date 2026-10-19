@@ -34,7 +34,8 @@ runs 5.0 if **any** of: `ecrire/src/SpipVersion.php` declares `VERSION = '5.…'
   freeze writes, preserve the incident state (shared files and every database), then restore the consistent backup
   taken before the upgrade (the release the farm ran, shared files and every site's database).
 
-Details: none upstream yet; `spip-migration-5` covers single sites.
+Details: none upstream yet; a single 5.0 site (install, upgrade, rollback, diagnostics): `spip5-instance`; its code:
+`spip-migration-5`.
 
 ## Supported scope
 

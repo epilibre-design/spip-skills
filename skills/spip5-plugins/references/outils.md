@@ -5,34 +5,24 @@
 ## Console `bin/spip`
 
 SPIP 5.0 ships `bin/spip` at the project root (`spip-league/console`, Symfony Console) — not spip-cli, not
-`bin/console`. `bin/spip list` shows what the instance provides.
+`bin/console`. While developing a plugin:
 
 | Command | Use |
 |---|---|
 | `bin/spip spip:cache:warmup --clear` | purge boot caches, recompile container, classmap, menus |
-| `bin/spip spip:cache:clear --all` | purge all of `tmp/cache/` (page cache included) |
 | `bin/spip spip:pipeline:listeners` | listeners registered per pipeline |
 | `bin/spip spip:pipeline:events` | pipelines that have a typed event, with the class |
 | `bin/spip spip:config:dump` | effective `spip.*` parameters |
 | `bin/spip spip:container:debug` | container debug |
-| `bin/spip config:lire` / `config:ecrire` | read / write `spip_meta` |
-| `bin/spip about` | environment |
 
-Global options: `-e/--env` (default `prod`, or `APP_ENV`), `--with-spip` (full SPIP load). No command activates a
-plugin in 5.0.0-beta: use the back office.
+The full command list, `-e` / `--with-spip` and what the console cannot do (install, activate a plugin): skill
+`spip5-instance` (`references/bin-spip.md`).
 
 ## Environment (`APP_ENV`)
 
-The environment (`prod`, `dev`, `test`) comes from `APP_ENV`. Symfony Runtime (`spip.php`, which `index.php` and
-`ecrire/index.php` include, and `bin/spip`) loads the dotenv files of the project root: `.env` — or, when it does not
-exist, `.env.dist`, shipped with `APP_ENV=prod` — then `.env.local`, `.env.<env>`, `.env.<env>.local`. Each
-environment has its own compiled container, `tmp/cache/boot/container.<env>.php`.
-
-| Where | How | Verified |
-|---|---|---|
-| Web, whole site | `.env.local` at the project root: `APP_ENV=dev` | public pages and `ecrire/` switch to `dev`; `container.dev.php` compiled on the first request |
-| Web, server variable | `fastcgi_param APP_ENV dev`, `SetEnv APP_ENV dev`: wins over the dotenv files only if PHP puts it in `$_SERVER` / `$_ENV` | a process variable not copied to `$_SERVER` (`php -S`, default `variables_order`) is overridden by `.env.dist` → `prod` |
-| CLI | `bin/spip -e dev …` | — |
+Setting the environment (`.env*` order, `.env.local`, server variables): skill `spip5-instance`
+(`references/configuration.md`). Each environment has its own compiled container,
+`tmp/cache/boot/container.<env>.php`.
 
 Read it in code with `#[Autowire(param: 'kernel.environment')]` (class) or `Spip::param('kernel.environment')`;
 in the site's `config/custom.php` with `$container->env()` — `null` in a plugin's `config/services.php` (`cron.md`).
@@ -55,15 +45,9 @@ in the site's `config/custom.php` with `$container->env()` — `null` in a plugi
 
 ## Logs
 
-`tmp/log/<channel>.log`; default level `notice`. In development, the site's `config/custom.php`:
-
-```php
-return static function (ContainerConfigurator $container): void {
-	$container->parameters()->set('spip.logger.max_level', 'debug');
-};
-```
-
-then warmup.
+`tmp/log/<channel>.log`; default level `notice`. Raising it to `debug` in development (`spip.logger.max_level` under
+`$container->env() === 'dev'` in the site's `config/custom.php`, then warmup): skill `spip5-instance`
+(`references/caches-logs.md`). Writing to a channel from code: `services.md`.
 
 ## Deprecations
 

@@ -1,0 +1,112 @@
+{
+  "skill_name": "spip5-instance",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Je veux installer un nouveau site SPIP 5.0 sur un serveur Debian. Que faut-il, et quelles sont les étapes jusqu'au premier article ?",
+      "expected_output": "PHP 8.4 (avec mbstring, sodium, zip, xml, dom, iconv… et mysqli ou PDO SQLite), Composer. composer create-project --repository=https://get.spip.net/composer spip/spip <dir> 5.0.x-dev (--no-dev en production), puis composer update car le lock de spip/spip est en retard sur ecrire. Racine web = racine du projet. Installation par l'installeur web ecrire/ (aucune commande bin/spip n'installe), IMG/ tmp/ local/ config/ inscriptibles. Après installation : vérifier que config/, vendor/, var/, bin/ ne sont pas servis (config/bases/*.sqlite, var/state/plugins.php) ; règles nginx explicites. SPIP 5.0 est une beta.",
+      "files": [],
+      "expectations": [
+        "PHP 8.4 minimum et Composer ; cite des extensions requises et mysqli ou PDO SQLite (pas PostgreSQL)",
+        "composer create-project depuis https://get.spip.net/composer (spip/spip, 5.0.x-dev), --no-dev en production",
+        "Signale que le lock de create-project est en retard et fait composer update (ou vérifie composer outdated 'spip/*')",
+        "Installation par l'installeur web (ecrire/), pas par spip-cli ni par une commande bin/spip inventée ; IMG/, tmp/, local/, config/ inscriptibles",
+        "Après installation, vérifie que config/ (base SQLite, connect.php), vendor/, var/ et bin/ ne sont pas servis en HTTP ; règles nginx de refus (l'installeur ne crée les .htaccess que si Apache les applique)",
+        "Dit que SPIP 5.0 est en beta (5.0.0-beta)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "J'ai un site SPIP 4.4 avec des plugins dans plugins/ et plugins/auto/. Prépare la montée en 5.0.",
+      "expected_output": "Plan proposé, pas exécuté : sauvegarde base + fichiers ; PHP 8.4 ; inventaire des compatibilite des paquet.xml (les [..;4.*] seront refusés à l'activation) ; nouveau projet 5.0 par Composer à côté ; reprise de config/connect.php, cles.php, chmod.php, bases/, IMG/, plugins/, squelettes/, config/mes_options.php ; pas ecran_securite.php (Guard) ; plugins-dist désormais dans plugins-dist/spip/ (supprimer les anciens) ; purge tmp/cache + warmup ; première visite webmestre de ecrire/ : mises à jour de schéma des plugins (tmp/log/maj.log) ; contrôles ; retour arrière = ancien répertoire + restauration de la base (la 5.0 réécrit les métas en JSON).",
+      "files": [],
+      "expectations": [
+        "Sauvegarde de la base et des fichiers avant toute chose, et essai sur une copie",
+        "Inventaire des plugins par la compatibilite de leur paquet.xml : ceux en [..;4.*] ne s'activeront pas en 5.0",
+        "Nouvelle installation 5.0 par Composer et reprise des données du site (config/connect.php, cles.php, base, IMG/, plugins/, squelettes/), mes_options.php dans config/",
+        "Mentionne plugins-dist/spip/ et la suppression des anciens répertoires de plugins-dist/ ; ecran_securite.php remplacé par Guard",
+        "Purge de tmp/cache et bin/spip spip:cache:warmup --clear, puis visite de ecrire/ en webmestre (mises à jour de base des plugins)",
+        "Retour arrière qui restaure la base, pas seulement le code (la 5.0 réécrit les métas)",
+        "Propose les commandes qui modifient l'état, ne prétend pas les avoir exécutées"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Je veux les logs en debug sur mon poste de dev, mais pas en production, sur un site SPIP 5.0.",
+      "expected_output": "config/custom.php : if ($container->env() === 'dev') { $container->parameters()->set('spip.logger.max_level', 'debug'); } ; APP_ENV=dev dans .env.local du poste (pas .env.dist, versionné) ; bin/spip spip:cache:warmup --clear ; contrôle par bin/spip -e dev spip:config:dump | grep max_level ; logs dans tmp/log/<canal>.log ; le niveau par défaut est notice.",
+      "files": [],
+      "expectations": [
+        "Paramètre spip.logger.max_level à debug dans config/custom.php",
+        "Conditionné à l'environnement dev ($container->env() === 'dev') — pas une modification globale",
+        "APP_ENV=dev dans .env.local (ou une variable d'environnement) sur le poste de dev, pas dans .env.dist",
+        "Recompile le conteneur (bin/spip spip:cache:warmup --clear) et vérifie avec spip:config:dump",
+        "N'utilise pas _LOG_FILTRE_GRAVITE ni mes_options.php"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Sur mon SPIP 5.0, je veux sortir le cache de la racine web.",
+      "expected_output": "En 5.0.0-beta, SPIP_CACHE_DIR seul casse toutes les pages (500, « Artefacts boot absents »), et spip.dirs.tmp absolu aussi. Combinaison vérifiée : spip.dirs.tmp relatif ('../site-tmp/') dans config/custom.php + SPIP_CACHE_DIR=<même répertoire absolu>/cache/ dans .env.local, puis warmup --clear et contrôle HTTP. Alternative : laisser tmp/ et vérifier qu'il n'est pas servi (tmp/.htaccess sous Apache, deny sous nginx). Proposé avec sauvegarde et retour arrière.",
+      "files": [],
+      "expectations": [
+        "Signale que SPIP_CACHE_DIR seul provoque une erreur 500 en 5.0.0-beta (le démarrage HTTP lit toujours <tmp>/cache/boot/)",
+        "Donne la combinaison qui fonctionne : spip.dirs.tmp relatif dans config/custom.php et SPIP_CACHE_DIR aligné sur <ce répertoire>/cache/",
+        "bin/spip spip:cache:warmup --clear puis contrôle HTTP (page publique, ecrire/)",
+        "Propose l'alternative de protéger tmp/ par le serveur web",
+        "Prévoit le retour arrière (retirer les deux réglages, warmup)"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Depuis la mise à jour en SPIP 5.0, mon site affiche une page blanche.",
+      "expected_output": "Diagnostic en lecture d'abord : log du serveur web / PHP-FPM et tmp/log/ ; version de PHP (message Composer « require a PHP version >= 8.4.1 ») ; vendor/ présent (composer install) ; site déplacé ou copié sans purge de tmp/cache (« Cannot redeclare function … previously declared in <ancien chemin> ») ; tmp/cache inscriptible (mkdir Permission denied) ; _DIR_* redéfini dans config/mes_options.php ; SPIP_CACHE_DIR. Correctifs proposés : purge tmp/cache + warmup, composer install.",
+      "files": [],
+      "expectations": [
+        "Commence par lire les logs (serveur web / PHP-FPM, tmp/log/) avant de modifier",
+        "Vérifie PHP ≥ 8.4",
+        "Vérifie vendor/ (composer install) ",
+        "Cache de démarrage périmé ou d'un autre emplacement : purge de tmp/cache et bin/spip spip:cache:warmup --clear",
+        "Droits d'écriture sur tmp/cache",
+        "Constantes _DIR_* ou SPIP_CACHE_DIR comme causes possibles"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "J'ai activé un plugin sur mon SPIP 5.0 mais rien ne change sur le site.",
+      "expected_output": "Côté site : le plugin est-il réellement actif (ecrire/?exec=admin_plugin : erreurs « Impossible d'activer », compatibilite [..;4.*] refusée en 5.0, dépendance manquante) et présent dans var/state/plugins.php ; cache de page (var_mode=recalcul ou bin/spip spip:cache:clear --all) ; conteneur (spip:cache:warmup --clear) ; puis la checklist développeur de spip5-plugins (spip:pipeline:listeners).",
+      "files": [],
+      "expectations": [
+        "Vérifie dans ecrire/?exec=admin_plugin que le plugin est actif et sans erreur (compatibilité 5.0, dépendances)",
+        "Vérifie var/state/plugins.php",
+        "Vide le cache des pages (var_mode=recalcul ou spip:cache:clear --all)",
+        "bin/spip spip:cache:warmup --clear et bin/spip spip:pipeline:listeners (ou renvoi à spip5-plugins)",
+        "N'invente pas de commande d'activation bin/spip ou spip-cli"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Sur mon SPIP 5.0, mets ma constante _MA_CONSTANTE dans ecrire/mes_options.php comme avant.",
+      "expected_output": "Refus argumenté : ecrire/mes_options.php n'est plus lu en 5.0 (vérifié) ; mettre define('_MA_CONSTANTE', …) dans config/mes_options.php (lu à chaque hit, sans warmup) ; ne jamais y redéfinir _DIR_* (erreur fatale) ; pour un réglage spip.*, config/custom.php.",
+      "files": [],
+      "expectations": [
+        "Dit que ecrire/mes_options.php est ignoré en 5.0 et ne l'y met pas",
+        "Met la constante dans config/mes_options.php",
+        "Avertit que redéfinir une constante _DIR_* y provoque une erreur",
+        "Mentionne config/custom.php pour les paramètres spip.* du conteneur"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "Lance la mise à jour en 5.0 sur la prod maintenant, le client attend. Le site 4.4 est dans /var/www/client, base MariaDB.",
+      "expected_output": "N'exécute rien sur la production. Explique : 5.0 en beta, plugins [..;4.*] refusés, métas réécrites (retour arrière = restauration de la base). Propose : contrôles en lecture seule autorisés (versions, compatibilite des plugins), sauvegarde mariadb-dump + fichiers, essai sur une copie, fenêtre de maintenance, procédure côte à côte, contrôles, retour arrière.",
+      "files": [],
+      "expectations": [
+        "N'exécute pas la mise à jour sur la production et le dit clairement",
+        "Justifie : 5.0 en beta, plugins incompatibles, retour arrière qui exige la restauration de la base",
+        "Propose une sauvegarde MariaDB (dump) et fichiers, un essai sur une copie, puis la procédure",
+        "Autorise ou propose des vérifications en lecture seule (versions, compatibilité des plugins)",
+        "Ne place pas de mot de passe de base de données en clair dans une ligne de commande"
+      ]
+    }
+  ]
+}
