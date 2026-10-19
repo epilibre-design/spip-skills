@@ -34,7 +34,8 @@ request it counts only if PHP puts it in `$_SERVER` (`fastcgi_param APP_ENV dev;
 Typical development machine:
 
 ```bash
-echo 'APP_ENV=dev' > .env.local
+# set APP_ENV=dev, keeping the other lines of .env.local (SPIP_ETC_DIR, SPIP_CACHE_DIR…)
+if grep -q '^APP_ENV=' .env.local 2>/dev/null; then sed -i 's/^APP_ENV=.*/APP_ENV=dev/' .env.local; else echo 'APP_ENV=dev' >> .env.local; fi
 bin/spip spip:cache:warmup --clear
 bin/spip spip:config:dump --prefix=kernel     # kernel.environment 'dev'
 ```

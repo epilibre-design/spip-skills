@@ -54,3 +54,12 @@ subagents, that skill only): **PASS 6/6 and 5/5** — `[5.0.0-dev;5.*]`, PSR-4, 
 | User: "latest 4.4: 4.4.28" ages at once | `upgrade-4-4.md` "Which versions": query `spip_loader.api` and `git ls-remote`; tested revisions kept with their date; `SKILL.md` guardrail |
 
 The eight evals were not re-run: they do not cover these procedure details.
+
+## Review of PR #40 (Greptile, 2026-10-19)
+
+| Finding | Change |
+|---|---|
+| P1: SQLite `cp -a config/bases` while the 4.4 site may write | `upgrade-4-4.md`: the copied file is replaced by `sqlite3 … ".backup '…'"` + `pragma integrity_check`; the switch uses the backup taken in maintenance |
+| P1: no write pause before the final copy | same fix as the Codex P1 (maintenance window) |
+| P1: `echo 'APP_ENV=dev' > .env.local` erases `SPIP_ETC_DIR` / `SPIP_CACHE_DIR` | `configuration.md`: update or append `APP_ENV` only; run on a scratch file (absent, without `APP_ENV`, with `APP_ENV=prod`: other lines kept) |
+| P2: `spip5-plugins` now points to `spip5-instance`, the upload note did not say so | `README.md`: the three skills are uploaded and updated together |

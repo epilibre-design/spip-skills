@@ -95,8 +95,9 @@ Custom skill installation is available in Customize > Skills.
 5. Upload the ZIP file.
 6. The skill appears in your list and can be enabled or disabled.
 
-Dependencies: `spip-migration-5` relies on `spip5-plugins` for the 5.0 target code. Upload and enable **both**,
-and update them together.
+Dependencies: `spip-migration-5` relies on `spip5-plugins` for the 5.0 target code, and `spip5-plugins` relies on
+`spip5-instance` for the console, the environment (`.env*`, `APP_ENV`) and the log level. Upload and enable all
+three, and update them together.
 
 Important notes:
 

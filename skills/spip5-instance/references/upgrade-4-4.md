@@ -72,6 +72,9 @@ cd /var/www/site5 && composer update --no-dev
 # data from the 4.4 site
 cp -a /var/www/site/config/connect.php /var/www/site/config/cles.php /var/www/site/config/chmod.php config/
 cp -a /var/www/site/config/bases config/            # SQLite only; MySQL keeps its server
+# SQLite: replace the copied file by a consistent copy (the 4.4 site may write while cp runs)
+sqlite3 /var/www/site/config/bases/spip.sqlite ".backup '/var/www/site5/config/bases/spip.sqlite'"
+sqlite3 /var/www/site5/config/bases/spip.sqlite "pragma integrity_check;"     # ok
 cp -a /var/www/site/config/.htaccess config/        # Apache: keep the deny file
 cp -a /var/www/site/config/mes_options.php config/  # if it exists, after removing _DIR_* / _NOM_* defines
 rm -rf IMG && cp -a /var/www/site/IMG IMG
