@@ -180,3 +180,114 @@ fonction de balise quand `phraser_arg()` a mis `param` à `false`.
 
 **Contournement :** écrire l'argument vide `''`, ou `#ENV{vide}`. Documenté dans `spip-plugins`
 (`references/actions.md`).
+
+---
+
+## 6. `SPIP_CACHE_DIR` casse le site, et `spip.dirs.tmp` absolu est tronqué
+
+- [ ] MR remontée :
+
+**Dépôts :** `spip-league/kernel` (`src/Directory/LegacyDirectoryConstants.php`, `src/Directory/SpipDirectories.php`,
+`src/SpipContainerFactory.php`). **Vérifié sur :** SPIP 5.0.0-beta, `spip/spip` `c8e329575`, `spip/ecrire`
+`26bfe470`, `spip/framework` `d0e8c97e`, `spip-league/kernel` `e0e80032b` (dernières révisions amont au
+2026-10-18), PHP 8.4.25. Exécuté sur une copie jetable de l'instance (compte rendu :
+`docs/tests/spip5-instance-verifications.md`, section « Directories », branche `feat/spip5-instance`, PR #40).
+
+**Symptôme 1 :** `SPIP_CACHE_DIR=/chemin/absolu/` dans `.env.local` (variable documentée dans
+`guides/migration/environnement-kernel.md`), puis `bin/spip spip:cache:warmup --clear` : toutes les requêtes HTTP
+renvoient 500, « Artefacts boot absents : options.php introuvable. Le cache boot doit être régénéré en phase
+pré-HTTP. » (`vendor/spip/framework/src/Boot/BootOrchestrator.php:32`).
+
+**Cause 1 :** la compilation (`bin/spip`) écrit `boot/` et le conteneur dans `SPIP_CACHE_DIR`
+(`SpipDirectories::getCacheDir()`, `SpipContainerFactory::cacheDir()`), mais côté HTTP
+`LegacyDirectoryConstants::defineAll()` définit `_DIR_CACHE = $dirTmp . 'cache/'` et `_DIR_CACHE_BOOT =
+_DIR_CACHE . 'boot/'` sans tenir compte de `SPIP_CACHE_DIR`. `PluginBootCache::fromGlobals()` cherche donc
+`tmp/cache/boot/options.php`.
+
+**Symptôme 2 :** `spip.dirs.tmp` défini en chemin absolu hors du projet dans `config/custom.php` (par exemple
+`/srv/site-tmp/`) : 500 également. Une trace temporaire dans `BootOrchestrator` montre
+`src/srv/site-tmp/cache/boot/options.php` (le `/` initial a disparu).
+
+**Cause 2 :** `SpipDirectories::relative()` réduit un chemin absolu situé hors du projet en retirant le `/` de tête,
+au lieu de produire un chemin relatif (`../…`) ou de le garder absolu. Par ailleurs `SpipContainerFactory::cacheDir()`
+ignore `spip.dirs.tmp` : le conteneur reste dans `<site>/tmp/cache`.
+
+**Reproduction :**
+
+```bash
+echo 'SPIP_CACHE_DIR=/srv/site-cache/' >> .env.local
+bin/spip spip:cache:warmup --clear
+curl -s -o /dev/null -w '%{http_code}\n' http://site.local/      # 500
+```
+
+**Contournement vérifié :** `spip.dirs.tmp` **relatif** (`'../site-tmp/'`) dans `config/custom.php` et
+`SPIP_CACHE_DIR=<même répertoire absolu>/cache/` dans `.env.local`, puis warmup : pages publiques 200, `ecrire/` 302,
+plus rien n'est écrit dans le `tmp/` du projet.
+
+**Pistes :** dériver `_DIR_CACHE` / `_DIR_CACHE_BOOT` de `SpipDirectories::getCacheDir()` (relativisé) ; faire
+produire à `relative()` un chemin `../` pour les cibles hors projet ; faire suivre `spip.dirs.tmp` à `cacheDir()`.
+
+---
+
+## 7. L'installeur s'arrête au premier `.htaccess` inopérant, avec un conseil obsolète
+
+- [ ] MR remontée :
+
+**Dépôt :** `spip/ecrire` (`install/etape_fin.php`, `install_verifier_htaccess()` ; `inc/acces.php`,
+`verifier_htaccess()`). **Vérifié sur :** SPIP 5.0.0-beta, `spip/ecrire` `26bfe470`, deux installations neuves
+exécutées (SQLite) : serveur PHP intégré, puis Apache 2.4.52 + PHP-FPM 8.4.
+
+**Symptôme :** sous un serveur qui ignore les `.htaccess` (nginx, serveur PHP intégré), la fin d'installation n'écrit
+que `tmp/.htaccess` et affiche « htaccess inopérant ». `config/` et `vendor/` n'ont aucun fichier de refus. Sous
+Apache, mais sans `config/.htaccess`, une requête directe sur `config/bases/spip.sqlite` télécharge la base (200,
+2,5 Mo, en-tête `SQLite format 3`).
+
+**Causes :**
+
+1. `install_verifier_htaccess()` enchaîne `verifier_htaccess(_DIR_TMP, true) && verifier_htaccess(_DIR_CONNECT, true)
+   && verifier_htaccess(_DIR_VENDOR, true)` : le `&&` s'arrête au premier échec, donc les deux autres fichiers ne sont
+   même pas écrits, alors qu'ils resteraient utiles le jour où le serveur applique les `.htaccess`.
+2. Le message (`htaccess_a_simuler`) conseille de définir `_DIR_TMP` et `_DIR_CONNECT` dans `mes_options.php`. En 5.0,
+   ces constantes sont définies par le kernel avant `mes_options.php` : les redéfinir provoque une erreur fatale
+   (« Constant _DIR_TMP already defined », HTTP 500, vérifié).
+3. La tâche qui réécrit ces fichiers (`ecrire/src/Cron/Task/MaintenanceTask.php`) est une tâche `#[AsCronTask]`, que
+   la file ne lance pas (entrée 1).
+
+**Pistes :** écrire les trois fichiers sans s'arrêter au premier échec, puis tester ; remplacer le conseil par les
+réglages 5.0 (`SPIP_ETC_DIR`, `spip.dirs.*`) ou par une règle de serveur web.
+
+---
+
+## 8. `var/` et `bin/` ne sont protégés par aucun fichier de refus
+
+- [ ] MR ou ticket remonté :
+
+**Dépôts :** `spip/ecrire` (`verifier_htaccess()` appelants), `spip/spip` (`htaccess.txt`). **Vérifié sur :** SPIP
+5.0.0-beta, `spip/spip` `c8e329575`, `spip/ecrire` `26bfe470`, Apache 2.4.52, installation neuve complète (les trois
+`.htaccess` écrits par l'installeur) et `htaccess.txt` copié en `.htaccess`.
+
+**Constat :** `var/state/plugins.php` (manifeste des plugins actifs, chemins de l'instance) et `bin/spip` répondent
+200. Le cœur n'écrit de `.htaccess` que dans `tmp/`, `config/` et `vendor/`, et `htaccess.txt` ne bloque que les
+fichiers commençant par un point et `composer.(json|lock|phar)`.
+
+**Contournement vérifié :** `RedirectMatch 404 ^/(var|bin)/` sous la ligne `composer.*` du `.htaccess` : les deux
+chemins passent en 404, le site et `ecrire/` restent fonctionnels.
+
+**Piste :** ajouter `var/` et `bin/` à `verifier_htaccess()` (ou la règle ci-dessus à `htaccess.txt`).
+
+---
+
+## 9. `bin/spip about` affiche « dev » au lieu de la version de SPIP
+
+- [ ] MR remontée :
+
+**Dépôt :** `spip-league/console` (`src/Command/AboutCommand.php`). **Vérifié sur :** `spip-league/console`
+`c5b9d472a`, SPIP 5.0.0-beta (`spip/spip` `c8e329575`, `spip/ecrire` `26bfe470`).
+
+**Symptôme :** `bin/spip about` affiche `SPIP dev`, alors que `bin/spip spip:info` affiche `Version SPIP
+5.0.0-beta`.
+
+**Cause :** `AboutCommand` lit le paramètre `spip.version`, qui n'est défini nulle part (`spip:config:dump` ne le
+liste pas), puis se rabat sur `getApplication()->getVersion()`, qui vaut `dev`.
+
+**Piste :** déclarer `spip.version` (depuis `Spip\SpipVersion`) ou lire `SpipVersion` directement.
