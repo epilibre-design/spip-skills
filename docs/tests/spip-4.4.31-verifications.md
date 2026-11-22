@@ -27,6 +27,7 @@ Each result says whether it comes from a **run** on the instance or a **source r
 | Direct display of `formulaires/` | `?page=formulaires/login`, `?page=formulaires/recherche` → 403 (anonymous) | `curl` on copy (port 18932) |
 | 404 response | `?page=article&id_article=999999` → `404 Not Found`, `Cache-Control: no-store, no-cache, must-revalidate` | `curl -D -` on copy |
 | Ajax context storage | after page views: `tmp/cache/contextes/7/791602947f1814b7c90b2c66c06eabe4` (subdirectory = first hex char of the md5) | `find` on copy |
+| Autorisation chain (securite#4931) | with `autoriser_chose_dist()` and `autoriser_truc_faire_dist()` defined, visitor `6forum`: `autoriser('voir','chose')` → true (via `autoriser_voir_dist`), `autoriser('supprimer','chose')` → false (via `autoriser_defaut_dist`), `autoriser_chose_dist()` never entered; `autoriser('supprimer','truc')` → true, `autoriser_truc_faire_dist()` entered | CLI on copy `jetable-4431-audit` |
 
 ## Source reads
 

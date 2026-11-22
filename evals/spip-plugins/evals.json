@@ -66,6 +66,17 @@
         "Le deuxième argument est 'item' et le troisième est l'identifiant de l'objet",
         "Un comportement défensif est implémenté quand autoriser() retourne false (return, spip_log, ou erreur)"
       ]
+    },
+    {
+      "id": 6,
+      "prompt": "Dans mon plugin 'acme' pour SPIP 4.4, je veux une seule fonction d'autorisation qui couvre toutes les actions (voir, modifier, supprimer…) sur mon objet 'chose'. Comment la nommer et où SPIP la cherche-t-il ?",
+      "expected_output": "Une fonction autoriser_chose_faire_dist(), avec la chaîne de recherche de autoriser_dist() depuis 4.4.26 : type_faire puis type + suffixe littéral _faire, puis faire, puis defaut.",
+      "files": [],
+      "expectations": [
+        "La fonction générique par type est nommée autoriser_chose_faire_dist (suffixe littéral _faire)",
+        "La réponse dit que autoriser_chose_dist() n'est plus appelée depuis SPIP 4.4.26",
+        "La chaîne de recherche donnée a 8 étapes dans l'ordre type_faire, type_faire_dist, type_faire (littéral), type_faire_dist (littéral), faire, faire_dist, defaut, defaut_dist"
+      ]
     }
   ]
 }
