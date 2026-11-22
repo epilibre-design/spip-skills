@@ -104,19 +104,34 @@ Adding `{ajax}` to an INCLURE makes the block reloadable without a full page ref
 
 ### How it works
 
-1. SPIP wraps the output in `<div id="spip_ancre_NNN">…</div>`
-2. Any link or form inside that div gets intercepted by SPIP JS
-3. SPIP fetches the new content for just that fond and replaces the div
+1. SPIP wraps the output in a container that carries the encoded context (output of SPIP 4.4.31):
+   `<div class="ajaxbloc ajax-id-1" data-ajax-env="daadbaac…|yo52iYNd…" data-origin="spip.php?page=test_ajax&amp;x=1">`
+2. Links with `class="ajax"` (and forms) inside that div are intercepted by `ajaxCallback.js`
+3. SPIP fetches the new content for just that fond, with the decoded context, and replaces the div
 
 ### Requirements
 
-SPIP's JavaScript must be loaded in the page. Add this in your main squelette:
+SPIP's JavaScript must be loaded in the page: `#INSERT_HEAD` in the `<head>` of the main squelette loads
+jQuery, `jquery.form.js` and `ajaxCallback.js` (`f_jQuery()`, `ecrire/inc/pipelines.php`; more scripts through the
+`jquery_plugins` pipeline). Without `#INSERT_HEAD` the block renders but never reloads.
 
-```html
-[(#CHEMIN{javascript/jquery.form.js}|oui)]
-```
+### Where the Ajax context lives (4.4.26+)
 
-Or use the `spip_javascripts` plugin, which is included by default in SPIP 4.x distributions.
+The context of an Ajax block is no longer carried in the page as a signed blob that a visitor could replay
+(securite#4920, #196, `Spip\Calcul\AjaxContext`):
+
+- `data-ajax-env` = `<md5>|<base64>`. The sensitive part (`fond`, `connect`) is stored server-side in
+  `tmp/cache/contextes/<first hex char of the md5>/<md5>` (or in memoization when `_MEMOIZE_CONTEXTES_AJAX` is
+  `true`); the rest of the `env` travels in the page as signed base64, checked on decoding.
+  `define('_CACHE_CONTEXTES_AJAX', true)` stores the whole context on disk.
+- A context coming from outside (forged `var_ajax_env`) is refused; `$_POST` values of a form are never stored.
+- No context is stored for an empty block or a context containing PHP code.
+- Robots (`_IS_BOT`) get the block **without** the Ajax container (run: `curl -A Googlebot` → plain `<p>…</p>`).
+- The hourly cron `optimiser_contextes` purges old files (up to 50 000 per run).
+
+Consequences: an Ajax reload needs a writable `tmp/cache/`; after emptying `tmp/cache/contextes/`, blocks of pages
+already open stop reloading until the page is reloaded. Everything in the `env` of an Ajax inclusion except
+`fond`/`connect` is readable in the page source — never pass a secret through it.
 
 ### Limitations
 

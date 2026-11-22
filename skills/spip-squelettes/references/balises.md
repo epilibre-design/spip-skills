@@ -227,7 +227,7 @@ La couleur est : #GET{couleur}
 #CACHE{0}
 ```
 
-**Gotcha:** `#CACHE` affects the whole squelette, not individual boucles. Place it at the top of the file. If omitted, SPIP uses a default cache duration (typically 24h).
+**Gotcha:** `#CACHE` affects the whole squelette, not individual boucles. Place it at the top of the file. If omitted, SPIP uses a default cache duration (typically 24h). It is ignored in the private space (4.4.24) and 404 pages are never cached (4.4.25): see `avance.md`.
 
 #### Post-processing with `#FILTRE`
 
