@@ -189,8 +189,17 @@ Use `#POINTS` (the relevance score) to sort results. Only valid inside a `{reche
 | `{par points}` | By search relevance score (only with `{recherche}`) |
 | `{par hasard}` | Random order |
 | `{inverse}` | Reverse any preceding `{par …}` sort |
+| `{par num titre, titre}` | Numbered titles (`1. Un`, `2. Deux`, `10. Dix`) in numeric order, then the others alphabetically (run on 4.4.31: `Un, Deux, Dix, Aaa…, Zzz…`) |
+| `{par sinum titre, …}` | Sort key "has a number / has none", to combine with `num titre` |
+| `{par #ENV{tri}}`, `{par num #ENV{tri}}` | Sort field taken from the context |
 
 Multiple `{par …}` critères can be combined for secondary sort.
+
+**Dynamic sorts:** `{par num #ENV{tri}}` and `{par sinum #ENV{tri}}` give the same order as their static forms only
+since 4.4.30 (#206); on 4.4.0–4.4.29 they mis-sort. Since 4.4.29 (securite#4961) the field name coming from
+`#ENV{tri}` is escaped: a value that is not a plain field (e.g. `tri=titre,(SELECT 1)`) makes the boucle return
+nothing instead of reaching SQL. Still restrict the accepted values in the squelette or the calling code rather
+than passing any request value.
 
 ```html
 <!-- Random featured article from rubrique 5 -->

@@ -29,6 +29,27 @@ Skill names are prefixed by scope: `spip-*` for SPIP core (`spip5-*` for SPIP 5.
 - `spip-mutualisation-maintenance`: SPIP farm inventory, shared updates, backups/rollback, and incident investigation
 - `plugin-escal`: the Escal squelette (noisettes, `escal/config` settings, special pages, layouts, technical mots-clés, spip-cli install)
 
+## Tested SPIP versions
+
+Skills are written against a tested release, not "the latest": each claim comes from a run or a source read recorded
+in `docs/tests/`. On 2026-11-22 the 4.x skills were audited against the `spip/ecrire` changelog 4.4.23 → 4.4.31
+(`docs/tests/spip-4.4.31-audit.md`, details in `docs/tests/spip-4.4.31-verifications.md`; latest 4.4 published that
+day: 4.4.31, `spip/spip` `62485d649`, `spip/ecrire` `5d7078d2`).
+
+| Skill | 4.x facts rechecked on 4.4.31 | Earlier reference |
+|---|---|---|
+| `spip-plugins` | autorisation chain, actions and redirects, job queue, cache, secrets, auth pipelines, traitements | 4.4.22 |
+| `spip-squelettes` | Ajax contexts, sorts, `#CACHE`, 404 | 4.4.22 |
+| `spip-formulaires` | redirects, `traiter()` identification, autosave, `formulaires/` display | 4.4.22 |
+| `spip-logs` | masking of sensitive values | 4.4.22 |
+| `spip-testing` | harness (`tests/`) and install script | 4.4.15 |
+| `spip-mutualisation-maintenance` | core upgrade routes, post-upgrade checks | 4.4.x (2026-08) |
+| `spip-migration-5`, `spip5-instance` | 4.4 side (`_T()`, URL helpers, schema, upgrade rehearsal) | 4.4.21–4.4.28 |
+| `plugin-escal` | spip-cli install recipe (Escal 5.6.15) | 4.4.14 |
+| `spip-lang`, `spip-saisies` | not rechecked (no 4.4.23–4.4.31 change found for them) | as recorded in their tests |
+
+Only the facts listed were re-run; the rest of each skill keeps its earlier reference.
+
 ## Install (copy-based)
 
 Run from the repository root.

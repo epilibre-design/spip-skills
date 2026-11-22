@@ -44,7 +44,7 @@ if (!autoriser('modifier', 'article', 42)) {
 
 // "Can the current visitor access the private space?"
 if (!autoriser('ecrire')) {
-    redirige_par_entete(generer_url_public('login'));
+    redirige_par_entete(generer_url_public('login')); // in an exec/page, not in an action (see actions.md)
 }
 
 // "Is the current visitor a webmaster?"
@@ -68,14 +68,15 @@ stripped, so `'_monplugin'` → lookup of `autoriser_monplugin_configurer[_dist]
 
 ## Lookup chain
 
-`autoriser_dist()` tries functions in this order and uses the first one that exists:
+`autoriser_dist()` tries functions in this order and uses the first one that exists (SPIP 4.4.26+,
+`ecrire/inc/autoriser.php`):
 
 ```
 When $type is non-empty:
   1. autoriser_{type}_{faire}
   2. autoriser_{type}_{faire}_dist
-  3. autoriser_{type}
-  4. autoriser_{type}_dist
+  3. autoriser_{type}_faire        ← literal "faire": generic for every action on this type
+  4. autoriser_{type}_faire_dist
   5. autoriser_{faire}
   6. autoriser_{faire}_dist
   7. autoriser_defaut
@@ -87,6 +88,10 @@ When $type is empty (global checks):
   3. autoriser_defaut
   4. autoriser_defaut_dist
 ```
+
+**Before 4.4.26** steps 3–4 were `autoriser_{type}` / `autoriser_{type}_dist`. Since securite#4931 those names are
+**no longer called, without warning**: the check falls through to `autoriser_{faire}` or `autoriser_defaut`. Rename
+any `autoriser_chose_dist()` to `autoriser_chose_faire_dist()`.
 
 **`_dist` suffix convention:** plugins define `autoriser_X_Y_dist()`. The version without `_dist` is
 a site-level override (placed in `mes_fonctions.php` or a theme). Never define the non-`_dist`
@@ -142,12 +147,13 @@ function autoriser_modererforum_dist($faire, $type, $id, $qui, $opt) {
 }
 ```
 
-### Plugin configuration gate (`configurer_monplugin`)
+### Plugin configuration gate (`autoriser('configurer', '_monplugin')`)
 
 A common pattern for protecting a plugin's configuration page:
 
 ```php
-function autoriser_configurermonplugin_dist($faire, $type, $id, $qui, $opt): bool {
+// autoriser('configurer', '_monplugin') → type 'monplugin', faire 'configurer'
+function autoriser_monplugin_configurer_dist($faire, $type, $id, $qui, $opt): bool {
     return autoriser('configurer', '', $id, $qui, $opt);
     // delegates to autoriser_configurer_dist — requires full admin
 }
@@ -183,11 +189,12 @@ if (!autoriser('configurer', '_monplugin')) { ... }
 | `'webmestre'` | `autoriser_webmestre_dist` | Webmaster-level (requires `webmestre=oui`) |
 | `'configurer'` | `autoriser_configurer_dist` | Site configuration — full admin, not restricted |
 | `'creer'` | `autoriser_creer_dist` | Create any content — full or comité |
-| `'voir'` | falls to `autoriser_defaut_dist` unless overridden | Object visibility |
+| `'voir'` | `autoriser_voir_dist` unless overridden | Object visibility: full admins yes; `auteur` only for admins and rédacteurs; otherwise yes |
 | `'modifier'` | object-specific or `autoriser_defaut_dist` | Edit an object |
 | `'supprimer'` | object-specific or `autoriser_defaut_dist` | Delete an object |
 | `'publier'` | object-specific or `autoriser_defaut_dist` | Change statut to publie |
 | `'publierdans'` | `autoriser_publierdans_dist` | Publish in a specific rubrique |
+| `'modifierliens'` | `autoriser_modifierliens_dist` (generic since 4.4.31, spip/spip#6106) | Add/remove links on an object: `modifier` on it, plus `associer<objets>` when `$opt['lien']['objet']` names the linked type. The private `editer_liens` form checks it on **both** objects of each link; override per type with `autoriser_{type}_modifierliens_dist()` (as `mots` does) |
 
 ---
 

@@ -9,8 +9,12 @@ copy first.
 - 5.0 is a beta: the decision to put a client site on it is the client's.
 - Database upgrade paths: from 3.2+ only, 4.1+ advised, 4.4 ideally: first bring the site to the latest published
   4.4 (see "Which versions" below).
-- 4.4.21 and 5.0.0-beta have the **same core schema** (`2026_08_03_00`): no core database upgrade from a recent 4.4;
-  plugins may still upgrade theirs.
+- Core schema: 4.4.31 and 5.0.0-beta (`spip/ecrire` 5.x `9021bd8f1`, 2026-11-22) are both at `2026_09_24_00`, so a
+  site on the latest 4.4 gets no core database upgrade; plugins may still upgrade theirs. From 4.4.20–4.4.25
+  (`2026_08_03_00`) the 5.0 upgrade runs `2026_09_24_00`, which **invalidates the MD5 passwords** of
+  administrators and rédacteurs (securite#4934): count them first (`SELECT COUNT(*) FROM spip_auteurs WHERE
+  LENGTH(pass) = 32 AND statut IN ('0minirezo','1comite')`) and make sure the operator's own account is not one of
+  them. Bringing the site to the latest 4.4 first moves that step to a version you can roll back to.
 - Inventory the plugins: 5.0 refuses every plugin whose `paquet.xml` `compatibilite` stops at 4
   (`[4.1.0;4.*]`, `[4.0.0;4.*]`, `[4.1.0;4.*.*]`). Decide for each one: 5.0-compatible version, replacement, or drop.
 
@@ -40,6 +44,11 @@ git ls-remote https://git.spip.net/spip/ecrire.git refs/heads/5.x
 On the site, after the upgrade: `composer show spip/ecrire` and `bin/spip spip:info`. This reference was tested on
 2026-10-18/19 with `spip/spip` `c8e329575`, `spip/ecrire` `26bfe470` (branch `5.x`), `spip/framework` `d0e8c97e`; the
 API then listed 4.4.28 as the latest 4.4. Behaviour described here holds for those revisions; recheck on newer ones.
+Rechecked on 2026-11-22 (latest 4.4 = 4.4.31): `create-project … 5.0.x-dev` + `composer update` → `spip/ecrire` 5.x
+`9021bd8f1`, `spip/framework` `d0e8c97e6`; side-by-side copy of a 4.4.31 site (SQLite, `.backup`), `bin/spip
+spip:cache:warmup --clear`, then public `/` 200, `?page=plan` 200, `ecrire/` 302, `bin/spip spip:info` → `5.0.0-beta`,
+`version_installee` unchanged (`2026092400`). The authenticated first webmaster hit and the rollback were not rerun
+that day.
 
 ## Backup
 

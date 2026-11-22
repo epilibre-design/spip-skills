@@ -158,4 +158,4 @@ The `<traduire reference="..." />` attribute in `paquet.xml` declares the refere
 
 - `conventions.md` - key naming rules
 - `usage.md` - `_T()`, `_L()`, `lang_select()`, squelettes
-- `../spip-plugins/references/i18n.md` - `<traduire>` declaration in paquet.xml
+- `../../spip-plugins/references/i18n.md` - `<traduire>` declaration in paquet.xml

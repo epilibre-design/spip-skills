@@ -10,7 +10,7 @@ Verified 2026-10-18, `spip/spip` `c8e329575`, `spip/ecrire` `26bfe470`.
 | Extensions required by the packages | `dom`, `filter`, `iconv`, `json`, `libxml`, `mbstring`, `pcre`, `phar`, `sodium`, `tokenizer`, `xml`, `xmlwriter`, `zip`, `zlib` | `composer check-platform-reqs` |
 | Database | MySQL/MariaDB (`mysqli`) or SQLite (`pdo_sqlite`); PostgreSQL is gone (`ecrire/req/`) | source |
 | Framework | Symfony 8.1 components, resolved by Composer | `composer show` |
-| Distribution | Composer only for 5.0: `https://www.spip.net/spip_loader.api` lists the published archives per branch and 5.0 only as `dev` (2026-10-18: 4.4.28, 4.3.9, 4.2.17, `dev`); query it, `upgrade-4-4.md` "Which versions" | API read |
+| Distribution | Composer only for 5.0: `https://www.spip.net/spip_loader.api` lists the published archives per branch and 5.0 only as `dev` (2026-11-22: 4.4.31, 4.3.9, 4.2.17, `dev`); query it, `upgrade-4-4.md` "Which versions" | API read |
 
 Check PHP for the web SAPI (PHP-FPM pool or Apache module), not only `php -v` in the shell. Not covered (not
 verified): distribution package names, and extensions beyond those Composer requires (e.g. `gd` for image filters,

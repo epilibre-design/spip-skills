@@ -135,6 +135,35 @@ $interfaces['table_des_traitements']['MON_CHAMP'][0] = 'strtolower(%s)';
 
 The `%s` placeholder is replaced with the compiled PHP expression of the balise.
 
+For a text field written by visitors (forum-like), build the treatment with the core helpers instead of a literal
+`propre(%s)` (4.4.26, securite#4915, `ecrire/public/interfaces.php`):
+
+```php
+$interfaces['table_des_traitements']['TEXTE']['acme_avis'] = declarer_traitement_raccourcis('acme');
+$interfaces['table_des_traitements']['TITRE']['acme_avis'] = declarer_traitement_typo_sans_numero('acme');
+// also declarer_traitement_typo('acme')
+```
+
+With no argument they return the site defaults (`_TRAITEMENT_RACCOURCIS`, `_TRAITEMENT_TYPO`, which a site may
+redefine). With a context name they add `['contexte_public' => 'acme']` to the `propre()` / `typo()` call: modèles in
+that text are then made inert **unless allowed**: the allowlist is empty by default, `formulaire` is always refused
+(`ecrire/inc/modeles.php`). Allow modèles per context with the constant
+`define('_MODELES_PUBLICS_AUTORISES', ['acme' => ['img', 'doc']]);` (or a flat list for every context) or the
+`modeles_publics_autorises` pipeline, whose flux is **not** `args`/`data`:
+
+```php
+function acme_modeles_publics_autorises($flux) {
+    if ($flux['contexte'] === 'acme') {
+        $flux['modeles'][] = 'img';
+    }
+    return $flux;
+}
+```
+
+`propre()` and `typo()` take a 4th argument `$options`: `contexte_public`, `modeles_autorises` (explicit list, `[]` =
+no modèle, bypasses the constant and pipeline), `modeles_interdits`, `interdire_scripts` (plural since textwheel
+3.4.1).
+
 ---
 
 ## Critères

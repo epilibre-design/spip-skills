@@ -111,12 +111,17 @@ queue_unlink_job($id_job);
 | `id_job` | `bigint(21) NOT NULL` | Primary key |
 | `fonction` | `varchar(255)` | PHP function name |
 | `descriptif` | `text` | Human-readable label |
-| `args` | `longtext` | Serialised arguments array |
+| `args` | `longtext` | `base64_encode(serialize($arguments))` since 4.4.29 (#176); older rows hold the raw serialised string |
 | `md5args` | `varchar(32)` | MD5 of `args` (used for deduplication) |
 | `inclure` | `varchar(255)` | File to include before calling the function |
 | `priorite` | `tinyint` | -10 to +10 |
 | `date` | `datetime` | Scheduled execution time |
 | `status` | `tinyint` | `1` = scheduled (`_JQ_SCHEDULED`), `0` = running (`_JQ_PENDING`) |
+| `signature` | `char(64)` | HMAC of the row, set by `queue_sign_job()` (4.4.20, securite#4895) |
+
+Never read, match or write `args` in SQL, and never insert into `spip_jobs` directly: a row without a valid
+`signature` is refused by `queue_start_job()` (logged `job signature invalide` in `queue.log`). Use
+`job_queue_add()` / `job_queue_remove()`.
 
 ---
 
@@ -140,7 +145,8 @@ scheduler:
 1. Skips if the next scheduled job is still in the future
 2. Acquires a lock (delete the row, re-insert with `status = _JQ_PENDING`) to prevent
    concurrent execution
-3. Calls `queue_start_job()` — deserialises args, includes the file, calls the function
+3. Calls `queue_start_job()` — checks the signature, decodes and deserialises args, includes the file, calls the
+   function
 4. On completion: calls `queue_close_job()` — purges the job, reschedules if periodic
 
 **Fallback:** if `sql_insertq('spip_jobs', ...)` fails (table missing, upgrade in progress),

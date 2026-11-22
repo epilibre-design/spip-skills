@@ -34,6 +34,12 @@ to serve or regenerate a cached file.
 #CACHE{300, statique}
 ```
 
+`#CACHE` has no effect in the private space (4.4.24, #181): private squelettes are not cached by this layer, so
+never rely on `#CACHE{0}` there to force a refresh.
+
+Not cached at all (`cache_valide()` returns -1, `ecrire/public/cacher.php`): 404 pages (4.4.25, #184 — the `404`
+squelette and any page whose `type-page` is `404`) and pages whose context contains PHP code.
+
 Source: `ecrire/public/balises.php` — `balise_CACHE_dist()`
 
 ---

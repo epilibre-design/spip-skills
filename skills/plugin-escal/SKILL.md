@@ -48,8 +48,8 @@ exists, plugins live in `plugins-dist/spip/`.
   whether Escal was ever installed, read the one key `escal_base_version` and match `grep -Eq '": ?null'` (not
   `':null}'`). Never run that test on the whole `escal` meta, where any `null` setting would match.
 
-Details: `spip-migration-5` (`references/audit-outils.md`: `bin/spip` commands); 4.4 → 5.0 upgrade and rollback of
-the site: `spip5-instance` (`references/upgrade-4-4.md`).
+Details: `bin/spip` commands in `spip5-instance` (`references/bin-spip.md`); code changes in `spip-migration-5`;
+4.4 → 5.0 upgrade and rollback of the site: `spip5-instance` (`references/upgrade-4-4.md`).
 
 ## Vocabulary traps — verify before answering
 
@@ -72,7 +72,9 @@ These are the things agents reliably get wrong about Escal. Every row was an act
 
 ## Install with spip-cli
 
-Verified against **spip-cli 2.0.1** on SPIP 4.4.14. Run `spip list` if a command name looks off.
+Verified against **spip-cli 2.0.1** on SPIP 4.4.14, and again on 2026-11-22 with spip-cli 2.0.1 (dev-master `e9043b84`,
+patched with MR !91, still open upstream) on SPIP 4.4.31, where SVP fetched Escal **5.6.15** (`[4.1.0;4.*]`). Run
+`spip list` if a command name looks off.
 
 ### ⚠ `plugins:svp:telecharger` is broken in stock spip-cli
 
@@ -123,7 +125,9 @@ spip plugins:lister --short          # every prefix above must appear
 spip cache:vider
 ```
 
-SVP unpacks one directory per version: `plugins/auto/escal/v5.6.2/`, not `plugins/auto/escal/`.
+SVP unpacks one directory per version: `plugins/auto/escal/v5.6.15/` (2026-11-22), not `plugins/auto/escal/`.
+On 4.4.31 step 2 already activated the packages: step 3 then prints « Aucun prefixe à activer », which is not an
+error — `plugins:lister --short` is the check.
 Step 2 also pulls **`calendriermini`** as a transitive dependency — expect 11 packages, not 10.
 
 ### ⚠ After a CLI install, the starter contents stay unpublished

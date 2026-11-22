@@ -287,4 +287,4 @@ $label = _T('monplugin:libelle_contexte_special', [], ['force' => false])
 
 - `format.md` - lang file structure and formatting
 - `conventions.md` - key naming rules
-- `../spip-plugins/references/i18n.md` - `<traduire>` declaration and advanced `lang_select()` usage
+- `../../spip-plugins/references/i18n.md` - `<traduire>` declaration and advanced `lang_select()` usage

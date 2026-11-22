@@ -130,6 +130,9 @@ Create `squelettes/404.html` to display a custom error page when a resource is n
 
 SPIP automatically serves this page with an HTTP 404 status code — no PHP configuration required.
 
+The 404 response is never stored in the page cache (4.4.25, #184): it is recomputed on each hit and sent with
+`Cache-Control: no-store`, whatever `#CACHE` it contains. Keep `404.html` light.
+
 ### Gotcha: 404.html is not triggered for private-space requests
 
 The custom 404 page applies to the public site. Broken URLs in the private administration interface show SPIP's built-in error page.
@@ -157,6 +160,11 @@ This means `#CACHE{3600}` does not mean visitors wait an hour to see a new artic
 ### Personalized cache
 
 Pages with `#CACHE{3600}` are shared across all anonymous visitors. Logged-in users always bypass the cache and see live content. To serve different content to logged-in users, use `BOUCLE_CONDITION` with `#SESSION`.
+
+### Gotcha: #CACHE does nothing in the private space
+
+Since 4.4.24 (#181) `#CACHE` is ignored in private-space squelettes (`prive/…`, `?exec=` pages): do not use it there
+to tune freshness.
 
 ### Gotcha: #CACHE{0} has a real cost
 

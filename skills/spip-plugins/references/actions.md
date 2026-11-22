@@ -43,9 +43,8 @@ function action_supprimer_item_dist() {
     // 3. Perform the side effect
     sql_delete('spip_items', 'id_item=' . $id_item);
 
-    // 4. Redirect (redirect URL was passed in the action URL)
-    include_spip('inc/headers');
-    redirige_par_entete(_request('redirect'));
+    // 4. No redirect here: SPIP redirects to _request('redirect') after the action
+    //    (traiter_appels_actions(), sanitised by securiser_redirect_action()).
 }
 ```
 
@@ -161,7 +160,7 @@ Always load `inc/autoriser` and check before performing the side effect:
 include_spip('inc/autoriser');
 if (!autoriser('supprimer', 'item', $id_item)) {
     spip_log("Echec : action interdite", _LOG_ERREUR);
-    return;  // or redirige_par_entete() back to a safe page
+    return;  // never redirige_par_entete() here; set $GLOBALS['redirect'] to send elsewhere
 }
 ```
 
@@ -171,19 +170,25 @@ See `references/autorisations.md` for the full `autoriser()` API.
 
 ## Redirecting after the action
 
-The redirect URL should be passed in the action URL and retrieved with `_request('redirect')`:
+Do **not** redirect from the action: never call `redirige_par_entete()` in an action since 4.4.26
+(securite#4938) — it would skip the check of the target. The caller passes `redirect` in the action URL
+(`generer_action_auteur($action, $arg, $redirect)`, `#URL_ACTION_AUTEUR{action, arg, #SELF}`,
+`#BOUTON_ACTION`). `traiter_appels_actions()` (`ecrire/public/aiguiller.php`) secures it with
+`securiser_redirect_action()` before calling the action (an external URL is dropped unless
+`_AUTORISER_ACTION_ABS_REDIRECT`), then redirects to it with `redirige_action()` once the action returns. It also
+carries the Ajax environment (`var_ajax`, `var_ajax_env`).
+
+To impose the target from the action, set it:
 
 ```php
-// Inside action handler, after work is done:
-include_spip('inc/headers');
-redirige_par_entete(_request('redirect'));
+$GLOBALS['redirect'] = generer_url_ecrire('items');   // trusted: not sanitised (4.4.28, !413)
 ```
 
-If no redirect URL is present, return silently. Avoid hardcoding redirect targets — callers pass
-their own context.
+Never copy a request value into `$GLOBALS['redirect']`: it would bypass the check. With no redirect at all, SPIP
+answers `204 No Content`.
 
-For AJAX calls, SPIP detects the context automatically; `redirige_par_entete()` either sends a
-`Location:` header (standard) or returns a JSON instruction (AJAX).
+Behind a server that is not Apache, nginx or Cherokee (e.g. `php -S`), the redirect is an HTML page with a
+`Refresh:` header and status 200, not a `302` with `Location:`; test the target, not the status code.
 
 ---
 
@@ -195,6 +200,8 @@ For AJAX calls, SPIP detects the context automatically; `redirige_par_entete()` 
   arguments like `"42-publie"` in `instituer_forum`)
 - `generer_action_auteur()` hashes with the current auteur's session key; links are per-user and
   expire with the session
+- An action never redirects itself (4.4.26+): SPIP redirects to the secured `redirect` parameter, or to
+  `$GLOBALS['redirect']` when the action sets it
 - A public action (`$public = true`) can be triggered by unauthenticated visitors; use only when
   the action is intentionally public (e.g. forum posting)
 

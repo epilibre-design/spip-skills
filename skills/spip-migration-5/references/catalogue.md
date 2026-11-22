@@ -108,7 +108,7 @@ Verified in SPIP 5.0.0-beta. "doc" = stated by dev.spip.net, not re-verified in 
 | root-namespace compiler classes `Boucle`, `Champ`, `Critere`, `Texte`, `Contexte`, `Polyglotte` | `use Spip\Compilateur\Noeud\…;` | aliases removed |
 | `|table_valeur` / `(DATA){source tableau}` on serialized strings | pass an array, unserialize explicitly if trusted | no auto-unserialize |
 
-**URL helpers — not a plain rename** (checked in the 4.4.23 wrappers, `ecrire/inc/utils.php`, `inc/urls.php`):
+**URL helpers — not a plain rename** (checked in the 4.4.23 wrappers, `ecrire/inc/utils.php`, `inc/urls.php`; unchanged in 4.4.31):
 the old functions were deprecated wrappers that reordered and cleaned arguments. Reproduce what the wrapper did:
 `$connect` moves from 5th to 7th position, `generer_url_ecrire_objet()` takes `($objet, $id)` but
 `generer_objet_url_ecrire()` takes `($id, $objet)`, and the new functions type `$args`, `$ancre`, `$type`, `$connect`

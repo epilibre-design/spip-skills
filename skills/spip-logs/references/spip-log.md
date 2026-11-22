@@ -90,7 +90,13 @@ define('_LOG_FILTRE_GRAVITE', _LOG_DEBUG);
 - Use a `$type` name matching the plugin prefix to keep log files separated.
 - Pass arrays directly rather than manually serializing them.
 - Reserve `_LOG_ERREUR` and above for actual failures — not warnings or unexpected-but-handled states.
-- Never log passwords, tokens, or personal data.
+- Never log passwords, tokens, or personal data. `spip_log()` does **not** mask anything: on 4.4.31
+  `spip_log(['pass' => 'Secret123', 'email' => …], 'acme')` writes both values in clear in `acme.log`.
+  Since 4.4.26 (securite#4940) only the core's own context dumps are masked — the squelette `calcul (…)` line
+  (`password=***, token=***, api_key=***`), the profiler URL and the debugger (`Spip\Debug\Context`). To log a
+  context array safely, pass it through `Spip\Debug\Context::mask($array)` (keys such as `pass`, `password`,
+  `pwd`, `secret`, `token`, `jeton`, `api_key`, `authorization`, and any key with a `pass`/`secret`/`token`/`jeton`/
+  `api_key`/`private_key`/`credential` segment become `***`) or `presenter_contexte($array)` for a one-line summary.
 - `spip_log()` is a no-op if the `tmp/log/` directory is not writable — confirm permissions in production.
 
 ---

@@ -134,6 +134,28 @@ Use `#CONFIG{prefix/key}` — see [variables.md in spip-squelettes](../../spip-s
 
 ---
 
+## Secrets and sensitive metas
+
+A plugin that needs a secret key (HMAC, token signature, encryption) asks the core for one (4.4.29, #205):
+
+```php
+use Spip\Chiffrer\SpipCles;
+$cle = SpipCles::secret_perso('acme');          // 32 raw bytes, stable for the site
+$cle = SpipCles::secret_perso('acme', false);   // disk part only (config/cles.php)
+```
+
+It is created on first call: a key `secret_de_acme` in `config/cles.php` and a meta of the same name; the default
+(composite) value is the XOR of both, so a database dump alone does not reveal it. The value is binary: use it
+as a `sodium_*` / `hash_hmac()` key, `bin2hex()` it before printing. Never store your own secret with
+`ecrire_meta()` / `ecrire_config()`.
+
+Since 4.4.26 (securite#4918) the core keeps sensitive metas out of reach: `SpipCles` holds its keys in a private
+property instead of `$GLOBALS['meta']`, and the meta cache file (`tmp/cache/meta_cache.php`) drops every `secret_*`
+and `alea_*` entry. `$GLOBALS['meta']['secret_du_site']` or `lire_config('alea_ephemere')` therefore return nothing
+in most requests: use `SpipCles::secret_du_site()` and the `securiser_action` / `calculer_cle_action()` APIs.
+
+---
+
 ## Customising the save treatment
 
 When additional processing is needed after saving, add a `traiter()` function and delegate to the built-in handler:

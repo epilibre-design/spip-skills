@@ -139,7 +139,12 @@ rg -n '_DIR_PLUGINS_SUPPL|_SPIP_PATH|dossier_squelettes' \
   "$spip_root/config" "$mutu_dir" --glob '*.php' 2>/dev/null
 ```
 
-Do not dump serialized caches from `tmp/` into the answer. The Mutualisation administration page reads per-site `tmp/meta_cache.php` to summarize plugin state and upgrade status, so any cache-derived plugin list must be timestamped and rechecked per site before it drives an upgrade decision ([`exec/mutualisation.php`](https://git.spip.net/spip-contrib-extensions/mutualisation/-/blob/master/exec/mutualisation.php)).
+Do not dump serialized caches from `tmp/` into the answer. The Mutualisation administration page reads per-site `tmp/meta_cache.php` to summarize plugin state and upgrade status, so any cache-derived plugin list must be timestamped and rechecked per site before it drives an upgrade decision ([`exec/mutualisation.php`](https://git.spip.net/spip-contrib-extensions/mutualisation/-/blob/master/exec/mutualisation.php)). Since 4.4.26 (securite#4918) that file no longer holds the `secret_*` and `alea_*` metas; it still holds
+`version_installee` and `popularite_total`, the inputs of the `upgrade=oui` secret.
+
+Per site on 4.4.26+, also report the file count and size of `tmp/cache/contextes/` (Ajax contexts, one file per
+context, purged after 48 h by the hourly `optimiser_contextes` job): a fast-growing count points to a crawler
+hitting Ajax blocks or a stalled job queue, not to an intrusion by itself.
 
 ## 6. Capacity, ownership, and anomalies
 

@@ -48,7 +48,7 @@ if [ ! -f "$SPIP_ROOT/config/connect.php" ]; then
         --admin-nom='Admin Test' \
         --admin-login='admin' \
         --admin-email='admin@example.test' \
-        --admin-pass='adminadmin' \
+        --admin-pass='admin-test-pass' \
         --adresse-site='http://localhost'
 fi
 
