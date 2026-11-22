@@ -3,7 +3,8 @@
 SPIP 5.0 console (Symfony Console, `spip-league/console`) at the project root. spip-cli (`spip …`) is a 4.x tool and
 does not boot 5.0. Run from the project root, as the web server user when the command writes files.
 
-Verified 2026-10-18, `spip/spip` `c8e329575` (`bin/spip list --raw`).
+Verified 2026-10-18, `spip/spip` `c8e329575` (`bin/spip list --raw`); command list rechecked 2026-11-22, `spip/spip`
+`68695ca0a` (only addition: `hello`, a welcome message).
 
 ## Commands
 
@@ -22,7 +23,7 @@ Verified 2026-10-18, `spip/spip` `c8e329575` (`bin/spip list --raw`).
 | `database:optimize [--reorder\|--clean\|--all]` | optimise the tables | yes |
 | `sites:syndics:maj` | refresh syndicated feeds | yes |
 
-Aliases: `cache:clear`, `cache:warmup`, `sql:optimize`.
+Aliases: `cache:clear`, `cache:warmup`, `sql:optimize`, `pipeline:listeners`, `pipeline:events`.
 
 Global options: `-e <env>` (the help says default `prod`; without `-e`, `APP_ENV` from `.env*` applies),
 `--with-spip` (full SPIP load).

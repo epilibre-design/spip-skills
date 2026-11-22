@@ -53,6 +53,8 @@ skill only maps 4.x constructs to it. If `spip5-plugins` is not available, say s
 | Config / metas behave differently after the upgrade | `references/config-metas.md` |
 | Keep one plugin working on **4.4 and 5.0** | `references/double-compat.md` |
 | Audit a plugin (grep, PHPStan, Rector), verify listeners, CLI commands | `references/audit-outils.md` |
+| Upgrade the site itself (backup, Composer, rollback), `bin/spip` reference | the **`spip5-instance`** skill (`references/upgrade-4-4.md`, `references/bin-spip.md`) |
+| Squelette rules on 4.x; testing the migrated plugin | the **`spip-squelettes`** skill; the **`spip-testing`** skill |
 
 ## Guardrails
 

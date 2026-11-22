@@ -67,3 +67,21 @@ Tasks 4–12 of `docs/superpowers/plans/2026-11-22-skills-4-4-31.md` implement t
 | plugins-dist | bigup 3.3.15, svp 3.2.8 use `AjaxContext` | confirms the deprecation row |
 | plugins-dist | forum 3.1.17–3.1.20, medias 4.4.13–4.4.18, sites 4.4.6–4.4.9, statistiques 3.2.0–3.2.3, revisions 3.1.14–3.1.15, urls_etendues 4.2.5–4.2.6, mots 4.3.2, safehtml 3.2.0–3.2.3 | autorisation/CSRF/sanitiser hardening of their own actions; no skill documents those internals |
 | plugins-dist | textwheel 3.4.0–3.4.1, porte_plume 3.1.12–3.1.15 `propre()` options, `interdire_scripts` | covered by the securite#4915 row |
+
+## Graph findings
+
+From the graphify analysis of 2026-11-22 (`graphify-out/GRAPH_REPORT.md`), handled in Task 13.
+
+- **`bin/spip` owned twice.** `spip-migration-5/references/audit-outils.md` §5 and
+  `spip5-instance/references/bin-spip.md` both listed the commands. Common: `spip:cache:warmup`, `spip:cache:clear`,
+  `spip:pipeline:listeners`, `spip:pipeline:events`, `spip:container:debug`, `spip:config:dump`, `routes:list`,
+  `config:lire`/`config:ecrire`, `about`. Differences: `audit-outils.md` gave `-e/--env (default prod)` while
+  `bin-spip.md` says `APP_ENV` from `.env*` applies without `-e` (kept); `bin-spip.md` lacked the aliases
+  `pipeline:listeners`/`pipeline:events` (added, checked with `bin/spip help` on `spip/spip` `68695ca0a`), which
+  also lists a new `hello` command. Decision: `bin-spip.md` owns the reference; `audit-outils.md` keeps the four
+  audit commands and links to it; the callouts of `spip-testing` and `plugin-escal` now point to `bin-spip.md`.
+- **`spip-migration-5` had no outbound route** to the site upgrade, squelettes or testing: two routing rows added.
+- **`spip-lang` was not reached from `spip-plugins`**: `i18n.md` now names it as owner of the language files; the
+  duplicated file-format and paquet-file passages were cut to a summary with a pointer.
+- **Dead link `spip-expert`** and the two broken `spip-lang` relative links: fixed in Task 2, guarded by
+  `tests/scripts/check-skill-links.sh`.

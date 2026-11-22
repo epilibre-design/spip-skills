@@ -42,22 +42,17 @@ Configuration and commands: `spip5-plugins` `outils.md`, *Static analysis*. What
 
 ## 5. Console `bin/spip` (5.0)
 
-SPIP 5.0 ships **`bin/spip`** at the project root (`spip-league/console`, Symfony Console). It is not spip-cli
-(`spip …`, the 4.x tool), not `bin/console`. `bin/spip list` shows what the instance provides.
+The command reference (every command, what it writes, global options, sequences) is owned by `spip5-instance`
+(`references/bin-spip.md`). For an audit, the useful ones are:
 
-| Command | Use |
+| Command | Audit use |
 |---|---|
-| `bin/spip spip:cache:warmup --clear` (alias `cache:warmup`) | purge boot caches and recompile the container + plugin caches |
-| `bin/spip spip:cache:clear` (`--boot` default, `--all` = whole `tmp/cache/`) | purge caches |
-| `bin/spip spip:pipeline:listeners` (alias `pipeline:listeners`) | listeners registered on `spip.pipeline.*` |
-| `bin/spip spip:pipeline:events` (alias `pipeline:events`) | pipelines that have a typed event |
-| `bin/spip spip:container:debug` | container debug information |
-| `bin/spip spip:config:dump` | effective `spip.*` parameters (defaults + `config/custom.php` + derived) |
-| `bin/spip routes:list` | declared routes |
-| `bin/spip config:lire` / `config:ecrire` | read / write `spip_meta` |
-| `bin/spip about` | environment |
+| `bin/spip spip:cache:warmup --clear` | recompile the container after changing the plugin; a compile error shows here first |
+| `bin/spip spip:pipeline:listeners` (alias `pipeline:listeners`) | is the plugin's listener registered on its `spip.pipeline.*`? |
+| `bin/spip spip:pipeline:events` (alias `pipeline:events`) | which pipelines have a typed event |
+| `bin/spip spip:container:debug` | compiled container file and class |
 
-Global options: `-e/--env` (default `prod`), `--with-spip` (force full SPIP load).
+`bin/spip` is not spip-cli (`spip …`, the 4.x tool), not `bin/console`.
 
 ## Listener not called
 
