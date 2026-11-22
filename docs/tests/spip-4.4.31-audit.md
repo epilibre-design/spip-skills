@@ -38,6 +38,7 @@ Tasks 4–12 of `docs/superpowers/plans/2026-11-22-skills-4-4-31.md` implement t
 | — | 4.4 → 5.0 upgrade run from 4.4.21, schema `2026_08_03_00` | spip5-instance | `upgrade-4-4.md:3,12,42`, `prerequis.md:13` | edit | run on a copy (Task 12) |
 | — | spip-cli checked on 4.4.14 | plugin-escal | `SKILL.md:75` | edit | run on a copy (Task 12) |
 | — | example release `spip-4.4.1` | spip-mutualisation-maintenance | `core-upgrade.md:59,97,99` | edit | none (example) |
+| — | Composer route uses a non-existent `spip/core` package; `composer update` at the root gives a mixed tree | spip-mutualisation-maintenance | `core-upgrade.md` Composer route | edit | run on copies (found during Task 11) |
 
 ## Rows without an action
 

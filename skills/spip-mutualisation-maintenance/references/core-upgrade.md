@@ -56,7 +56,7 @@ If the current provenance is Git, keep the production method Git-backed and prep
 spip_root=/srv/www/example-spip/current
 release_parent=/srv/www/example-spip/releases
 old_release=/srv/www/example-spip/releases/spip-4.3.8
-target_release=/srv/www/example-spip/releases/spip-4.4.1
+target_release=/srv/www/example-spip/releases/spip-4.4.31   # example release
 origin_url=verified_git_remote_url
 target_ref=verified_reviewed_tag_or_commit
 
@@ -74,45 +74,62 @@ case "$old_release" in "$release_parent"/*) ;; *) exit 1;; esac
 git clone --origin origin --no-checkout "$origin_url" "$target_release"
 git -C "$target_release" checkout --detach "$target_ref"
 git -C "$target_release" status --short
+# the spip/spip repository holds only the root: install the locked core packages, then every
+# plugins-dist/ plugin at the tag of the target plugins-dist.json (see the Composer route below)
+composer --working-dir="$target_release" install --no-dev --no-interaction
 ```
+
+Tags of `spip/spip` have no `v` prefix (`4.4.31`, not `v4.4.31`). Checked on 2026-11-22: tag `4.4.31` =
+`62485d649`, whose `composer.lock` pins `spip/ecrire` 4.4.31.
 
 ### Composer-managed core — proposed operator command shape
 
 Read-only evidence:
 
 ```bash
-composer --working-dir="$spip_root" show --locked
+composer --working-dir="$spip_root" show --locked 'spip/*'
 composer --working-dir="$spip_root" validate --no-check-publish
 git -C "$spip_root" diff -- composer.json composer.lock
 ```
 
-The proposal must change constraints deliberately, retain the previous lock file, run a dry-run where supported, and build an isolated release before switching production. Do not run `composer update` generically at the live root.
+A SPIP 4.4 tree is the Composer **project** `spip/spip`; the core code comes from the packages `spip/ecrire`,
+`spip/prive`, `spip/dist`, `spip/security`. There is no `spip/core` package: `composer require spip/core:…` fails
+("could not be found in any version"). `composer update 'spip/*'` at the root is not an upgrade either: it moves
+`ecrire/` and `prive/` (checked: 4.4.21 → `spip/ecrire` 4.4.31, `spip/prive` 1.1.10) but leaves the root files
+(`spip.php`, `plugins-dist.json`, `CHANGELOG.md`) and every `plugins-dist/` plugin at the old release — a mixed
+tree. Record `spip/spip` and `spip/ecrire` separately. Do not run `composer update` at the live root.
 
-If the current provenance is Composer, keep the update scoped and stage it away from production; the agent never runs this block:
+Build the exact target project in isolation instead; the agent never runs this block:
 
 ```bash
 # proposed — operator runs this, agent does not
-spip_root=/srv/www/example-spip/current
 build_parent=/srv/build/spip-core
-prepared_release=/srv/build/spip-core/2026-08-28-spip-4.4.1
+prepared_release=/srv/build/spip-core/2026-11-22-spip-4.4.31   # example
 composer_bin=/usr/local/bin/composer
-target_constraint=4.4.1
+target_version=4.4.31   # exact, verified at task time
 
-spip_root="$(realpath -e -- "$spip_root")"
 build_parent="$(realpath -e -- "$build_parent")"
 prepared_parent="$(realpath -e -- "$(dirname -- "$prepared_release")")"
-test -n "$spip_root" && test "$spip_root" != /
-test -n "$build_parent" && test "$build_parent" != /
 test "$prepared_parent" = "$build_parent"
-test -f "$spip_root/composer.json" && test -f "$spip_root/composer.lock"
 test ! -e "$prepared_release"
 
-cp -a -- "$spip_root" "$prepared_release"
-"$composer_bin" --working-dir="$prepared_release" validate --no-check-publish
-"$composer_bin" --working-dir="$prepared_release" require "spip/core:$target_constraint" --no-update
-"$composer_bin" --working-dir="$prepared_release" update spip/core --with-all-dependencies --dry-run
-"$composer_bin" --working-dir="$prepared_release" update spip/core --with-all-dependencies
+"$composer_bin" create-project --no-dev --no-interaction \
+  --repository=https://get.spip.net/composer "spip/spip:$target_version" "$prepared_release"
+"$composer_bin" --working-dir="$prepared_release" show --locked 'spip/*'
+
+# create-project does not fetch plugins-dist/ (the archive ships it): clone each one at the tag
+# pinned in the target plugins-dist.json
+cd "$prepared_release"
+php -r '$d = json_decode(file_get_contents("plugins-dist.json"), true);
+  foreach ($d as $p) { echo $p["path"], "\t", $p["source"], "\t", $p["tag"] ?? $p["branch"], "\n"; }' |
+while IFS="$(printf '\t')" read -r path source ref; do
+  git clone --quiet --depth 1 --branch "$ref" "$source" "$path"
+done
 ```
+
+Checked on 2026-11-22 for 4.4.31: `spip/ecrire` 4.4.31, `spip/prive` 1.1.10, `spip/dist` 4.2.10, `spip/security`
+1.6.7, 20 plugins-dist cloned. The shared `config/`, `IMG/`, `plugins/` and the farm's site directories are then
+attached to the prepared release by the deployment's existing mechanism, never copied over the live root.
 
 ### Archive-managed core — proposed operator command shape
 
@@ -121,8 +138,8 @@ SPIP's official update guide includes archive-based release replacement as an or
 ```bash
 # proposed — operator runs this, agent does not
 release_parent=/srv/www/example-spip/releases
-target_release=/srv/www/example-spip/releases/spip-4.4.1
-target_archive=/srv/dist/spip-v4.4.1.zip
+target_release=/srv/www/example-spip/releases/spip-4.4.31   # example release
+target_archive=/srv/dist/spip-v4.4.31.zip   # https://files.spip.net/spip/archives/spip-v4.4.31.zip (example)
 target_archive_sha256=verified_sha256
 
 release_parent="$(realpath -e -- "$release_parent")"
@@ -144,7 +161,7 @@ SPIP's official guide also keeps `spip_loader` as a normal update route, but in 
 # proposed — operator runs this, agent does not
 loader_artifact=/srv/dist/spip_loader.php
 loader_sha256=verified_loader_sha256
-target_release_label=4.4.1
+target_release_label=4.4.31   # example
 maintenance_root=/srv/www/example-spip/current
 
 loader_artifact="$(realpath -e -- "$loader_artifact")"
@@ -195,6 +212,18 @@ Do not purge all caches before capturing errors. Cache cleanup, if required by t
 |---|---|---|---|---|---|---|---|---|
 
 Use explicit HTTP status/content checks and authenticated manual validation where required. A successful administration site does not prove the other databases migrated.
+
+Release-specific checks for a target ≥ 4.4.26 coming from an older 4.4:
+
+- the schema upgrade `2026_09_24_00` (securite#4934) invalidates the old MD5 passwords of administrators and
+  rédacteurs (`pass` = `x`, `htpass` and `low_sec` emptied): those authors can no longer log in and must use
+  "mot de passe oublié". Count them per site **before** the upgrade with
+  `SELECT COUNT(*) FROM spip_auteurs WHERE LENGTH(pass) = 32 AND statut IN ('0minirezo','1comite')` and warn them; an
+  administration account in that list locks the operator out of that site's private area;
+- new passwords need at least 12 characters (4.4.29, #64);
+- each site gets `tmp/cache/contextes/` (Ajax contexts, 4.4.26) and the hourly job `optimiser_contextes` in its
+  `spip_jobs`, which deletes context files older than 48 h (up to 50 000 per run).
+
 
 ## 6. Rollback boundary
 
