@@ -77,6 +77,17 @@
         "La réponse dit que autoriser_chose_dist() n'est plus appelée depuis SPIP 4.4.26",
         "La chaîne de recherche donnée a 8 étapes dans l'ordre type_faire, type_faire_dist, type_faire (littéral), type_faire_dist (littéral), faire, faire_dist, defaut, defaut_dist"
       ]
+    },
+    {
+      "id": 7,
+      "prompt": "Écris l'action sécurisée action_acme_supprimer_item_dist() d'un plugin SPIP 4.4 : elle vérifie l'autorisation, supprime l'item, puis renvoie l'utilisateur vers la page d'où il vient.",
+      "expected_output": "L'action vérifie securiser_action() et autoriser(), supprime, et laisse SPIP rediriger vers _request('redirect') sans appeler redirige_par_entete(); une redirection fixée par l'action passe par $GLOBALS['redirect'].",
+      "files": [],
+      "expectations": [
+        "L'action n'appelle pas redirige_par_entete()",
+        "La réponse explique que traiter_appels_actions() redirige vers _request('redirect') après l'action, en la sécurisant",
+        "Pour imposer une cible, l'action affecte $GLOBALS['redirect']"
+      ]
     }
   ]
 }

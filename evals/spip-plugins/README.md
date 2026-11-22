@@ -10,6 +10,7 @@
 | 4 | _administrations.php | Convention fichier install/upgrade | piège |
 | 5 | autoriser() dans une action | API d'autorisation SPIP | limite |
 | 6 | Autorisation générique par type | Chaîne autoriser_dist() 4.4.26+ | piège |
+| 7 | Redirection après action | Redirection gérée par traiter_appels_actions() | piège |
 
 ## Erreurs typiques sans skill
 
@@ -18,6 +19,7 @@
 | 2 | Utilise `$flux['args']['table'] === 'spip_articles'` (clé dépréciée "kept for BC") au lieu de `$flux['args']['objet'] === 'article'` |
 | 4 | Invente une balise `<install>` dans paquet.xml (n'existe pas). Nomme les fonctions `acme_install()` / `acme_uninstall()` au lieu de `acme_upgrade()` / `acme_vider_tables()`. Ignore la convention de nommage `{prefix}_administrations.php`. |
 | 6 | Nomme la fonction `autoriser_chose_dist()` (ignorée depuis 4.4.26) |
+| 7 | Appelle `redirige_par_entete(_request('redirect'))` dans l'action (interdit depuis 4.4.26) |
 
 ## Lancer les évaluations
 

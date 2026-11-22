@@ -32,3 +32,25 @@ so the answer it leads to is `autoriser_chose_dist()`. On SPIP 4.4.31 that funct
 
 Side finding: the "Special faire values" table says `'voir'` "falls to `autoriser_defaut_dist` unless
 overridden"; the core has `autoriser_voir_dist()` (admins: yes; `auteur`: admins and rédacteurs; otherwise yes).
+
+## spip-plugins 7
+
+Prompt (`evals/spip-plugins/evals.json` id 7): secured action that deletes an item and sends the user back.
+
+What the skill teaches (`skills/spip-plugins/references/actions.md`):
+
+- `:46-48`, the model action ends with `// 4. Redirect …` `redirige_par_entete(_request('redirect'));`
+- `:164` `return;  // or redirige_par_entete() back to a safe page`
+- `:172-186` "Redirecting after the action": call `redirige_par_entete(_request('redirect'))` after the work.
+
+On SPIP 4.4.31 `traiter_appels_actions()` already redirects after the action (runs on `jetable-4431-audit`, see
+`spip-4.4.31-verifications.md`), and since 4.4.26 (securite#4938) an action must not call `redirige_par_entete()`:
+doing so bypasses `securiser_redirect_action()`.
+
+| Expectation | Verdict |
+|---|---|
+| 1 no `redirige_par_entete()` in the action | FAIL — the model action calls it |
+| 2 explains that `traiter_appels_actions()` redirects to the secured `_request('redirect')` | FAIL — not mentioned |
+| 3 imposes a target through `$GLOBALS['redirect']` | FAIL — not mentioned |
+
+**RED: FAIL (0/3).**
