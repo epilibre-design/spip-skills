@@ -556,6 +556,36 @@ $flux['args']   array    Context
 $flux['data']   string   Login form HTML
 ```
 
+### `auth_lister_methodes_authentification` (4.4.31)
+
+Lists the authentication methods tried, in order, by `auth_identifier_login()` and the login form
+(`auth_lister_methodes_authentification()`, `ecrire/inc/auth.php`). Called once per request (static cache).
+
+```
+$flux['args']   array    []
+$flux['data']   array    method names, from $GLOBALS['liste_des_authentifications'] (e.g. ['spip', 'ldap'])
+```
+
+Each name `x` needs a function `auth_x_dist()` (`auth/x.php`). Add, remove or reorder names here instead of writing
+to `$GLOBALS['liste_des_authentifications']`.
+
+### `auth_valider_identification` (4.4.31)
+
+Called once a method has found the author (login and password right): the last word before the visitor is
+identified. Return an error to refuse.
+
+```
+$flux['args']   array    methode, login, password (bool: a password was used — never the password),
+                         serveur, phpauth, usage
+$flux['data']   array    ['auteur' => array]  — leave an array to accept;
+                         set 'auteur' => '' and 'erreur' => 'message' to refuse
+```
+
+`usage` says why the identification runs: `'login'` (default; login form, HTTP auth), `'controler_auteur'`
+(password re-check of the logged-in author), `'login_action_auth'` (end of an external method,
+`auth_terminer_identifier_login()`). `auth_identifier_login($login, $password, $serveur = '', $phpauth = false,
+$usage = 'login', $methode_demandee = null)` gained the last two arguments in 4.4.31.
+
 ---
 
 ## Configuration and metadata
@@ -770,6 +800,9 @@ All remaining pipelines from `ecrire/paquet.xml`. Most are extension points (`ac
 | `ajouter_onglets` | array | Add tabs to private pages |
 | `arbo_creer_chaine_url` | `$flux` | Build arborescence-style URLs |
 | `auth_administrer` | `$flux` | Admin authentication flow |
+| `auth_lister_methodes_authentification` | `$flux` | Ordered list of authentication methods (4.4.31) |
+| `auth_valider_identification` | `$flux` | Accept or refuse an identified author (4.4.31) |
+| `modeles_publics_autorises` | `['contexte', 'modeles']` | Modèles allowed in a text with `contexte_public` (4.4.26) |
 | `autoriser` | file include | Authorization function declaration |
 | `base_admin_repair` | `$flux` | Database repair operations |
 | `body_prive` | string | `<body>` tag attributes (private) |
