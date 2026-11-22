@@ -741,7 +741,8 @@ function svp_pre_boucle($boucle) {
 }
 ```
 
-This pipeline requires knowledge of SPIP's compiler internals. See the `spip-expert` skill for `Boucle` object structure.
+This pipeline requires knowledge of SPIP's compiler internals: the `Boucle` object structure is in
+`references/balises-filtres-criteres.md` ("Boucle properties modified by critères").
 
 ---
 
