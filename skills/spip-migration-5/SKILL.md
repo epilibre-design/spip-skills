@@ -14,7 +14,7 @@ are stored differently. It is **not** Symfony full-stack: no `bin/console`, no `
 `debug:event-dispatcher`.
 
 **Verified against SPIP 5.0.0-beta** (`spip/spip` `c8e329575`, 2026-09-22, `ecrire` `2cd5843f`; additions of
-2026-10-18 on `ecrire` `26bfe470`) and SPIP 4.4.23. SPIP 5.0 is still
+2026-10-18 on `ecrire` `26bfe470`) and SPIP 4.4.23; the 4.4 side rechecked on 4.4.31 (`ecrire` `5d7078d2`, 2026-11-22). SPIP 5.0 is still
 moving: when a name in this skill looks off, check the source (paths in *Source of truth*) and `bin/spip list`.
 
 **Requires the `spip5-plugins` skill** for the 5.0 target code (listeners, tasks, injection, Guard, menus): this
