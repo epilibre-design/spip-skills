@@ -20,6 +20,12 @@ Append `?var_mode=debug` (or `&var_mode=debug`) to any public URL to display the
 
 ---
 
+Since 4.4.26 the overlay masks sensitive context values (`***` for `password`, `token`, `secret`… — securite#4940)
+and escapes the displayed SQL query and attributes (securite#4952). A value shown as `***` is still in the real
+context: the mask is for display only.
+
+---
+
 ## _VAR_NOCACHE — suppress cache writes in PHP
 
 ```php
