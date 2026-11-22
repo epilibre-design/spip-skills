@@ -339,9 +339,12 @@ if [ ! -f "$SPIP_ROOT/config/connect.php" ]; then
         --admin-nom='Admin Test' \
         --admin-login='admin' \
         --admin-email='admin@example.test' \
-        --admin-pass='adminadmin' \
+        --admin-pass='admin-test-pass' \
         --adresse-site='http://localhost'
 fi
+# Since SPIP 4.4.29 (#64) a new password needs at least 12 characters: with a shorter --admin-pass,
+# core:installer creates the database, prints « Le mot de passe doit contenir au moins 12 caractères. »
+# and leaves no admin and no config/connect.php (run on 4.4.31).
 
 # Register depot and activate dependencies
 "$SPIP_BIN" plugins:svp:depoter "$DEPOT_PRINCIPAL" || true

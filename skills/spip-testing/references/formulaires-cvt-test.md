@@ -133,6 +133,10 @@ public function testTraiterFailure(): void
 
 ## Testing the form `.html` template rendering
 
+For an HTTP-level check of a form, request a page squelette that contains `#FORMULAIRE_MON_FORM`: since 4.4.26
+`spip.php?page=formulaires/mon_form` answers the admin minipage (HTTP 403) for everyone, webmestres included
+(securite#4948).
+
 `Templating::fromString()->render($source, $env)` compiles a template string and renders it with a given ENV. The ENV must mirror what SPIP normally passes via the CVT machinery.
 
 ### Pattern — render form HTML with simulated ENV
