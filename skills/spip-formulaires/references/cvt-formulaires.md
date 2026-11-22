@@ -28,6 +28,10 @@ function formulaires_mon_form_identifier_dist(/* same args */): array
 
 Arguments come directly from the balise call: `#FORMULAIRE_MON_FORM{$a, $b}` → each function receives `($a, $b)` in the same order.
 
+To look at a form, put `#FORMULAIRE_MON_FORM` in a page squelette and open that page. `spip.php?page=formulaires/mon_form`
+is refused (admin minipage, HTTP 403) for everyone, webmestres included, since 4.4.26 (securite#4948,
+`ecrire/public.php`); any `?page=` containing `/` is refused to non-webmestres.
+
 ---
 
 ## charger() — load the environment
@@ -73,7 +77,7 @@ Any non-underscore key becomes a template variable and is re-populated from `_re
 ### Minimal example
 
 ```php
-// plugins-dist/spip/mots/formulaires/editer_mot.php:49
+// plugins-dist/mots/formulaires/editer_mot.php:48 (SPIP 4.4.31)
 function formulaires_editer_mot_charger_dist($id_mot = 'new', $id_groupe = 0, $retour = '', ...) {
     $valeurs = formulaires_editer_objet_charger('mot', $id_mot, $id_groupe, '', $retour, ...);
     if (intval($id_mot) and !autoriser('modifier', 'mot', intval($id_mot))) {
@@ -118,7 +122,7 @@ If `verifier()` is absent, the framework uses an empty array (always valid).
 ### Real example (forum verification)
 
 ```php
-// plugins-dist/spip/forum/formulaires/forum.php:235
+// plugins-dist/forum/formulaires/forum.php:218 (SPIP 4.4.31)
 function formulaires_forum_verifier_dist($objet, $id_objet, ...) {
     $erreurs = [];
     if (strlen(_request('texte')) < 10) {
@@ -154,7 +158,7 @@ $rev = pipeline('formulaire_traiter', ['args' => [...], 'data' => $rev]);
 
 | Key | Effect |
 |---|---|
-| `redirect` | URL to redirect to after success (302 or JS depending on context) |
+| `redirect` | URL to redirect to after success (302, or a hidden link followed by JS in Ajax) — see [Redirect safety](#redirect-safety) |
 | `message_ok` | Success message shown in the squelette after redirect |
 | `message_erreur` | Treat as failure: no redirect, error banner shown |
 | `editable` | If present: override editability of the reloaded form |
@@ -179,7 +183,7 @@ sql_terminer_transaction();
 Return `['message_erreur' => ...]` to signal failure; the form re-displays with the error. No automatic cleanup of already-applied effects occurs.
 
 ```php
-// plugins-dist/spip/forum/formulaires/forum.php:528
+// plugins-dist/forum/formulaires/forum.php:505 (SPIP 4.4.31)
 function formulaires_forum_traiter_dist($objet, $id_objet, ..., $retour) {
     $id_reponse = $forum_insert($objet, $id_objet, $id_forum);
     if ($id_reponse) {
@@ -189,6 +193,33 @@ function formulaires_forum_traiter_dist($objet, $id_objet, ..., $retour) {
 }
 ```
 
+### Redirect safety
+
+`traiter()` is trusted code: SPIP follows its `redirect` almost as is (`redirige_formulaire()`,
+`ecrire/inc/headers.php`). Measured on 4.4.31:
+
+| `redirect` returned by `traiter()` | Normal POST | Ajax POST |
+|---|---|---|
+| `spip.php?page=plan` | 302 to the site URL | link to `spip.php?page=plan` |
+| `https://evil.example/` (built in PHP) | 302 to `https://evil.example/` | link to `https://evil.example/` |
+| `https://evil.example/` **equal to a query-string value** (`?retour=…` passed to the form) | 302 to `https://evil.example/` | **no redirect** (4.4.29, securite#4954), message shown |
+| `javascript:…`, `data:…`, `mailto:…` | 302 to `./` | no redirect |
+
+So the only automatic guard is Ajax-only. When the target comes from the request or from a form argument the
+visitor controls (`retour`, `redirect`, `url`), check it in `traiter()` yourself, as the core login form does:
+
+```php
+include_spip('public/aiguiller');   // defines securiser_redirect_action()
+$retour = securiser_redirect_action($retour, false);   // '' when the URL leaves the site
+return ['message_ok' => _T('acme:ok'), 'redirect' => $retour];
+```
+
+### Identifying the visitor in `traiter()`
+
+A `traiter()` may log the visitor in (sign-up with immediate login). Since 4.4.31 (prive#151) SPIP re-encodes the
+form context for the now-identified visitor, so the form re-displayed after `traiter()` (no redirect, or Ajax)
+keeps working; on earlier 4.4 releases redirect after such a `traiter()`.
+
 ---
 
 ## identifier() — disambiguate multiple forms
@@ -196,7 +227,7 @@ function formulaires_forum_traiter_dist($objet, $id_objet, ..., $retour) {
 When a page contains several instances of the same formulaire (e.g. two `#FORMULAIRE_FORUM` in a thread), SPIP must decide which one was posted. Without `identifier()`, it compares full argument lists.
 
 ```php
-// plugins-dist/spip/forum/formulaires/forum.php:30
+// plugins-dist/forum/formulaires/forum.php:23 (SPIP 4.4.31)
 function formulaires_forum_identifier_dist($objet, $id_objet, $id_forum, ...) {
     return [$objet, $id_objet, $id_forum];  // subset that uniquely identifies this instance
 }
@@ -279,7 +310,7 @@ Source: `ecrire/inc/cvt_multietapes.php`
 Add `_autosave_id` to the `charger()` return to enable session-backed autosave (saves the form in the visitor's session every few seconds via JS):
 
 ```php
-// plugins-dist/spip/forum/formulaires/forum.php:174
+// plugins-dist/forum/formulaires/forum.php:163 (SPIP 4.4.31)
 return array_merge($vals, [
     '_autosave_id' => $ids,   // array used as uniqueness key (md5-hashed)
     // ...
@@ -288,10 +319,17 @@ return array_merge($vals, [
 
 What happens:
 - On first non-POST load: any previously saved session data repopulates field values
-- On each keystroke: JS posts to the autosave endpoint and updates `session_autosave_{key}`
+- Typing marks the form as changed; on `change`, `submit` and page unload `jquery.autosave.js` POSTs the serialised
+  form to `action=session` (`arg=set`, `var=autosave_<key>`, `val=<fields>`), which stores
+  `session_autosave_{key}`; fields whose name starts with `_` are dropped
 - On `traiter()`: `cvtautosave_formulaire_traiter()` (via `formulaire_traiter` pipeline) clears the session entry and GC's entries older than `_AUTOSAVE_GB_DELAY` (default 72 hours)
 
-Source: `ecrire/inc/cvt_autosave.php`
+Since 4.4.31 (securite#4983) `action/session` requires a POST, a key matching `^autosave_[a-z_0-9-]+$`, and the
+author-bound hash `calculer_action_auteur('session-set')`; otherwise it silently does nothing. The core JS gets
+`arg` and `hash` from `cvtautosave_formulaire_charger()`: a plugin using `_autosave_id` has nothing to change, but
+custom JS posting to `action=session` must send them. Since 4.4.23, restored values keep their backslashes.
+
+Source: `ecrire/inc/cvt_autosave.php`, `ecrire/action/session.php`, `prive/javascript/jquery.autosave.js`
 
 ---
 
